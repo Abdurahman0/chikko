@@ -1,0 +1,78 @@
+import type { ComponentType, JSX } from 'react';
+import { Navigate, createBrowserRouter } from 'react-router-dom';
+import type { AppRouteConfig, AppRouteId } from '../../config/routes';
+import { fallbackRoutes, moduleRoutes, publicRoutes, routePaths } from '../../config/routes';
+import RouteGate from './RouteGate';
+import AccessDeniedPage from '../pages/public/AccessDeniedPage';
+import AiSettingsPage from '../pages/protected/AiSettingsPage';
+import ChatPage from '../pages/protected/ChatPage';
+import CustomersPage from '../pages/protected/CustomersPage';
+import DashboardPage from '../pages/protected/DashboardPage';
+import LeadsPage from '../pages/protected/LeadsPage';
+import LoginPage from '../pages/public/LoginPage';
+import LogsPage from '../pages/protected/LogsPage';
+import NotFoundPage from '../pages/public/NotFoundPage';
+import NotificationsPage from '../pages/protected/NotificationsPage';
+import OrdersPage from '../pages/protected/OrdersPage';
+import PaymentsPage from '../pages/protected/PaymentsPage';
+import ProductsPage from '../pages/protected/ProductsPage';
+import ProfilePage from '../pages/protected/ProfilePage';
+import AppShell from '../../layout/AppShell';
+
+type RoutedPageId = Exclude<AppRouteId, 'home'>;
+
+const pageRegistry: Record<RoutedPageId, ComponentType> = {
+  'access-denied': AccessDeniedPage,
+  'ai-settings': AiSettingsPage,
+  chat: ChatPage,
+  customers: CustomersPage,
+  dashboard: DashboardPage,
+  leads: LeadsPage,
+  login: LoginPage,
+  logs: LogsPage,
+  'not-found': NotFoundPage,
+  notifications: NotificationsPage,
+  orders: OrdersPage,
+  payments: PaymentsPage,
+  products: ProductsPage,
+  profile: ProfilePage,
+};
+
+function renderRouteElement(route: AppRouteConfig): JSX.Element {
+  if (route.id === 'home') {
+    return <Navigate replace to={routePaths.dashboard} />;
+  }
+
+  const PageComponent = pageRegistry[route.id];
+
+  return (
+    <RouteGate route={route}>
+      <PageComponent />
+    </RouteGate>
+  );
+}
+
+export const appRouter = createBrowserRouter([
+  {
+    path: routePaths.root,
+    element: <Navigate replace to={routePaths.dashboard} />,
+  },
+  ...publicRoutes
+    .filter((route) => route.id !== 'home')
+    .map((route) => ({
+      path: route.path,
+      element: renderRouteElement(route),
+    })),
+  {
+    element: <AppShell />,
+    children: moduleRoutes.map((route) => ({
+      path: route.path,
+      element: renderRouteElement(route),
+    })),
+  },
+  ...fallbackRoutes.map((route) => ({
+    path: route.path,
+    element: renderRouteElement(route),
+  })),
+]);
+

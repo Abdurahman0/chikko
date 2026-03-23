@@ -1,0 +1,123 @@
+import type { Config } from 'tailwindcss';
+
+const variableColor = (name: string) => `rgb(var(${name}) / <alpha-value>)`;
+const fixedVariableColor = (name: string, alpha: number) =>
+  `rgb(var(${name}) / ${alpha})`;
+
+const config: Config = {
+  content: ['./index.html', './src/**/*.{ts,tsx}'],
+  theme: {
+    extend: {
+      fontFamily: {
+        sans: ['"Segoe UI"', 'Tahoma', 'Geneva', 'Verdana', 'sans-serif'],
+        mono: ['"Consolas"', '"Courier New"', 'monospace'],
+      },
+      colors: {
+        primary: {
+          DEFAULT: variableColor('--color-primary'),
+          foreground: variableColor('--color-primary-foreground'),
+          accent: variableColor('--color-primary-accent'),
+          soft: variableColor('--color-primary-soft'),
+          strong: variableColor('--color-primary-strong'),
+        },
+        background: {
+          DEFAULT: variableColor('--color-background-default'),
+          subtle: variableColor('--color-background-subtle'),
+          elevated: variableColor('--color-background-elevated'),
+          inverse: variableColor('--color-background-inverse'),
+          overlay: fixedVariableColor('--color-background-overlay', 0.72),
+          ghost: fixedVariableColor('--color-background-ghost', 0.08),
+        },
+        surface: {
+          DEFAULT: variableColor('--color-surface-default'),
+          subtle: variableColor('--color-surface-subtle'),
+          card: variableColor('--color-surface-card'),
+          muted: variableColor('--color-surface-muted'),
+        },
+        text: {
+          primary: variableColor('--color-text-primary'),
+          secondary: variableColor('--color-text-secondary'),
+          muted: variableColor('--color-text-muted'),
+          accent: variableColor('--color-text-accent'),
+          inverse: variableColor('--color-text-inverse'),
+          'inverse-muted': fixedVariableColor('--color-text-inverse', 0.64),
+          'inverse-soft': fixedVariableColor('--color-text-inverse', 0.84),
+        },
+        border: {
+          soft: variableColor('--color-border-soft'),
+          subtle: variableColor('--color-border-subtle'),
+          accent: variableColor('--color-border-accent'),
+          inverse: variableColor('--color-border-inverse'),
+        },
+        success: {
+          DEFAULT: variableColor('--color-success'),
+          bg: variableColor('--color-success-bg'),
+        },
+        warning: {
+          DEFAULT: variableColor('--color-warning'),
+          bg: variableColor('--color-warning-bg'),
+        },
+        danger: {
+          DEFAULT: variableColor('--color-danger'),
+          bg: variableColor('--color-danger-bg'),
+        },
+        info: {
+          DEFAULT: variableColor('--color-info'),
+          bg: variableColor('--color-info-bg'),
+        },
+        neutral: {
+          DEFAULT: variableColor('--color-neutral'),
+          bg: variableColor('--color-neutral-bg'),
+        },
+      },
+      spacing: {
+        1: '4px',
+        2: '8px',
+        3: '12px',
+        4: '16px',
+        5: '18px',
+        6: '20px',
+        7: '24px',
+        8: '28px',
+        10: '32px',
+      },
+      borderRadius: {
+        sm: '7px',
+        md: '9px',
+        lg: '11px',
+        xl: '14px',
+        pill: '999px',
+      },
+      boxShadow: {
+        sm: '0 0 0 1px rgba(148, 163, 184, 0.06)',
+        md: '0 8px 24px rgba(0, 0, 0, 0.18)',
+      },
+      maxWidth: {
+        page: '1344px',
+        reading: '720px',
+        sidebar: '320px',
+      },
+      width: {
+        sidebar: '320px',
+      },
+      minHeight: {
+        topbar: '72px',
+      },
+      backdropBlur: {
+        shell: '16px',
+      },
+      transitionDuration: {
+        fast: '140ms',
+        base: '180ms',
+      },
+      backgroundImage: {
+        'app-shell': 'none',
+        'surface-card': 'none',
+        'surface-muted': 'none',
+      },
+    },
+  },
+  plugins: [],
+};
+
+export default config;
