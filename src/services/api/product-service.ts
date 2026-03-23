@@ -8,4 +8,13 @@ export const apiProductService: ProductService = {
   async getById() {
     throw createNotImplementedError('ProductService', 'getById');
   },
+  async create() {
+    throw createNotImplementedError('ProductService', 'create');
+  },
+  async update() {
+    throw createNotImplementedError('ProductService', 'update');
+  },
+  async delete() {
+    throw createNotImplementedError('ProductService', 'delete');
+  },
 };

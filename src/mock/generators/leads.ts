@@ -1,6 +1,5 @@
 import {
   LEAD_STATUSES,
-  PLATFORM_CHANNELS,
 } from '../../constants';
 import type { Lead, UserSummary } from '../../types/domain';
 import {
@@ -29,16 +28,19 @@ export function generateMockLeads(
   return Array.from({ length: count }, (_, index) => {
     const { fullName } = createPersonName(index);
     const status = cycleValue(LEAD_STATUSES, index);
+    const source = index % 2 === 0 ? 'instagram' : 'telegram';
+    const username = createUsername(index);
 
     return {
       id: createMockId('lead', index),
       fullName,
-      username: createUsername(index),
+      username,
       contact: {
         phone: createPhoneNumber(index),
-        username: createUsername(index),
+        username,
+        email: source === 'instagram' ? undefined : `${username}@mail.com`,
       },
-      source: cycleValue(PLATFORM_CHANNELS, index),
+      source,
       status,
       assignedOperator: cycleValue(operators, index),
       notesSummary: cycleValue(MOCK_LEAD_NOTES, index),

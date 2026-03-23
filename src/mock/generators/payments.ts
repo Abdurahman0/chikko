@@ -15,10 +15,19 @@ export function generateMockPayments(
 
   return Array.from({ length: count }, (_, index) => {
     const order = orders[index % orders.length]!;
+    const orderPaymentStatus =
+      order.paymentStatus ??
+      (order.status === 'cancelled'
+        ? 'failed'
+        : order.status === 'draft'
+          ? 'unpaid'
+          : order.status === 'waiting_payment' || order.status === 'pending'
+            ? 'pending'
+            : 'paid');
     const isPaidState =
-      order.paymentStatus === 'paid' ||
-      order.paymentStatus === 'refunded' ||
-      order.paymentStatus === 'partially-refunded';
+      orderPaymentStatus === 'paid' ||
+      orderPaymentStatus === 'refunded' ||
+      orderPaymentStatus === 'partially-refunded';
 
     return {
       id: createMockId('payment', index),
@@ -26,8 +35,8 @@ export function generateMockPayments(
       transactionId: `TX-${String(70001 + index)}`,
       method: cycleValue(PAYMENT_METHODS, index),
       amount: order.totalAmount,
-      currency: order.currency,
-      status: order.paymentStatus,
+      currency: order.currency ?? 'USD',
+      status: orderPaymentStatus,
       paidAt: isPaidState ? timestampFromIndex(index, { hourOffset: 1 }) : undefined,
       createdAt: timestampFromIndex(index + 5, { dayStep: 2 }),
       updatedAt: timestampFromIndex(index, { dayStep: 1 }),

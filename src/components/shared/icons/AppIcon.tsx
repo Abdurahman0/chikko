@@ -3,28 +3,37 @@ import type { IconType } from 'react-icons';
 import {
   FiBell,
   FiBox,
+  FiCalendar,
   FiChevronDown,
   FiCreditCard,
+  FiDownload,
   FiFileText,
+  FiFilter,
   FiGrid,
   FiLogOut,
   FiMenu,
   FiMessageSquare,
   FiMoon,
   FiPackage,
+  FiPlus,
   FiSearch,
   FiSettings,
   FiShoppingBag,
   FiSun,
+  FiTrendingDown,
+  FiTrendingUp,
   FiUser,
   FiUsers,
   FiX,
+  FiActivity,
   FiZap,
 } from 'react-icons/fi';
 
 export type AppIconName =
   | 'dashboard'
   | 'profile'
+  | 'users'
+  | 'integrations'
   | 'leads'
   | 'customers'
   | 'products'
@@ -42,7 +51,16 @@ export type AppIconName =
   | 'bell'
   | 'user'
   | 'chevron-down'
-  | 'close';
+  | 'close'
+  | 'calendar'
+  | 'filter'
+  | 'download'
+  | 'log-out'
+  | 'plus'
+  | 'trending-up'
+  | 'trending-down'
+  | 'activity'
+  | 'settings';
 
 interface AppIconProps extends SVGProps<SVGSVGElement> {
   name: AppIconName;
@@ -51,6 +69,8 @@ interface AppIconProps extends SVGProps<SVGSVGElement> {
 const ICON_MAP: Record<AppIconName, IconType> = {
   dashboard: FiGrid,
   profile: FiUser,
+  users: FiUsers,
+  integrations: FiSettings,
   leads: FiFileText,
   customers: FiUsers,
   products: FiBox,
@@ -69,6 +89,15 @@ const ICON_MAP: Record<AppIconName, IconType> = {
   user: FiUser,
   'chevron-down': FiChevronDown,
   close: FiX,
+  calendar: FiCalendar,
+  filter: FiFilter,
+  download: FiDownload,
+  'log-out': FiLogOut,
+  plus: FiPlus,
+  'trending-up': FiTrendingUp,
+  'trending-down': FiTrendingDown,
+  activity: FiActivity,
+  settings: FiSettings,
 };
 
 function AppIcon({ name, className, ...props }: AppIconProps) {

@@ -1,9 +1,9 @@
 import type { ProfileService } from '../core/contracts';
-import { mockDataStore } from './dataset';
+import { mockAuthService } from '../../auth/mock-auth-service';
 import { withMockDelay } from './helpers';
 
 export const mockProfileService: ProfileService = {
   async getCurrentUser() {
-    return withMockDelay(mockDataStore.currentUser, 140);
+    return withMockDelay(mockAuthService.getCurrentUser(), 140);
   },
 };

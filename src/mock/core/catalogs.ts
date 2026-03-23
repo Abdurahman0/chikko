@@ -9,6 +9,16 @@ export const MOCK_FIRST_NAMES = [
   'Nodira',
   'Kamila',
   'Sardor',
+  'Zarina',
+  'Otabek',
+  'Gulnara',
+  'Sherzod',
+  'Dilorom',
+  'Rustam',
+  'Nilufar',
+  'Farrukh',
+  'Lola',
+  'Bobur',
 ] as const;
 
 export const MOCK_LAST_NAMES = [
@@ -22,58 +32,68 @@ export const MOCK_LAST_NAMES = [
   'Akhmedova',
   'Nasriddinov',
   'Khalilova',
+  'Khodjaev',
+  'Ergasheva',
+  'Abdullaev',
+  'Mirzaeva',
+  'Sobirov',
+  'Jumayeva',
+  'Normatov',
+  'Rahimova',
+  'Haydarov',
+  'Sultanova',
 ] as const;
 
 export const MOCK_PRODUCT_CATEGORIES = [
-  'Skincare',
-  'Supplements',
-  'Accessories',
-  'Home',
-  'Beauty',
-  'Wellness',
+  'Teri parvarishi',
+  "Qo'shimchalar",
+  'Aksessuarlar',
+  'Uy uchun',
+  "Go'zallik",
+  "Sog'lom turmush",
 ] as const;
 
 export const MOCK_TAGS = [
-  'priority',
-  'follow-up',
+  'ustuvor',
+  'qayta-aloqa',
   'vip',
-  'repeat',
-  'new-source',
-  'warm',
+  'takroriy',
+  'yangi-manba',
+  'issiq',
 ] as const;
 
 export const MOCK_SEGMENTS = [
-  'new',
-  'returning',
+  'yangi',
+  'qaytuvchi',
   'vip',
-  'wholesale',
+  'ulgurji',
 ] as const;
 
 export const MOCK_LEAD_NOTES = [
-  'Asked about pricing and delivery timing.',
-  'Requested a follow-up message later today.',
-  'Interested in bundle options for a first order.',
-  'Needs confirmation before moving forward.',
+  "Narx va yetkazib berish muddatini so'radi.",
+  "Bugun keyinroq qayta aloqa xabarini so'radi.",
+  'Birinchi buyurtma uchun paket variantlariga qiziqdi.',
+  'Davom etishdan oldin tasdiq kerak.',
 ] as const;
 
 export const MOCK_ORDER_NOTES = [
-  'Customer requested a delivery update.',
-  'Order needs confirmation before dispatch.',
-  'Operator flagged this order for quick follow-up.',
-  'Requested alternative payment method details.',
+  "Mijoz yetkazib berish holati yangilanishini so'radi.",
+  "Jo'natishdan oldin buyurtmani tasdiqlash kerak.",
+  'Operator tezkor qayta aloqa uchun ushbu buyurtmani belgiladi.',
+  "Muqobil to'lov usuli tafsilotlarini so'radi.",
 ] as const;
 
 export const MOCK_CHAT_PREVIEWS = [
-  'Can you share available sizes?',
-  'Please confirm the payment status.',
-  'I want to reorder the previous item.',
-  'Send me the updated delivery estimate.',
+  "Mavjud o'lchamlarni yubora olasizmi?",
+  "To'lov holatini tasdiqlab bering.",
+  'Oldingi mahsulotni qayta buyurtma qilmoqchiman.',
+  'Yangilangan yetkazib berish muddatini yuboring.',
 ] as const;
 
 export const MOCK_MESSAGE_SNIPPETS = [
-  'Thanks, I am checking that for you now.',
-  'Please confirm the quantity you want to order.',
-  'The team can arrange delivery tomorrow.',
-  'I have sent the latest offer in the chat.',
-  'We are preparing the next update for this request.',
+  'Rahmat, hozir siz uchun tekshirib chiqyapman.',
+  'Iltimos, buyurtma miqdorini tasdiqlang.',
+  'Jamoa ertaga yetkazib berishni tashkil qilishi mumkin.',
+  "So'nggi taklifni chatga yubordim.",
+  "Ushbu so'rov bo'yicha keyingi yangilanishni tayyorlayapmiz.",
 ] as const;

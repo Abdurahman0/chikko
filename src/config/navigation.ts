@@ -11,6 +11,8 @@ export type NavigationGroupId =
 export type NavigationIconKey =
   | 'dashboard'
   | 'profile'
+  | 'users'
+  | 'integrations'
   | 'leads'
   | 'customers'
   | 'products'
@@ -85,7 +87,7 @@ const navigationBlueprints: NavigationItemBlueprint[] = [
     group: 'main',
     sortOrder: 1,
     iconKey: 'dashboard',
-    permissionKey: 'dashboard.view',
+    permissionKey: 'can_view_dashboard',
     visibilityNote:
       'Shown broadly. Operator visibility should later remain backend-permission driven.',
   },
@@ -101,65 +103,77 @@ const navigationBlueprints: NavigationItemBlueprint[] = [
     group: 'operations',
     sortOrder: 1,
     iconKey: 'leads',
-    permissionKey: 'leads.view',
+    permissionKey: 'can_view_leads',
   },
   {
     routeId: 'customers',
     group: 'operations',
     sortOrder: 2,
     iconKey: 'customers',
-    permissionKey: 'customers.view',
+    permissionKey: 'can_view_customers',
   },
   {
     routeId: 'products',
     group: 'operations',
     sortOrder: 3,
     iconKey: 'products',
-    permissionKey: 'products.view',
+    permissionKey: 'can_view_products',
   },
   {
     routeId: 'orders',
     group: 'operations',
     sortOrder: 4,
     iconKey: 'orders',
-    permissionKey: 'orders.view',
+    permissionKey: 'can_view_orders',
   },
   {
     routeId: 'payments',
     group: 'operations',
     sortOrder: 5,
     iconKey: 'payments',
-    permissionKey: 'payments.view',
+    permissionKey: 'can_view_payments',
   },
   {
     routeId: 'chat',
     group: 'communication',
     sortOrder: 1,
     iconKey: 'chat',
-    permissionKey: 'chat.view',
+    permissionKey: 'can_chat',
   },
   {
     routeId: 'notifications',
     group: 'communication',
     sortOrder: 2,
     iconKey: 'notifications',
-    permissionKey: 'notifications.view',
+    permissionKey: 'can_view_notifications',
+  },
+  {
+    routeId: 'users',
+    group: 'system',
+    sortOrder: 1,
+    iconKey: 'users',
+    permissionKey: 'can_manage_users',
+  },
+  {
+    routeId: 'integrations',
+    group: 'system',
+    sortOrder: 2,
+    iconKey: 'integrations',
+    permissionKey: 'can_manage_integrations',
   },
   {
     routeId: 'ai-settings',
     group: 'system',
-    sortOrder: 1,
+    sortOrder: 3,
     iconKey: 'ai-settings',
-    permissionKey: 'ai-settings.view',
     visibilityNote:
       'Developer-focused module. Admin should not be treated as having developer-level visibility here.',
   },
   {
     routeId: 'logs',
     group: 'system',
-    sortOrder: 2,
+    sortOrder: 4,
     iconKey: 'logs',
-    permissionKey: 'logs.view',
     visibilityNote:
       'Developer-focused module. Operator access, if ever allowed later, should be permission-driven.',
   },

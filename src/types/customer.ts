@@ -6,6 +6,8 @@ import type {
   EntityId,
   TimestampString,
 } from './common';
+import type { LeadSummary } from './lead';
+import type { UserSummary } from './user';
 
 export interface CustomerSummary {
   id: EntityId;
@@ -20,6 +22,10 @@ export interface Customer extends AuditInfo {
   username?: string;
   contact: ContactInfo;
   address?: AddressInfo;
+  notes?: string;
+  metadata?: Record<string, string | number | boolean | null>;
+  lead?: LeadSummary;
+  assignedOperator?: UserSummary;
   segments?: string[];
   totalOrders: number;
   totalSpent: number;

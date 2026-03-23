@@ -3,7 +3,7 @@ import {
   MOCK_LAST_NAMES,
 } from './catalogs';
 
-const MOCK_BASE_DATE = new Date('2026-02-15T10:00:00.000Z');
+const MOCK_BASE_DATE = new Date();
 
 export function createMockId(prefix: string, index: number): string {
   return `${prefix}-${String(index + 1).padStart(3, '0')}`;

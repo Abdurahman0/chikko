@@ -1,4 +1,5 @@
 import type { AppRouteConfig } from '../../config/routes';
+import { useTranslation } from 'react-i18next';
 import {
   EmptyState,
   LoadingState,
@@ -20,17 +21,34 @@ interface PagePlaceholderProps {
 function PagePlaceholder({
   route,
   summary,
-  sectionTitle = 'Page Foundation',
-  sectionDescription = 'This placeholder demonstrates the shared page composition pattern for future module pages.',
-  emptyStateTitle = 'No module-specific UI yet',
-  emptyStateDescription = 'Future tasks can replace this empty state with real content while keeping the same layout, section, and card structure.',
+  sectionTitle,
+  sectionDescription,
+  emptyStateTitle,
+  emptyStateDescription,
 }: PagePlaceholderProps) {
+  const { t } = useTranslation();
+  const resolvedSectionTitle =
+    sectionTitle ?? t('shared.placeholder.sectionTitle');
+  const resolvedSectionDescription =
+    sectionDescription ?? t('shared.placeholder.sectionDescription');
+  const resolvedEmptyStateTitle =
+    emptyStateTitle ?? t('shared.placeholder.emptyTitle');
+  const resolvedEmptyStateDescription =
+    emptyStateDescription ?? t('shared.placeholder.emptyDescription');
+  const translatedRouteTitle = t(`routes.${route.id}.title`, {
+    defaultValue: route.title,
+  });
+
   const content = (
     <PageLayout
       header={
         <PageHeader
-          eyebrow={route.access === 'public' ? 'Public Route' : 'Protected Route'}
-          title={route.title}
+          eyebrow={
+            route.access === 'public'
+              ? t('shared.placeholder.publicRoute')
+              : t('shared.placeholder.protectedRoute')
+          }
+          title={translatedRouteTitle}
           subtitle={summary}
           actions={
             <span className="inline-flex rounded-pill border border-border-accent bg-primary-soft px-[10px] py-[6px] font-mono text-[0.95rem] text-text-accent">
@@ -40,23 +58,34 @@ function PagePlaceholder({
         />
       }
     >
-      <PageSection title={sectionTitle} description={sectionDescription}>
+      <PageSection
+        title={resolvedSectionTitle}
+        description={resolvedSectionDescription}
+      >
         <PageCard>
           <dl className="mt-7 grid grid-cols-[repeat(auto-fit,minmax(140px,1fr))] gap-4">
             <div className="rounded-lg border border-border-subtle bg-background-subtle p-4">
-              <dt className="text-[0.85rem] text-text-muted">Route ID</dt>
+              <dt className="text-[0.85rem] text-text-muted">
+                {t('shared.placeholder.routeId')}
+              </dt>
               <dd className="mt-2 text-[1.8rem] font-bold text-text-primary">
                 {route.id}
               </dd>
             </div>
             <div className="rounded-lg border border-border-subtle bg-background-subtle p-4">
-              <dt className="text-[0.85rem] text-text-muted">Navigation</dt>
+              <dt className="text-[0.85rem] text-text-muted">
+                {t('shared.placeholder.navigation')}
+              </dt>
               <dd className="mt-2 text-[1.8rem] font-bold text-text-primary">
-                {route.showInNavigation ? 'Listed' : 'Hidden'}
+                {route.showInNavigation
+                  ? t('shared.placeholder.listed')
+                  : t('shared.placeholder.hidden')}
               </dd>
             </div>
             <div className="rounded-lg border border-border-subtle bg-background-subtle p-4">
-              <dt className="text-[0.85rem] text-text-muted">Access</dt>
+              <dt className="text-[0.85rem] text-text-muted">
+                {t('shared.placeholder.access')}
+              </dt>
               <dd className="mt-2 text-[1.8rem] font-bold text-text-primary">
                 {route.access}
               </dd>
@@ -64,28 +93,30 @@ function PagePlaceholder({
           </dl>
           {route.allowedRoles ? (
             <p className="mt-4 text-text-secondary">
-              Allowed roles: <strong>{route.allowedRoles.join(', ')}</strong>
+              {t('shared.placeholder.allowedRoles')}:{' '}
+              <strong>{route.allowedRoles.join(', ')}</strong>
             </p>
           ) : null}
           {route.accessStrategy ? (
             <p className="mt-4 text-text-secondary">
-              Access strategy: <strong>{route.accessStrategy}</strong>
+              {t('shared.placeholder.accessStrategy')}:{' '}
+              <strong>{route.accessStrategy}</strong>
             </p>
           ) : null}
         </PageCard>
       </PageSection>
 
-      <PageSection title="Next Page State">
+      <PageSection title={t('shared.placeholder.nextStateTitle')}>
         <EmptyState
-          title={emptyStateTitle}
-          description={emptyStateDescription}
+          title={resolvedEmptyStateTitle}
+          description={resolvedEmptyStateDescription}
         />
       </PageSection>
 
-      <PageSection title="Loading Pattern">
+      <PageSection title={t('shared.placeholder.loadingPatternTitle')}>
         <LoadingState
-          title="Future data load placeholder"
-          description="When services or hooks are connected later, this loading state is the intended shared fallback while data is resolving."
+          title={t('shared.placeholder.loadingPatternHeading')}
+          description={t('shared.placeholder.loadingPatternDescription')}
         />
       </PageSection>
     </PageLayout>

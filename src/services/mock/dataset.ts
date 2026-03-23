@@ -1,4 +1,5 @@
 import {
+  DASHBOARD_MOCK_SCENARIO_COUNT,
   generateMockChatMessages,
   generateMockConversations,
   generateMockCustomers,
@@ -22,19 +23,19 @@ import type {
   Product,
 } from '../../types/domain';
 
-const users = generateMockUsers(6);
+const users = generateMockUsers(10);
 const operators = users.filter((user) => user.role === 'operator');
-const leads = generateMockLeads(14, { operators });
-const customers = generateMockCustomers(10);
-const products = generateMockProducts(12);
-const orders = generateMockOrders(12, { customers, products, operators });
-const payments = generateMockPayments(12, { orders });
-const conversations = generateMockConversations(10, {
+const leads = generateMockLeads(48, { operators });
+const customers = generateMockCustomers(42, { operators, leads });
+const products = generateMockProducts(44);
+const orders = generateMockOrders(36, { customers, leads, products });
+const payments = generateMockPayments(24, { orders });
+const conversations = generateMockConversations(15, {
   leads,
   customers,
   operators,
 });
-let notifications = generateMockNotifications(10, {
+let notifications = generateMockNotifications(20, {
   leads,
   orders,
   conversations,
@@ -46,6 +47,7 @@ const messagesByConversationId = new Map<string, ChatMessage[]>(
     generateMockChatMessages(conversation.id, 5 + (index % 3)),
   ]),
 );
+let dashboardScenarioCursor = 0;
 
 export const mockDataStore = {
   users,
@@ -67,10 +69,10 @@ export const mockDataStore = {
 };
 
 export function getMockDashboardOverview() {
-  return generateMockDashboardOverview({
-    leads: mockDataStore.leads,
-    customers: mockDataStore.customers,
-    orders: mockDataStore.orders,
-    notifications: mockDataStore.notifications,
+  const next = generateMockDashboardOverview({
+    scenarioIndex: dashboardScenarioCursor,
   });
+  dashboardScenarioCursor =
+    (dashboardScenarioCursor + 1) % DASHBOARD_MOCK_SCENARIO_COUNT;
+  return next;
 }

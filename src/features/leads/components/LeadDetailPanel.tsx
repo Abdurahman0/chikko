@@ -1,11 +1,9 @@
 import { useEffect, useState } from 'react';
-import {
-  LEAD_STATUS_LABELS,
-  PLATFORM_CHANNEL_LABELS,
-} from '../../../constants';
+import { useTranslation } from 'react-i18next';
 import { StatusBadge } from '../../../components/shared/data';
 import AppIcon from '../../../components/shared/icons/AppIcon';
 import { EmptyState, LoadingState, PageCard } from '../../../components/shared/page';
+import { getChannelLabel, getLeadStatusLabel } from '../../../i18n/labels';
 import { services } from '../../../services';
 import type { EntityId, Lead } from '../../../types/domain';
 
@@ -14,33 +12,30 @@ interface LeadDetailPanelProps {
   onClose: () => void;
 }
 
-const detailSectionTitleClassName =
-  'm-0 text-[1rem] font-semibold leading-tight text-text-primary';
+const labelClassName =
+  'text-[11px] font-semibold uppercase tracking-[0.12em] text-text-muted';
 
-const detailSectionDescriptionClassName =
-  'mt-1.5 max-w-[52ch] text-[13px] leading-5 text-text-secondary';
+const valueClassName =
+  'text-sm font-semibold text-text-primary [overflow-wrap:anywhere]';
 
-const detailListRowBaseClassName =
-  'm-0 flex flex-col items-start justify-between gap-2 border-b border-border-subtle pb-3 min-[641px]:flex-row min-[641px]:items-start min-[641px]:gap-4';
-
-const detailChipClassName =
-  'inline-flex min-h-8 items-center gap-2 rounded-pill border border-border-soft bg-background-elevated/88 px-3 text-[12px] font-semibold text-text-secondary shadow-sm';
-
-const detailSoftChipClassName =
-  'inline-flex min-h-8 items-center gap-2 rounded-pill border border-border-soft bg-background-subtle/90 px-3 text-[12px] font-semibold text-text-secondary shadow-sm';
-
-function formatDateTime(timestamp?: string): string {
+function formatDateTime(
+  timestamp: string | undefined,
+  locale: string,
+  fallback: string,
+): string {
   if (!timestamp) {
-    return 'Unavailable';
+    return fallback;
   }
 
-  return new Intl.DateTimeFormat('en-US', {
+  return new Intl.DateTimeFormat(locale, {
     dateStyle: 'medium',
     timeStyle: 'short',
   }).format(new Date(timestamp));
 }
 
 function LeadDetailPanel({ leadId, onClose }: LeadDetailPanelProps) {
+  const { t, i18n } = useTranslation();
+  const locale = i18n.language === 'ru' ? 'ru-RU' : 'uz-UZ';
   const [lead, setLead] = useState<Lead | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
@@ -97,101 +92,161 @@ function LeadDetailPanel({ leadId, onClose }: LeadDetailPanelProps) {
 
   return (
     <div
-      className="fixed inset-0 z-40 flex justify-end bg-background-overlay/80 backdrop-blur-[2px]"
+      className="fixed inset-0 z-40 flex justify-end bg-background-overlay/72 backdrop-blur-[3px]"
       onClick={onClose}
       role="presentation"
     >
       <aside
-        className="h-full w-full overflow-y-auto border-l border-border-soft bg-surface-card p-4 shadow-md min-[641px]:max-w-[440px] min-[641px]:p-5"
+        className="h-full w-full overflow-y-auto bg-background-subtle p-4 shadow-xl ring-1 ring-border-soft/50 min-[641px]:max-w-[460px] min-[641px]:p-5"
         onClick={(event) => event.stopPropagation()}
-        aria-label="Lead details"
+        aria-label={t('leads.detail.ariaLabel')}
       >
-        <div className="mb-5 flex flex-wrap items-start justify-between gap-3 border-b border-border-subtle pb-4">
-          <div className="min-w-0">
-            <p className="mb-1.5 text-[11px] font-bold uppercase tracking-[0.14em] text-primary">
-              Lead details
-            </p>
-            <h2 className="m-0 text-[clamp(1.2rem,2.8vw,1.55rem)] leading-[1.08] text-text-primary [overflow-wrap:anywhere]">
-              {lead?.fullName ?? 'Lead details'}
-            </h2>
-            {!isLoading && lead ? (
-              <div className="mt-3 flex flex-wrap items-center gap-2">
-                <span className={detailSoftChipClassName}>
-                  <AppIcon name="chat" className="h-3.5 w-3.5" aria-hidden="true" />
-                  {PLATFORM_CHANNEL_LABELS[lead.source]}
-                </span>
-                <span className={detailChipClassName}>
-                  <AppIcon name="user" className="h-3.5 w-3.5" aria-hidden="true" />
-                  {lead.assignedOperator?.fullName ?? 'Unassigned'}
-                </span>
-              </div>
-            ) : null}
-          </div>
-          <button
-            type="button"
-            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-border-soft bg-background-elevated/88 text-text-primary shadow-sm transition duration-fast hover:bg-surface-card focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/10"
-            onClick={onClose}
-            aria-label="Close lead details"
-          >
-            <AppIcon name="close" className="h-4.5 w-4.5" aria-hidden="true" />
-          </button>
-        </div>
+        <header className="mb-4 rounded-xl bg-surface-card p-4 shadow-sm ring-1 ring-border-soft/40 transition duration-base hover:shadow-md hover:ring-border-soft/60">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="m-0 text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">
+                {t('leads.detail.profile')}
+              </p>
+              <h2 className="mt-1 font-display text-[1.55rem] font-extrabold leading-[1.05] tracking-[-0.03em] text-text-primary [overflow-wrap:anywhere]">
+                {lead?.fullName ?? t('leads.detail.titleFallback')}
+              </h2>
+              {!isLoading && lead ? (
+                <p className="mt-1 text-sm text-text-secondary [overflow-wrap:anywhere]">
+                  @
+                  {lead.username ??
+                    lead.contact.username ??
+                    t('leads.unknownHandle')}
+                </p>
+              ) : null}
+            </div>
 
-        <div className="grid min-h-full min-w-0 gap-4">
+            <button
+              type="button"
+              className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-surface-subtle text-text-primary shadow-sm transition duration-fast hover:bg-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20"
+              onClick={onClose}
+              aria-label={t('leads.detail.close')}
+            >
+              <AppIcon name="close" className="h-4.5 w-4.5" aria-hidden="true" />
+            </button>
+          </div>
+
+          {!isLoading && lead ? (
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <StatusBadge
+                status={lead.status}
+                label={getLeadStatusLabel(t, lead.status)}
+              />
+              <span className="inline-flex min-h-7 items-center gap-1.5 rounded-pill bg-info-bg px-2.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-info">
+                <AppIcon name="chat" className="h-3.5 w-3.5" aria-hidden="true" />
+                {getChannelLabel(t, lead.source)}
+              </span>
+            </div>
+          ) : null}
+        </header>
+
+        <div className="grid gap-3">
           {isLoading ? (
             <LoadingState
-              title="Loading lead details"
-              description="Lead detail data is being requested from the active leads service."
+              title={t('leads.detail.loadingTitle')}
+              description={t('leads.detail.loadingDescription')}
             />
           ) : null}
 
           {!isLoading && (hasError || !lead) ? (
             <EmptyState
-              title="Lead details are unavailable"
-              description="The selected lead could not be loaded from the service layer."
+              title={t('leads.detail.errorTitle')}
+              description={t('leads.detail.errorDescription')}
             />
           ) : null}
 
           {!isLoading && lead ? (
             <>
               <PageCard>
-                <div className="grid gap-5">
-                  <div className="flex flex-wrap items-center justify-between gap-4 border-b border-border-subtle pb-3.5">
-                    <div>
-                      <h3 className={detailSectionTitleClassName}>{lead.fullName}</h3>
-                      <p className={detailSectionDescriptionClassName}>
-                        {lead.username ?? lead.contact.username ?? 'No public handle'}
+                <div className="grid gap-4">
+                  <div className="grid gap-1">
+                    <h3 className="m-0 text-[1rem] font-semibold text-text-primary">
+                      {t('leads.detail.contactTitle')}
+                    </h3>
+                    <p className="m-0 text-sm text-text-secondary">
+                      {t('leads.detail.contactDescription')}
+                    </p>
+                  </div>
+
+                  <div className="grid gap-2.5 sm:grid-cols-2">
+                    <div className="rounded-lg bg-surface-subtle/80 p-3">
+                      <p className={labelClassName}>{t('leads.detail.phone')}</p>
+                      <p className={`mt-1 ${valueClassName}`}>
+                        {lead.contact.phone ?? t('common.na')}
                       </p>
                     </div>
-                    <StatusBadge
-                      status={lead.status}
-                      label={LEAD_STATUS_LABELS[lead.status]}
-                    />
+                    <div className="rounded-lg bg-surface-subtle/80 p-3">
+                      <p className={labelClassName}>{t('leads.detail.email')}</p>
+                      <p className={`mt-1 ${valueClassName}`}>
+                        {lead.contact.email ?? t('common.na')}
+                      </p>
+                    </div>
+                    <div className="rounded-lg bg-surface-subtle/80 p-3">
+                      <p className={labelClassName}>{t('leads.detail.source')}</p>
+                      <p className={`mt-1 ${valueClassName}`}>
+                        {getChannelLabel(t, lead.source)}
+                      </p>
+                    </div>
+                    <div className="rounded-lg bg-surface-subtle/80 p-3">
+                      <p className={labelClassName}>{t('leads.detail.owner')}</p>
+                      <p className={`mt-1 ${valueClassName}`}>
+                        {lead.assignedOperator?.fullName ?? t('common.unassigned')}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </PageCard>
+
+              <PageCard>
+                <div className="grid gap-4">
+                  <div className="grid gap-1">
+                    <h3 className="m-0 text-[1rem] font-semibold text-text-primary">
+                      {t('leads.detail.activityTitle')}
+                    </h3>
+                    <p className="m-0 text-sm text-text-secondary">
+                      {t('leads.detail.activityDescription')}
+                    </p>
                   </div>
 
-                  <dl className="m-0 grid gap-3.5">
-                    <div className={detailListRowBaseClassName}>
-                      <dt className="m-0 text-sm text-text-secondary">Phone</dt>
-                      <dd className="m-0 text-sm font-semibold text-text-primary min-[641px]:text-right">
-                        {lead.contact.phone ?? 'Unavailable'}
+                  <dl className="m-0 grid gap-2">
+                    <div className="flex items-center justify-between gap-3 rounded-lg bg-surface-subtle/80 px-3 py-2.5">
+                      <dt className={labelClassName}>{t('leads.detail.created')}</dt>
+                      <dd className={`m-0 ${valueClassName}`}>
+                        {formatDateTime(lead.createdAt, locale, t('common.na'))}
                       </dd>
                     </div>
-                    <div className={detailListRowBaseClassName}>
-                      <dt className="m-0 text-sm text-text-secondary">Email</dt>
-                      <dd className="m-0 text-sm font-semibold text-text-primary min-[641px]:text-right">
-                        {lead.contact.email ?? 'Unavailable'}
+                    <div className="flex items-center justify-between gap-3 rounded-lg bg-surface-subtle/80 px-3 py-2.5">
+                      <dt className={labelClassName}>{t('leads.detail.updated')}</dt>
+                      <dd className={`m-0 ${valueClassName}`}>
+                        {formatDateTime(lead.updatedAt, locale, t('common.na'))}
                       </dd>
                     </div>
-                    <div className={detailListRowBaseClassName}>
-                      <dt className="m-0 text-sm text-text-secondary">Source</dt>
-                      <dd className="m-0 text-sm font-semibold text-text-primary min-[641px]:text-right">
-                        {PLATFORM_CHANNEL_LABELS[lead.source]}
+                    <div className="flex items-center justify-between gap-3 rounded-lg bg-surface-subtle/80 px-3 py-2.5">
+                      <dt className={labelClassName}>{t('leads.detail.lastContact')}</dt>
+                      <dd className={`m-0 ${valueClassName}`}>
+                        {formatDateTime(lead.lastContactAt, locale, t('common.na'))}
                       </dd>
                     </div>
-                    <div className="m-0 flex flex-col items-start justify-between gap-2 min-[641px]:flex-row min-[641px]:items-start min-[641px]:gap-4">
-                      <dt className="m-0 text-sm text-text-secondary">Owner</dt>
-                      <dd className="m-0 text-sm font-semibold text-text-primary min-[641px]:text-right">
-                        {lead.assignedOperator?.fullName ?? 'Unassigned'}
+                    <div className="flex items-center justify-between gap-3 rounded-lg bg-surface-subtle/80 px-3 py-2.5">
+                      <dt className={labelClassName}>{t('leads.detail.lastMessage')}</dt>
+                      <dd className={`m-0 ${valueClassName}`}>
+                        {formatDateTime(lead.lastMessageAt, locale, t('common.na'))}
+                      </dd>
+                    </div>
+                    <div className="flex items-center justify-between gap-3 rounded-lg bg-surface-subtle/80 px-3 py-2.5">
+                      <dt className={labelClassName}>{t('leads.detail.leadReplied')}</dt>
+                      <dd className={`m-0 ${valueClassName}`}>
+                        {lead.replied ? t('common.yes') : t('common.no')}
+                      </dd>
+                    </div>
+                    <div className="flex items-center justify-between gap-3 rounded-lg bg-surface-subtle/80 px-3 py-2.5">
+                      <dt className={labelClassName}>{t('leads.detail.dmSent')}</dt>
+                      <dd className={`m-0 ${valueClassName}`}>
+                        {lead.dmSent ? t('common.yes') : t('common.no')}
                       </dd>
                     </div>
                   </dl>
@@ -199,77 +254,28 @@ function LeadDetailPanel({ leadId, onClose }: LeadDetailPanelProps) {
               </PageCard>
 
               <PageCard>
-                <div className="grid gap-5">
-                  <div className="grid gap-2">
-                    <h3 className={detailSectionTitleClassName}>Activity</h3>
-                    <p className={detailSectionDescriptionClassName}>
-                      Recent timestamps and response signals.
+                <div className="grid gap-4">
+                  <div className="grid gap-1">
+                    <h3 className="m-0 text-[1rem] font-semibold text-text-primary">
+                      {t('leads.detail.notesTitle')}
+                    </h3>
+                    <p className="m-0 text-sm text-text-secondary">
+                      {t('leads.detail.notesDescription')}
                     </p>
                   </div>
 
-                  <dl className="m-0 grid gap-3.5">
-                    <div className={detailListRowBaseClassName}>
-                      <dt className="m-0 text-sm text-text-secondary">Created</dt>
-                      <dd className="m-0 text-sm font-semibold text-text-primary min-[641px]:text-right">
-                        {formatDateTime(lead.createdAt)}
-                      </dd>
-                    </div>
-                    <div className={detailListRowBaseClassName}>
-                      <dt className="m-0 text-sm text-text-secondary">Updated</dt>
-                      <dd className="m-0 text-sm font-semibold text-text-primary min-[641px]:text-right">
-                        {formatDateTime(lead.updatedAt)}
-                      </dd>
-                    </div>
-                    <div className={detailListRowBaseClassName}>
-                      <dt className="m-0 text-sm text-text-secondary">Last contact</dt>
-                      <dd className="m-0 text-sm font-semibold text-text-primary min-[641px]:text-right">
-                        {formatDateTime(lead.lastContactAt)}
-                      </dd>
-                    </div>
-                    <div className={detailListRowBaseClassName}>
-                      <dt className="m-0 text-sm text-text-secondary">Last message</dt>
-                      <dd className="m-0 text-sm font-semibold text-text-primary min-[641px]:text-right">
-                        {formatDateTime(lead.lastMessageAt)}
-                      </dd>
-                    </div>
-                    <div className={detailListRowBaseClassName}>
-                      <dt className="m-0 text-sm text-text-secondary">Lead replied</dt>
-                      <dd className="m-0 text-sm font-semibold text-text-primary min-[641px]:text-right">
-                        {lead.replied ? 'Yes' : 'No'}
-                      </dd>
-                    </div>
-                    <div className="m-0 flex flex-col items-start justify-between gap-2 min-[641px]:flex-row min-[641px]:items-start min-[641px]:gap-4">
-                      <dt className="m-0 text-sm text-text-secondary">DM sent</dt>
-                      <dd className="m-0 text-sm font-semibold text-text-primary min-[641px]:text-right">
-                        {lead.dmSent ? 'Yes' : 'No'}
-                      </dd>
-                    </div>
-                  </dl>
-                </div>
-              </PageCard>
-
-              <PageCard>
-                <div className="grid gap-5">
-                  <div className="grid gap-2">
-                    <h3 className={detailSectionTitleClassName}>Notes</h3>
-                    <p className={detailSectionDescriptionClassName}>
-                      Quick context before follow-up.
-                    </p>
-                  </div>
-
-                  <div className="rounded-xl border border-border-subtle bg-surface-muted p-3.5">
+                  <div className="rounded-lg bg-surface-subtle/80 p-3.5">
                     <p className="m-0 text-sm leading-6 text-text-secondary [overflow-wrap:anywhere]">
-                      {lead.notesSummary ??
-                        'No notes are available for this lead yet.'}
+                      {lead.notesSummary ?? t('leads.detail.noNotes')}
                     </p>
                   </div>
 
                   {lead.tags?.length ? (
-                    <div className="flex flex-wrap gap-2 pt-0.5">
+                    <div className="flex flex-wrap gap-2">
                       {lead.tags.map((tag) => (
                         <span
                           key={tag}
-                          className="inline-flex min-h-7 max-w-full items-center rounded-pill border border-border-accent bg-primary-soft px-3 text-[11px] font-semibold uppercase tracking-[0.06em] text-text-accent [overflow-wrap:anywhere]"
+                          className="inline-flex min-h-7 max-w-full items-center rounded-pill bg-primary/12 px-3 text-[11px] font-semibold uppercase tracking-[0.07em] text-text-accent [overflow-wrap:anywhere]"
                         >
                           {tag}
                         </span>

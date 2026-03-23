@@ -1,6 +1,9 @@
+import { useMemo } from 'react';
 import { NavLink } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { navigationGroups, type NavigationIconKey } from '../config/navigation';
 import AppIcon from '../components/shared/icons/AppIcon';
+import { useAuth } from '../auth';
 
 interface AppSidebarProps {
   isOpen: boolean;
@@ -13,6 +16,8 @@ const navigationItemMeta: Record<
 > = {
   dashboard: { caption: 'Overview' },
   profile: { caption: 'Account', label: 'Profile' },
+  users: { caption: 'Access' },
+  integrations: { caption: 'Connections' },
   leads: { caption: 'Pipeline' },
   customers: { caption: 'Accounts' },
   products: { caption: 'Catalog' },
@@ -25,45 +30,64 @@ const navigationItemMeta: Record<
 };
 
 const closeButtonClassName = [
-  'inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg border border-border-soft bg-background-elevated/80 text-text-secondary transition',
-  'duration-fast hover:border-border-accent hover:bg-primary/10 hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/25 focus-visible:ring-offset-0',
+  'inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg bg-surface-card/80 text-text-secondary transition',
+  'duration-fast hover:bg-primary/10 hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/25 focus-visible:ring-offset-0',
   'min-[960px]:hidden',
 ].join(' ');
 
 const groupLabelClassName =
-  'mb-2 px-2 text-[11px] font-bold uppercase tracking-[0.14em] text-text-muted';
+  'mb-2 mt-1 px-2 text-[10px] font-bold uppercase tracking-[0.16em] text-text-muted/90';
 
 const navLinkBaseClassName = [
-  'group block rounded-xl border px-3 py-2.5 text-text-secondary no-underline transition duration-fast',
+  'group block rounded-xl px-3 py-2.5 text-text-secondary no-underline transition duration-fast',
   'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/25 focus-visible:ring-offset-0',
 ].join(' ');
 
 const navLinkInactiveClassName = [
-  'border-transparent hover:border-border-soft hover:bg-background-subtle hover:text-text-primary',
+  'hover:bg-surface-card/85 hover:text-text-primary',
 ].join(' ');
 
 const navLinkActiveClassName = [
-  'border-border-accent bg-primary/10 text-text-primary shadow-sm',
+  'bg-primary/10 text-text-accent shadow-sm ring-1 ring-primary/20',
 ].join(' ');
 
 function AppSidebar({ isOpen, onClose }: AppSidebarProps) {
+  const { t } = useTranslation();
+  const { canAccessRoute } = useAuth();
+
+  const visibleNavigationGroups = useMemo(
+    () =>
+      navigationGroups
+        .map((group) => ({
+          ...group,
+          items: group.items.filter((item) => canAccessRoute(item.id)),
+        }))
+        .filter((group) => group.items.length > 0),
+    [canAccessRoute],
+  );
+
   return (
     <aside
       className={[
-        'fixed inset-y-0 left-0 z-30 flex w-[84vw] max-w-sidebar flex-col border-r border-border-soft',
-        'bg-surface-card px-3 pb-3 pt-4 text-text-primary shadow-md transition-transform duration-base',
+        'fixed inset-y-0 left-0 z-50 flex w-[84vw] max-w-sidebar flex-col overflow-hidden',
+        'bg-background-subtle/95 px-3 pb-4 pt-4 text-text-primary shadow-[18px_0_42px_-30px_rgba(25,28,30,0.22)] backdrop-blur-shell transition-transform duration-base',
         isOpen ? 'translate-x-0' : '-translate-x-full',
-        'min-[960px]:sticky min-[960px]:top-0 min-[960px]:h-screen min-[960px]:w-sidebar min-[960px]:max-w-none min-[960px]:shrink-0 min-[960px]:translate-x-0',
+        'min-[960px]:sticky min-[960px]:top-0 min-[960px]:self-start min-[960px]:h-[100dvh] min-[960px]:w-sidebar min-[960px]:max-w-none min-[960px]:shrink-0 min-[960px]:translate-x-0',
       ].join(' ')}
     >
-      <div className="flex min-h-topbar items-center justify-between gap-3 border-b border-border-soft/90 py-4">
-        <div>
-          <p className="mb-1 text-[11px] font-bold uppercase tracking-[0.14em] text-text-muted">
-            Chikko CRM
-          </p>
-          <h1 className="m-0 text-[1.35rem] font-bold tracking-[-0.03em]">
-            Chikko
-          </h1>
+      <div className="flex min-h-topbar items-center justify-between gap-3 py-3">
+        <div className="flex items-center gap-2.5">
+          <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm">
+            <AppIcon name="dashboard" className="h-[17px] w-[17px]" aria-hidden="true" />
+          </span>
+          <div>
+            <h1 className="m-0 font-display text-[1.36rem] font-extrabold leading-none tracking-[-0.03em]">
+              {t('common.appName')}
+            </h1>
+            <p className="mt-1 text-[10px] font-bold uppercase tracking-[0.16em] text-text-muted">
+              CRM
+            </p>
+          </div>
         </div>
         <button
           type="button"
@@ -76,14 +100,18 @@ function AppSidebar({ isOpen, onClose }: AppSidebarProps) {
       </div>
 
       <div className="flex-1 overflow-y-auto pr-1 pt-4">
-        {navigationGroups.map((group) => (
+          {visibleNavigationGroups.map((group) => (
           <section
             key={group.id}
             className="mt-0 first:mt-0 [&+&]:mt-5"
           >
-            <p className={groupLabelClassName}>{group.label}</p>
+            <p className={groupLabelClassName}>
+              {t(`navigation.groups.${group.id}`, { defaultValue: group.label })}
+            </p>
             <nav
-              aria-label={`${group.label} navigation`}
+              aria-label={`${t(`navigation.groups.${group.id}`, {
+                defaultValue: group.label,
+              })} navigation`}
               className="grid gap-1.5"
             >
               {group.items.map((item) => (
@@ -105,10 +133,10 @@ function AppSidebar({ isOpen, onClose }: AppSidebarProps) {
                       <span
                         aria-hidden="true"
                         className={[
-                          'inline-flex h-9 min-w-9 items-center justify-center rounded-lg border transition duration-fast',
+                          'inline-flex h-9 min-w-9 items-center justify-center rounded-lg transition duration-fast',
                           isActive
-                            ? 'border-border-accent bg-primary/10 text-primary'
-                            : 'border-border-soft bg-background-subtle text-text-secondary group-hover:border-border-accent group-hover:bg-primary/10 group-hover:text-text-primary',
+                            ? 'bg-primary/20 text-text-accent'
+                            : 'bg-background-elevated/90 text-text-secondary group-hover:bg-primary/10 group-hover:text-text-primary',
                         ].join(' ')}
                       >
                         <AppIcon
@@ -118,10 +146,15 @@ function AppSidebar({ isOpen, onClose }: AppSidebarProps) {
                       </span>
                       <span className="grid min-w-0 gap-[3px]">
                         <span className="font-semibold [overflow-wrap:anywhere]">
-                          {navigationItemMeta[item.iconKey].label ?? item.label}
+                          {t(`routes.${item.id}.title`, {
+                            defaultValue:
+                              navigationItemMeta[item.iconKey].label ?? item.label,
+                          })}
                         </span>
                         <small className="text-[11px] tracking-[0.02em] text-text-muted [overflow-wrap:anywhere]">
-                          {navigationItemMeta[item.iconKey].caption}
+                          {t(`navigation.captions.${item.id}`, {
+                            defaultValue: navigationItemMeta[item.iconKey].caption,
+                          })}
                         </small>
                       </span>
                     </span>

@@ -12,11 +12,11 @@ function PageHeader({ eyebrow, title, subtitle, actions }: PageHeaderProps) {
     <header className="mb-4 grid gap-3 min-[768px]:mb-5 min-[768px]:grid-cols-[minmax(0,1fr)_auto] min-[768px]:items-start">
       <div className="min-w-0">
         {eyebrow ? (
-          <p className="mb-1.5 text-[11px] font-bold uppercase tracking-[0.14em] text-primary">
+          <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">
             {eyebrow}
           </p>
         ) : null}
-        <h1 className="m-0 text-[clamp(1.4rem,2.7vw,2rem)] font-bold leading-[1.04] text-text-primary [overflow-wrap:anywhere]">
+        <h1 className="m-0 font-display text-[clamp(1.6rem,2.7vw,2.2rem)] font-extrabold leading-[1.02] tracking-[-0.03em] text-text-primary [overflow-wrap:anywhere]">
           {title}
         </h1>
         {subtitle ? (

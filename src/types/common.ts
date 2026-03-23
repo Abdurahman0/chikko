@@ -47,6 +47,16 @@ export interface TableQueryParams extends BaseFilterParams {
   pageSize: number;
   sortBy?: string;
   sortDirection?: SortDirection;
+  assignedOperator?: EntityId;
+  assigned_operator?: EntityId;
+  currency?: CurrencyCode;
+  isActive?: boolean;
+  is_active?: boolean;
+  status?: string;
+  source?: string;
+  aiGenerated?: boolean;
+  ai_generated?: boolean;
+  ordering?: string;
 }
 
 export interface AuditInfo {

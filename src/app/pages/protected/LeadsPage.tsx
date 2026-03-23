@@ -1,10 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import {
-  LEAD_STATUS_LABELS,
-  LEAD_STATUS_OPTIONS,
-  PLATFORM_CHANNEL_LABELS,
-  PLATFORM_CHANNEL_OPTIONS,
-} from '../../../constants';
+import { useTranslation } from 'react-i18next';
 import {
   DataTable,
   FilterBar,
@@ -20,57 +15,137 @@ import {
   PageLayout,
   PageSection,
 } from '../../../components/shared/page';
+import {
+  getChannelLabel,
+  getLeadStatusLabel,
+} from '../../../i18n/labels';
 import { services } from '../../../services';
 import type {
   EntityId,
   Lead,
   LeadStatus,
   PlatformChannel,
+  SelectOption,
 } from '../../../types/domain';
 import LeadDetailPanel from '../../../features/leads/components/LeadDetailPanel';
 
 type LeadStatusFilter = LeadStatus | 'all';
-type LeadSourceFilter = PlatformChannel | 'all';
+type LeadSourceFilter = 'telegram' | 'instagram' | 'all';
 
 const PAGE_SIZE = 8;
 const SERVICE_FETCH_SIZE = 250;
-
-const leadsChipClassName =
-  'inline-flex min-h-8 items-center gap-2 rounded-pill border border-border-soft bg-background-elevated/88 px-3 text-[12px] font-semibold text-text-secondary shadow-sm';
-
-const leadsAccentChipClassName =
-  'inline-flex min-h-8 items-center gap-2 rounded-pill border border-border-accent bg-primary-soft px-3 text-[12px] font-semibold text-text-accent shadow-sm';
-
-const leadsSoftChipClassName =
-  'inline-flex min-h-8 items-center gap-2 rounded-pill border border-border-soft bg-background-subtle/90 px-3 text-[12px] font-semibold text-text-secondary shadow-sm';
+const STATUS_VALUES: LeadStatus[] = [
+  'new',
+  'contacted',
+  'qualified',
+  'negotiating',
+  'converted',
+  'lost',
+  'archived',
+];
+const SOURCE_VALUES: Array<Extract<PlatformChannel, 'telegram' | 'instagram'>> = [
+  'telegram',
+  'instagram',
+];
 
 const tablePrimaryTextClassName =
-  'table-cell-primary block font-semibold leading-[1.35] text-text-primary [overflow-wrap:anywhere]';
+  'block text-sm font-semibold leading-[1.35] text-text-primary [overflow-wrap:anywhere]';
 
 const tableSecondaryTextClassName =
   'block text-[12px] leading-[1.45] text-text-secondary [overflow-wrap:anywhere]';
 
-const STATUS_FILTER_OPTIONS = [
-  { value: 'all', label: 'All statuses' },
-  ...LEAD_STATUS_OPTIONS,
-];
-
-const SOURCE_FILTER_OPTIONS = [
-  { value: 'all', label: 'All channels' },
-  ...PLATFORM_CHANNEL_OPTIONS,
-];
-
-function formatDate(timestamp?: string): string {
+function formatDate(
+  timestamp: string | undefined,
+  locale: string,
+  fallback: string,
+): string {
   if (!timestamp) {
-    return 'Unavailable';
+    return fallback;
   }
 
-  return new Intl.DateTimeFormat('en-US', {
+  return new Intl.DateTimeFormat(locale, {
     dateStyle: 'medium',
   }).format(new Date(timestamp));
 }
 
+function formatRelativeTime(
+  timestamp: string | undefined,
+  locale: string,
+  fallback: string,
+): string {
+  if (!timestamp) {
+    return fallback;
+  }
+
+  const target = new Date(timestamp).getTime();
+  if (Number.isNaN(target)) {
+    return fallback;
+  }
+
+  const delta = target - Date.now();
+  const minute = 60 * 1000;
+  const hour = 60 * minute;
+  const day = 24 * hour;
+  const formatter = new Intl.RelativeTimeFormat(locale, { numeric: 'auto' });
+
+  if (Math.abs(delta) < hour) {
+    return formatter.format(Math.round(delta / minute), 'minute');
+  }
+
+  if (Math.abs(delta) < day) {
+    return formatter.format(Math.round(delta / hour), 'hour');
+  }
+
+  return formatter.format(Math.round(delta / day), 'day');
+}
+
+function channelAbbreviation(source: PlatformChannel): string {
+  switch (source) {
+    case 'instagram':
+      return 'IG';
+    case 'telegram':
+      return 'TG';
+    case 'whatsapp':
+      return 'WA';
+    case 'facebook':
+      return 'FB';
+    case 'website':
+      return 'WEB';
+    case 'marketplace':
+      return 'MKT';
+    case 'webchat':
+      return 'CHAT';
+    case 'referral':
+      return 'REF';
+    default:
+      return 'OTR';
+  }
+}
+
 function LeadsPage() {
+  const { t, i18n } = useTranslation();
+  const locale = i18n.language === 'ru' ? 'ru-RU' : 'uz-UZ';
+  const relativeLocale = i18n.language === 'ru' ? 'ru' : 'uz';
+  const statusOptions = useMemo<SelectOption[]>(
+    () => [
+      { value: 'all', label: t('leads.allStatuses') },
+      ...STATUS_VALUES.map((status) => ({
+        value: status,
+        label: getLeadStatusLabel(t, status),
+      })),
+    ],
+    [t],
+  );
+  const sourceOptions = useMemo<SelectOption[]>(
+    () => [
+      { value: 'all', label: t('leads.allChannels') },
+      ...SOURCE_VALUES.map((source) => ({
+        value: source,
+        label: getChannelLabel(t, source),
+      })),
+    ],
+    [t],
+  );
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<LeadStatusFilter>('all');
   const [sourceFilter, setSourceFilter] = useState<LeadSourceFilter>('all');
@@ -142,108 +217,115 @@ function LeadsPage() {
   const paginatedLeads = useMemo(() => {
     const safePage = Math.min(currentPage, totalPages);
     const startIndex = (safePage - 1) * PAGE_SIZE;
-
     return filteredLeads.slice(startIndex, startIndex + PAGE_SIZE);
   }, [currentPage, filteredLeads, totalPages]);
 
   const columns = useMemo(() => {
     return [
       {
-        key: 'fullName',
-        label: 'Lead',
+        key: 'lead',
+        label: t('leads.lead'),
         render: (lead: Lead) => (
-          <div className="grid gap-1">
+          <div className="grid gap-0.5">
             <span className={tablePrimaryTextClassName}>{lead.fullName}</span>
             <span className={tableSecondaryTextClassName}>
-              {lead.username ?? lead.contact.username ?? 'No handle'}
+              @{lead.username ?? lead.contact.username ?? t('leads.unknownHandle')}
             </span>
           </div>
         ),
       },
       {
         key: 'contact',
-        label: 'Contact',
+        label: t('leads.contact'),
         render: (lead: Lead) => (
-          <div className="grid gap-1">
+          <div className="grid gap-0.5">
             <span className={tablePrimaryTextClassName}>
-              {lead.contact.phone ?? 'No phone'}
+              {lead.contact.phone ?? t('leads.noPhone')}
             </span>
             <span className={tableSecondaryTextClassName}>
-              {lead.contact.email ?? 'No email'}
+              {lead.contact.email ?? t('leads.noEmail')}
             </span>
           </div>
         ),
       },
       {
         key: 'source',
-        label: 'Source',
+        label: t('leads.source'),
         render: (lead: Lead) => (
-          <div className="grid gap-1">
-            <span className={tablePrimaryTextClassName}>
-              {PLATFORM_CHANNEL_LABELS[lead.source]}
+          <div className="grid gap-0.5">
+            <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-text-primary">
+              <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-md bg-info-bg px-1 text-[10px] font-semibold text-info">
+                {channelAbbreviation(lead.source)}
+              </span>
+              {getChannelLabel(t, lead.source)}
             </span>
             <span className={tableSecondaryTextClassName}>
-              {lead.dmSent ? 'DM sent' : 'Awaiting outreach'}
+              {lead.dmSent ? t('leads.dmSent') : t('leads.awaitingOutreach')}
             </span>
           </div>
         ),
       },
       {
         key: 'status',
-        label: 'Status',
+        label: t('leads.status'),
         render: (lead: Lead) => (
           <StatusBadge
             status={lead.status}
-            label={LEAD_STATUS_LABELS[lead.status]}
+            label={getLeadStatusLabel(t, lead.status)}
           />
         ),
       },
       {
-        key: 'operator',
-        label: 'Owner',
+        key: 'owner',
+        label: t('leads.owner'),
         render: (lead: Lead) => (
-          <div className="grid gap-1">
+          <div className="grid gap-0.5">
             <span className={tablePrimaryTextClassName}>
-              {lead.assignedOperator?.fullName ?? 'Unassigned'}
+              {lead.assignedOperator?.fullName ?? t('common.unassigned')}
             </span>
             <span className={tableSecondaryTextClassName}>
-              {lead.replied ? 'Replied' : 'Awaiting reply'}
+              {lead.replied ? t('leads.replied') : t('leads.awaitingReply')}
             </span>
           </div>
         ),
       },
       {
-        key: 'timestamps',
-        label: 'Timeline',
-        render: (lead: Lead) => (
-          <div className="grid gap-1">
-            <span className={tablePrimaryTextClassName}>
-              Created {formatDate(lead.createdAt)}
-            </span>
-            <span className={tableSecondaryTextClassName}>
-              Last contact {formatDate(lead.lastContactAt ?? lead.updatedAt)}
-            </span>
-          </div>
-        ),
+        key: 'activity',
+        label: t('leads.lastActivity'),
+        render: (lead: Lead) => {
+          const lastActivity = lead.lastContactAt ?? lead.updatedAt;
+          return (
+            <div className="grid gap-0.5">
+              <span className={tablePrimaryTextClassName}>
+                {formatRelativeTime(lastActivity, relativeLocale, t('common.na'))}
+              </span>
+              <span className={tableSecondaryTextClassName}>
+                {formatDate(lastActivity, locale, t('common.na'))}
+              </span>
+            </div>
+          );
+        },
       },
     ];
-  }, []);
+  }, [locale, relativeLocale, t]);
 
   const header = (
     <PageHeader
-      eyebrow="CRM"
-      title="Leads"
-      subtitle="Search, qualify, and review inbound leads from one queue."
+      eyebrow={t('leads.pipelineEyebrow')}
+      title={t('leads.title')}
+      subtitle={t('leads.subtitle')}
       actions={
         <div className="flex w-full flex-wrap items-center gap-2 min-[768px]:w-auto">
-          <span className={leadsAccentChipClassName}>
+          <span className="inline-flex min-h-8 items-center gap-2 rounded-pill bg-primary/12 px-3 text-[12px] font-semibold text-text-accent">
             <AppIcon name="leads" className="h-3.5 w-3.5" aria-hidden="true" />
-            Pipeline
+            {filteredLeads.length} {t('leads.visible')}
           </span>
-          <span className={leadsChipClassName}>
-            <AppIcon name="dashboard" className="h-3.5 w-3.5" aria-hidden="true" />
-            {filteredLeads.length} visible
-          </span>
+          {activeFilterCount > 0 ? (
+            <span className="inline-flex min-h-8 items-center gap-2 rounded-pill bg-surface-subtle px-3 text-[12px] font-semibold text-text-secondary">
+              <AppIcon name="filter" className="h-3.5 w-3.5" aria-hidden="true" />
+              {activeFilterCount} {t('leads.filters')}
+            </span>
+          ) : null}
         </div>
       }
     />
@@ -253,8 +335,8 @@ function LeadsPage() {
     return (
       <PageLayout header={header}>
         <EmptyState
-          title="Leads could not be loaded"
-          description="The leads service did not return a usable result. Retry logic and service-state helpers can be layered on later without changing this page structure."
+          title={t('leads.errorTitle')}
+          description={t('leads.errorDescription')}
         />
       </PageLayout>
     );
@@ -262,85 +344,85 @@ function LeadsPage() {
 
   return (
     <PageLayout header={header}>
-      <PageSection
-        title="Lead pipeline"
-        description="Search, filter, and open lead details without leaving the queue."
-        actions={
-          <div className="flex flex-wrap items-center gap-2">
-            {activeFilterCount > 0 ? (
-              <span className={leadsSoftChipClassName}>
-                <AppIcon name="search" className="h-3.5 w-3.5" aria-hidden="true" />
-                {activeFilterCount} filter{activeFilterCount > 1 ? 's' : ''}
-              </span>
-            ) : null}
-            {selectedLeadId ? (
-              <span className={leadsChipClassName}>
-                <AppIcon name="profile" className="h-3.5 w-3.5" aria-hidden="true" />
-                Detail open
-              </span>
-            ) : null}
-          </div>
-        }
-      >
+      <PageSection>
         <FilterBar
           actions={
-            <div className="flex w-full flex-wrap items-center gap-3 max-[640px]:items-start min-[900px]:w-auto">
-              <strong className="inline-flex min-h-10 min-w-10 items-center justify-center rounded-xl border border-border-accent bg-primary/12 px-3 text-[1rem] font-semibold leading-none tracking-[-0.03em] text-text-accent shadow-sm">
-                {filteredLeads.length}
-              </strong>
-              <div className="grid gap-px">
-                <span className="text-[13px] font-semibold text-text-secondary">
-                  matching leads
+            <div className="flex w-full flex-wrap items-center gap-2 max-[820px]:justify-start min-[820px]:w-auto">
+              <span className="inline-flex min-h-9 items-center gap-2 rounded-lg bg-surface-subtle px-3 text-sm font-semibold text-text-primary">
+                <AppIcon
+                  name="activity"
+                  className="h-4 w-4 text-text-muted"
+                  aria-hidden="true"
+                />
+                {filteredLeads.length} {t('leads.count')}
+              </span>
+              {selectedLeadId ? (
+                <span className="inline-flex min-h-9 items-center gap-2 rounded-lg bg-primary/12 px-3 text-sm font-semibold text-text-accent">
+                  <AppIcon
+                    name="user"
+                    className="h-4 w-4"
+                    aria-hidden="true"
+                  />
+                  {t('leads.detailOpen')}
                 </span>
-                <span className="text-[11px] text-text-muted">
-                  Select any row to inspect details.
-                </span>
-              </div>
+              ) : null}
             </div>
           }
         >
           <SearchInput
             value={search}
             onChange={setSearch}
-            placeholder="Search name, phone, handle, or status"
+            placeholder={t('leads.searchPlaceholder')}
             disabled={isLoading}
           />
 
-          <label className="grid min-w-[min(200px,100%)] flex-[1_1_100%] gap-2 min-[640px]:flex-[0_1_200px]">
-            <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-text-secondary">
-              Status
+          <label className="grid min-w-[min(180px,100%)] flex-[1_1_180px] gap-1.5 min-[640px]:flex-[0_1_200px]">
+            <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-text-muted">
+              {t('leads.status')}
             </span>
             <FilterSelect
               value={statusFilter}
-              options={STATUS_FILTER_OPTIONS}
+              options={statusOptions}
               onChange={(value) => setStatusFilter(value as LeadStatusFilter)}
               disabled={isLoading}
             />
           </label>
 
-          <label className="grid min-w-[min(200px,100%)] flex-[1_1_100%] gap-2 min-[640px]:flex-[0_1_200px]">
-            <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-text-secondary">
-              Channel
+          <label className="grid min-w-[min(180px,100%)] flex-[1_1_180px] gap-1.5 min-[640px]:flex-[0_1_200px]">
+            <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-text-muted">
+              {t('leads.channel')}
             </span>
             <FilterSelect
               value={sourceFilter}
-              options={SOURCE_FILTER_OPTIONS}
+              options={sourceOptions}
               onChange={(value) => setSourceFilter(value as LeadSourceFilter)}
               disabled={isLoading}
             />
           </label>
         </FilterBar>
 
-        <div className="leads-table-block [&_.table-shell]:border-border-accent/70 [&_.table-shell]:shadow-sm [&_.data-table__cell:first-child]:pl-5 max-[640px]:[&_.data-table__cell:first-child]:pl-4 [&_.data-table__cell--head:first-child]:pl-5 max-[640px]:[&_.data-table__cell--head:first-child]:pl-4 [&_.data-table__row--clickable:hover_.status-badge]:-translate-y-px [&_.data-table__row--clickable:hover_.table-cell-primary]:text-text-accent">
-          <DataTable
-            data={paginatedLeads}
-            columns={columns}
-            rowKey="id"
-            loading={isLoading}
-            onRowClick={(lead) => setSelectedLeadId(lead.id)}
-            emptyTitle="No leads match the current view"
-            emptyDescription="Adjust the search or filters to find a different segment of the mock lead pipeline."
-          />
+        <div className="grid gap-3">
+          <div className="flex flex-wrap items-center justify-between gap-2 px-1">
+            <h2 className="m-0 text-[1rem] font-semibold text-text-primary">
+              {t('leads.queueTitle')}
+            </h2>
+            <span className="text-[12px] font-medium text-text-muted">
+              {t('leads.queueHint')}
+            </span>
+          </div>
+
+          <div className="[&_.data-table__row--clickable:hover_.status-badge]:-translate-y-px">
+            <DataTable
+              data={paginatedLeads}
+              columns={columns}
+              rowKey="id"
+              selectedRowKey={selectedLeadId}
+              loading={isLoading}
+              onRowClick={(lead) => setSelectedLeadId(lead.id)}
+              emptyTitle={t('leads.emptyTitle')}
+              emptyDescription={t('leads.emptyDescription')}
+            />
+          </div>
         </div>
 
         {!isLoading && filteredLeads.length > 0 ? (

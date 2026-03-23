@@ -1,12 +1,51 @@
 import type { PropsWithChildren } from 'react';
+import { Navigate, useLocation } from 'react-router-dom';
 import type { AppRouteConfig } from '../../config/routes';
+import { routePaths } from '../../config/routes';
+import { useAuth } from '../../auth';
 
 interface RouteGateProps extends PropsWithChildren {
   route: AppRouteConfig;
 }
 
 function RouteGate({ route, children }: RouteGateProps) {
-  void route;
+  const location = useLocation();
+  const {
+    isAuthenticated,
+    isBootstrapping,
+    canAccessRoute,
+    resolveDefaultLandingPath,
+  } = useAuth();
+
+  if (isBootstrapping) {
+    return (
+      <main className="grid min-h-screen place-items-center bg-background-default p-6">
+        <p className="text-sm font-semibold text-text-secondary">Loading session...</p>
+      </main>
+    );
+  }
+
+  if (route.access === 'public') {
+    if (route.id === 'login' && isAuthenticated) {
+      return <Navigate replace to={resolveDefaultLandingPath()} />;
+    }
+
+    return <>{children}</>;
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <Navigate
+        replace
+        to={routePaths.login}
+        state={{ from: location.pathname }}
+      />
+    );
+  }
+
+  if (!canAccessRoute(route.id)) {
+    return <Navigate replace to={routePaths.accessDenied} />;
+  }
 
   return <>{children}</>;
 }

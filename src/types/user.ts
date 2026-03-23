@@ -16,6 +16,7 @@ export interface AppUser extends AuditInfo {
   id: EntityId;
   fullName: string;
   email: string;
+  phone?: string;
   role: UserRole;
   status?: UserStatus;
   avatarUrl?: string;

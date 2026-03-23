@@ -9,7 +9,8 @@ const config: Config = {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['"Segoe UI"', 'Tahoma', 'Geneva', 'Verdana', 'sans-serif'],
+        sans: ['"Inter"', '"Segoe UI"', 'Tahoma', 'sans-serif'],
+        display: ['"Manrope"', '"Inter"', '"Segoe UI"', 'sans-serif'],
         mono: ['"Consolas"', '"Courier New"', 'monospace'],
       },
       colors: {
@@ -75,36 +76,37 @@ const config: Config = {
         2: '8px',
         3: '12px',
         4: '16px',
-        5: '18px',
+        5: '20px',
         6: '20px',
         7: '24px',
-        8: '28px',
+        8: '32px',
         10: '32px',
+        12: '40px',
       },
       borderRadius: {
-        sm: '7px',
-        md: '9px',
-        lg: '11px',
-        xl: '14px',
+        sm: '8px',
+        md: '12px',
+        lg: '16px',
+        xl: '20px',
         pill: '999px',
       },
       boxShadow: {
-        sm: '0 0 0 1px rgba(148, 163, 184, 0.06)',
-        md: '0 8px 24px rgba(0, 0, 0, 0.18)',
+        sm: '0 0 0 1px rgba(25, 28, 30, 0.06)',
+        md: '0 8px 24px rgba(25, 28, 30, 0.06)',
       },
       maxWidth: {
-        page: '1344px',
+        page: '1600px',
         reading: '720px',
-        sidebar: '320px',
+        sidebar: '280px',
       },
       width: {
-        sidebar: '320px',
+        sidebar: '280px',
       },
       minHeight: {
-        topbar: '72px',
+        topbar: '82px',
       },
       backdropBlur: {
-        shell: '16px',
+        shell: '20px',
       },
       transitionDuration: {
         fast: '140ms',

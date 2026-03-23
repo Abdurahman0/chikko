@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import { EmptyState, LoadingState } from '../page';
 
 type DataTableAlign = 'left' | 'center' | 'right';
@@ -15,6 +16,7 @@ interface DataTableProps<T> {
   data: T[];
   columns: DataTableColumn<T>[];
   rowKey?: keyof T | ((row: T, index: number) => string);
+  selectedRowKey?: string | null;
   loading?: boolean;
   emptyTitle?: string;
   emptyDescription?: string;
@@ -22,29 +24,33 @@ interface DataTableProps<T> {
 }
 
 const TABLE_SHELL_CLASS_NAME = [
-  'table-shell overflow-x-auto rounded-[20px] border border-border-soft bg-surface-card shadow-sm',
+  'table-shell overflow-x-auto rounded-xl bg-surface-card p-2 shadow-sm ring-1 ring-border-soft/40',
   '[-webkit-overflow-scrolling:touch]',
-  '[&>div]:min-h-[240px] [&>div]:rounded-none [&>div]:border-0 [&>div]:bg-transparent [&>div]:shadow-none',
+  '[&>div]:min-h-[240px] [&>div]:rounded-none [&>div]:border-0 [&>div]:bg-transparent [&>div]:shadow-none [&>div]:ring-0',
 ].join(' ');
 
 const TABLE_CLASS_NAME =
-  'data-table min-w-[620px] w-full border-collapse min-[768px]:min-w-[720px]';
+  'data-table min-w-[620px] w-full border-separate border-spacing-y-1.5 min-[768px]:min-w-[720px]';
 
 const ROW_CLASS_NAME =
-  'data-table__row border-t border-border-soft/90 first:border-t-0';
+  'data-table__row bg-surface-subtle/70';
+
 
 const CLICKABLE_ROW_CLASS_NAME = [
   ROW_CLASS_NAME,
-  'data-table__row--clickable cursor-pointer transition-colors duration-fast hover:bg-primary/5',
+  'data-table__row--clickable cursor-pointer transition-colors duration-fast hover:bg-primary/8',
 ].join(' ');
+
+const SELECTED_ROW_CLASS_NAME =
+  'data-table__row--selected bg-primary/10 shadow-[inset_0_0_0_1px_rgb(var(--color-primary)/0.3)]';
 
 const HEAD_CELL_BASE_CLASS_NAME = [
   'data-table__cell data-table__cell--head px-4 py-3.5 align-middle text-[11px] font-bold uppercase tracking-[0.12em] max-[640px]:px-4',
-  'border-b border-border-soft bg-background-subtle/90 text-text-muted',
+  'bg-transparent text-text-muted',
 ].join(' ');
 
 const BODY_CELL_BASE_CLASS_NAME =
-  'data-table__cell px-4 py-3.5 align-middle text-sm text-text-primary max-[640px]:px-4';
+  'data-table__cell px-4 py-3.5 align-middle text-sm text-text-primary first:rounded-l-lg last:rounded-r-lg max-[640px]:px-4';
 
 const ALIGN_CLASS_NAMES: Record<DataTableAlign, string> = {
   left: 'text-left',
@@ -92,17 +98,23 @@ function DataTable<T>({
   data,
   columns,
   rowKey,
+  selectedRowKey,
   loading = false,
-  emptyTitle = 'No records available',
-  emptyDescription = 'Data will appear here once the page is connected to a data source.',
+  emptyTitle,
+  emptyDescription,
   onRowClick,
 }: DataTableProps<T>) {
+  const { t } = useTranslation();
+  const resolvedEmptyTitle = emptyTitle ?? t('shared.table.emptyTitle');
+  const resolvedEmptyDescription =
+    emptyDescription ?? t('shared.table.emptyDescription');
+
   if (loading) {
     return (
       <div className={TABLE_SHELL_CLASS_NAME}>
         <LoadingState
-          title="Loading table data"
-          description="This table is waiting for data and will render rows when records are ready."
+          title={t('shared.table.loadingTitle')}
+          description={t('shared.table.loadingDescription')}
         />
       </div>
     );
@@ -111,7 +123,10 @@ function DataTable<T>({
   if (!data.length) {
     return (
       <div className={TABLE_SHELL_CLASS_NAME}>
-        <EmptyState title={emptyTitle} description={emptyDescription} />
+        <EmptyState
+          title={resolvedEmptyTitle}
+          description={resolvedEmptyDescription}
+        />
       </div>
     );
   }
@@ -136,26 +151,35 @@ function DataTable<T>({
           </tr>
         </thead>
         <tbody>
-          {data.map((row, index) => (
-            <tr
-              key={getRowKey(row, index, rowKey)}
-              className={onRowClick ? CLICKABLE_ROW_CLASS_NAME : ROW_CLASS_NAME}
-              onClick={onRowClick ? () => onRowClick(row) : undefined}
-            >
-              {columns.map((column) => (
-                <td
-                  key={column.key}
-                  className={[
-                    BODY_CELL_BASE_CLASS_NAME,
-                    `data-table__cell--${column.align ?? 'left'}`,
-                    ALIGN_CLASS_NAMES[column.align ?? 'left'],
-                  ].join(' ')}
-                >
-                  {getCellContent(row, column)}
-                </td>
-              ))}
-            </tr>
-          ))}
+          {data.map((row, index) => {
+            const resolvedRowKey = getRowKey(row, index, rowKey);
+            const isSelected = selectedRowKey === resolvedRowKey;
+
+            return (
+              <tr
+                key={resolvedRowKey}
+                className={[
+                  onRowClick ? CLICKABLE_ROW_CLASS_NAME : ROW_CLASS_NAME,
+                  isSelected ? SELECTED_ROW_CLASS_NAME : '',
+                ].join(' ')}
+                onClick={onRowClick ? () => onRowClick(row) : undefined}
+                aria-selected={isSelected}
+              >
+                {columns.map((column) => (
+                  <td
+                    key={column.key}
+                    className={[
+                      BODY_CELL_BASE_CLASS_NAME,
+                      `data-table__cell--${column.align ?? 'left'}`,
+                      ALIGN_CLASS_NAMES[column.align ?? 'left'],
+                    ].join(' ')}
+                  >
+                    {getCellContent(row, column)}
+                  </td>
+                ))}
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </div>

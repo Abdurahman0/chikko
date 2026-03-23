@@ -1,0 +1,757 @@
+import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { FiTrash2 } from 'react-icons/fi';
+import { useTranslation } from 'react-i18next';
+import { FilterSelect } from '../../../components/shared/data';
+import AppIcon from '../../../components/shared/icons/AppIcon';
+import type {
+  CurrencyCode,
+  Customer,
+  Lead,
+  Order,
+  OrderMutationInput,
+  OrderSource,
+  OrderStatus,
+  Product,
+  SelectOption,
+} from '../../../types/domain';
+
+interface OrderFormPanelProps {
+  mode: 'create' | 'edit';
+  order?: Order | null;
+  customers: Customer[];
+  leads: Lead[];
+  products: Product[];
+  statusOptions: SelectOption[];
+  sourceOptions: SelectOption[];
+  isSubmitting: boolean;
+  errorMessage?: string | null;
+  onClose: () => void;
+  onSubmit: (payload: OrderMutationInput) => void;
+}
+
+interface OrderItemFormState {
+  id: string;
+  productId: string;
+  quantity: string;
+  unitPrice: string;
+}
+
+interface OrderFormState {
+  customerId: string;
+  leadId: string;
+  status: OrderStatus;
+  source: OrderSource;
+  contactName: string;
+  contactPhone: string;
+  shippingAddress: string;
+  notes: string;
+  aiGenerated: boolean;
+  items: OrderItemFormState[];
+}
+
+const labelClassName =
+  'text-[11px] font-semibold uppercase tracking-[0.12em] text-text-muted';
+
+const inputClassName = [
+  'w-full rounded-lg border border-border-soft/60 bg-surface-card px-3.5 py-2.5 text-sm font-medium text-text-primary',
+  'placeholder:text-text-muted outline-none transition duration-fast',
+  'focus:border-primary/50 focus:ring-2 focus:ring-primary/20',
+  'disabled:cursor-not-allowed disabled:opacity-60',
+].join(' ');
+
+function createItemState(
+  index: number,
+  products: Product[],
+  item?: { productId: string; quantity: number; unitPrice: number },
+): OrderItemFormState {
+  const fallbackProduct = products[0];
+  const productId = item?.productId ?? fallbackProduct?.id ?? '';
+  const defaultPrice =
+    item?.unitPrice ?? fallbackProduct?.promoPrice ?? fallbackProduct?.price ?? 0;
+
+  return {
+    id: `order-form-item-${index}-${Math.random().toString(36).slice(2, 7)}`,
+    productId,
+    quantity: String(item?.quantity ?? 1),
+    unitPrice: String(Number(defaultPrice.toFixed(2))),
+  };
+}
+
+function createInitialState(
+  mode: 'create' | 'edit',
+  order: Order | null | undefined,
+  products: Product[],
+): OrderFormState {
+  if (mode === 'edit' && order) {
+    return {
+      customerId: order.customer?.id ?? '',
+      leadId: order.lead?.id ?? '',
+      status: order.status,
+      source: order.source,
+      contactName: order.contactName,
+      contactPhone: order.contactPhone,
+      shippingAddress: order.shippingAddress,
+      notes: order.notes ?? '',
+      aiGenerated: order.aiGenerated,
+      items: order.items.map((item, index) =>
+        createItemState(index, products, {
+          productId: item.product.id,
+          quantity: item.quantity,
+          unitPrice: item.unitPrice,
+        }),
+      ),
+    };
+  }
+
+  return {
+    customerId: '',
+    leadId: '',
+    status: 'draft',
+    source: 'telegram',
+    contactName: '',
+    contactPhone: '',
+    shippingAddress: '',
+    notes: '',
+    aiGenerated: false,
+    items: [createItemState(0, products)],
+  };
+}
+
+function parsePositiveInteger(value: string): number {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) {
+    return 0;
+  }
+
+  return Math.max(1, Math.floor(parsed));
+}
+
+function parseNonNegativeNumber(value: string): number {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) {
+    return 0;
+  }
+
+  return Math.max(0, Number(parsed.toFixed(2)));
+}
+
+function resolveCurrency(items: OrderItemFormState[], products: Product[]): CurrencyCode {
+  const productById = new Map(products.map((product) => [product.id, product]));
+  const firstResolved = items.find((item) => productById.has(item.productId));
+  if (!firstResolved) {
+    return 'USD';
+  }
+
+  return productById.get(firstResolved.productId)?.currency ?? 'USD';
+}
+
+function OrderFormPanel({
+  mode,
+  order,
+  customers,
+  leads,
+  products,
+  statusOptions,
+  sourceOptions,
+  isSubmitting,
+  errorMessage,
+  onClose,
+  onSubmit,
+}: OrderFormPanelProps) {
+  const { t, i18n } = useTranslation();
+  const locale = i18n.language === 'ru' ? 'ru-RU' : 'uz-UZ';
+  const [form, setForm] = useState<OrderFormState>(() =>
+    createInitialState(mode, order, products),
+  );
+  const [fieldError, setFieldError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setForm(createInitialState(mode, order, products));
+    setFieldError(null);
+  }, [mode, order, products]);
+
+  useEffect(() => {
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape' && !isSubmitting) {
+        onClose();
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isSubmitting, onClose]);
+
+  const customerOptions = useMemo<SelectOption[]>(
+    () => [
+      { value: '', label: t('orders.form.noneCustomer') },
+      ...customers.map((customer) => ({
+        value: customer.id,
+        label: customer.fullName,
+      })),
+    ],
+    [customers, t],
+  );
+
+  const leadOptions = useMemo<SelectOption[]>(
+    () => [
+      { value: '', label: t('orders.form.noneLead') },
+      ...leads.map((lead) => ({
+        value: lead.id,
+        label: lead.fullName,
+      })),
+    ],
+    [leads, t],
+  );
+
+  const productOptions = useMemo<SelectOption[]>(
+    () =>
+      products.map((product) => ({
+        value: product.id,
+        label: `${product.name} (${product.sku ?? product.id})`,
+      })),
+    [products],
+  );
+
+  const productById = useMemo(
+    () => new Map(products.map((product) => [product.id, product])),
+    [products],
+  );
+
+  const itemRows = useMemo(
+    () =>
+      form.items.map((item) => {
+        const quantity = parsePositiveInteger(item.quantity);
+        const unitPrice = parseNonNegativeNumber(item.unitPrice);
+        const lineTotal = Number((quantity * unitPrice).toFixed(2));
+
+        return {
+          ...item,
+          quantity,
+          unitPrice,
+          lineTotal,
+        };
+      }),
+    [form.items],
+  );
+
+  const totalAmount = useMemo(
+    () =>
+      Number(
+        itemRows.reduce((sum, item) => sum + item.lineTotal, 0).toFixed(2),
+      ),
+    [itemRows],
+  );
+
+  const canSubmit = useMemo(() => {
+    return (
+      form.contactName.trim().length > 0 &&
+      form.contactPhone.trim().length > 0 &&
+      form.shippingAddress.trim().length > 0 &&
+      form.items.length > 0 &&
+      form.items.every(
+        (item) =>
+          item.productId.trim().length > 0 &&
+          parsePositiveInteger(item.quantity) > 0 &&
+          parseNonNegativeNumber(item.unitPrice) >= 0,
+      )
+    );
+  }, [form]);
+
+  function updateItem(id: string, patch: Partial<OrderItemFormState>) {
+    setForm((current) => ({
+      ...current,
+      items: current.items.map((item) =>
+        item.id === id ? { ...item, ...patch } : item,
+      ),
+    }));
+  }
+
+  function addItemRow() {
+    setForm((current) => ({
+      ...current,
+      items: [...current.items, createItemState(current.items.length, products)],
+    }));
+  }
+
+  function removeItemRow(id: string) {
+    setForm((current) => {
+      if (current.items.length <= 1) {
+        return current;
+      }
+
+      return {
+        ...current,
+        items: current.items.filter((item) => item.id !== id),
+      };
+    });
+  }
+
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setFieldError(null);
+
+    const contactName = form.contactName.trim();
+    const contactPhone = form.contactPhone.trim();
+    const shippingAddress = form.shippingAddress.trim();
+    const notes = form.notes.trim();
+
+    if (!contactName || !contactPhone || !shippingAddress) {
+      setFieldError(t('orders.form.requiredError'));
+      return;
+    }
+
+    if (!form.items.length) {
+      setFieldError(t('orders.form.itemsRequired'));
+      return;
+    }
+
+    const normalizedItems = form.items.map((item) => {
+      const productId = item.productId.trim();
+      const quantity = parsePositiveInteger(item.quantity);
+      const unitPrice = parseNonNegativeNumber(item.unitPrice);
+
+      return {
+        productId,
+        quantity,
+        unitPrice,
+      };
+    });
+
+    if (normalizedItems.some((item) => !item.productId)) {
+      setFieldError(t('orders.form.productRequired'));
+      return;
+    }
+
+    const currency = resolveCurrency(form.items, products);
+
+    onSubmit({
+      customerId: form.customerId || undefined,
+      leadId: form.leadId || undefined,
+      status: form.status,
+      source: form.source,
+      contactName,
+      contactPhone,
+      shippingAddress,
+      notes,
+      aiGenerated: form.aiGenerated,
+      items: normalizedItems,
+      currency,
+      metadata: {
+        source: 'mock',
+        saved_via: 'orders-form',
+      },
+    });
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex justify-end bg-background-overlay/72 backdrop-blur-[3px]"
+      onClick={() => {
+        if (!isSubmitting) {
+          onClose();
+        }
+      }}
+      role="presentation"
+    >
+      <aside
+        className="h-full w-full overflow-y-auto bg-background-subtle p-4 shadow-xl ring-1 ring-border-soft/50 min-[641px]:max-w-[620px] min-[641px]:p-5"
+        onClick={(event) => event.stopPropagation()}
+        aria-label={
+          mode === 'create'
+            ? t('orders.form.createTitle')
+            : t('orders.form.editTitle')
+        }
+      >
+        <header className="mb-4 rounded-xl bg-surface-card p-4 shadow-sm ring-1 ring-border-soft/40">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="m-0 text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">
+                {t('orders.form.eyebrow')}
+              </p>
+              <h2 className="mt-1 font-display text-[1.45rem] font-extrabold leading-[1.05] tracking-[-0.03em] text-text-primary">
+                {mode === 'create'
+                  ? t('orders.form.createTitle')
+                  : t('orders.form.editTitle')}
+              </h2>
+              <p className="mt-1 text-sm text-text-secondary">
+                {mode === 'create'
+                  ? t('orders.form.createSubtitle')
+                  : t('orders.form.editSubtitle')}
+              </p>
+            </div>
+            <button
+              type="button"
+              className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-surface-subtle text-text-primary shadow-sm transition duration-fast hover:bg-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 disabled:opacity-60"
+              onClick={onClose}
+              disabled={isSubmitting}
+              aria-label={t('orders.form.close')}
+            >
+              <AppIcon name="close" className="h-4.5 w-4.5" aria-hidden="true" />
+            </button>
+          </div>
+        </header>
+
+        <form className="grid gap-3" onSubmit={handleSubmit} noValidate>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className="grid gap-1.5">
+              <span className={labelClassName}>{t('orders.form.customer')}</span>
+              <FilterSelect
+                value={form.customerId}
+                options={customerOptions}
+                onChange={(value) =>
+                  setForm((current) => ({ ...current, customerId: value }))
+                }
+                disabled={isSubmitting}
+              />
+            </label>
+
+            <label className="grid gap-1.5">
+              <span className={labelClassName}>{t('orders.form.lead')}</span>
+              <FilterSelect
+                value={form.leadId}
+                options={leadOptions}
+                onChange={(value) =>
+                  setForm((current) => ({ ...current, leadId: value }))
+                }
+                disabled={isSubmitting}
+              />
+            </label>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className="grid gap-1.5">
+              <span className={labelClassName}>{t('orders.form.status')}</span>
+              <FilterSelect
+                value={form.status}
+                options={statusOptions}
+                onChange={(value) =>
+                  setForm((current) => ({
+                    ...current,
+                    status: value as OrderStatus,
+                  }))
+                }
+                disabled={isSubmitting}
+              />
+            </label>
+
+            <label className="grid gap-1.5">
+              <span className={labelClassName}>{t('orders.form.source')}</span>
+              <FilterSelect
+                value={form.source}
+                options={sourceOptions}
+                onChange={(value) =>
+                  setForm((current) => ({
+                    ...current,
+                    source: value as OrderSource,
+                  }))
+                }
+                disabled={isSubmitting}
+              />
+            </label>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="grid gap-1.5">
+              <label className={labelClassName} htmlFor="order-form-contact-name">
+                {t('orders.form.contactName')}
+              </label>
+              <input
+                id="order-form-contact-name"
+                type="text"
+                value={form.contactName}
+                onChange={(event) =>
+                  setForm((current) => ({
+                    ...current,
+                    contactName: event.target.value,
+                  }))
+                }
+                className={inputClassName}
+                placeholder={t('orders.form.contactName')}
+                disabled={isSubmitting}
+                required
+              />
+            </div>
+
+            <div className="grid gap-1.5">
+              <label className={labelClassName} htmlFor="order-form-contact-phone">
+                {t('orders.form.contactPhone')}
+              </label>
+              <input
+                id="order-form-contact-phone"
+                type="text"
+                value={form.contactPhone}
+                onChange={(event) =>
+                  setForm((current) => ({
+                    ...current,
+                    contactPhone: event.target.value,
+                  }))
+                }
+                className={inputClassName}
+                placeholder="+998 90 000 0000"
+                disabled={isSubmitting}
+                required
+              />
+            </div>
+          </div>
+
+          <div className="grid gap-1.5">
+            <label className={labelClassName} htmlFor="order-form-shipping-address">
+              {t('orders.form.shippingAddress')}
+            </label>
+            <textarea
+              id="order-form-shipping-address"
+              value={form.shippingAddress}
+              onChange={(event) =>
+                setForm((current) => ({
+                  ...current,
+                  shippingAddress: event.target.value,
+                }))
+              }
+              className={`${inputClassName} min-h-[86px] resize-y`}
+              placeholder={t('orders.form.shippingAddress')}
+              disabled={isSubmitting}
+              required
+            />
+          </div>
+
+          <div className="grid gap-1.5">
+            <label className={labelClassName} htmlFor="order-form-notes">
+              {t('orders.form.notes')}
+            </label>
+            <textarea
+              id="order-form-notes"
+              value={form.notes}
+              onChange={(event) =>
+                setForm((current) => ({ ...current, notes: event.target.value }))
+              }
+              className={`${inputClassName} min-h-[92px] resize-y`}
+              placeholder={t('orders.form.notesPlaceholder')}
+              disabled={isSubmitting}
+            />
+          </div>
+
+          <div className="flex items-center justify-between gap-4 rounded-xl bg-surface-card px-4 py-4 ring-1 ring-border-soft/35">
+            <div className="grid gap-0.5">
+              <p className="m-0 text-sm font-semibold text-text-primary">
+                {t('orders.form.aiGenerated')}
+              </p>
+              <p className="m-0 text-[12px] text-text-secondary">
+                {t('orders.form.aiGeneratedHint')}
+              </p>
+            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={form.aiGenerated}
+              className={[
+                'relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full p-0.5 transition-colors duration-200 ease-in-out',
+                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30',
+                form.aiGenerated ? 'bg-primary' : 'bg-border-soft/80',
+              ].join(' ')}
+              onClick={() =>
+                setForm((current) => ({
+                  ...current,
+                  aiGenerated: !current.aiGenerated,
+                }))
+              }
+              disabled={isSubmitting}
+            >
+              <span
+                className={[
+                  'pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow-md transition-transform duration-200 ease-in-out',
+                  form.aiGenerated ? 'translate-x-5' : 'translate-x-0',
+                ].join(' ')}
+              />
+            </button>
+          </div>
+
+          <section className="grid gap-3 rounded-xl bg-surface-card p-3.5 shadow-sm ring-1 ring-border-soft/35">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h3 className="m-0 text-base font-semibold text-text-primary">
+                {t('orders.form.itemsTitle')}
+              </h3>
+              <button
+                type="button"
+                className="inline-flex min-h-9 items-center gap-2 rounded-lg bg-primary/12 px-3 text-sm font-semibold text-text-accent transition duration-fast hover:bg-primary/16 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 disabled:opacity-60"
+                onClick={addItemRow}
+                disabled={isSubmitting || products.length === 0}
+              >
+                <AppIcon name="plus" className="h-4 w-4" aria-hidden="true" />
+                {t('orders.form.addItem')}
+              </button>
+            </div>
+
+            {products.length === 0 ? (
+              <p className="m-0 rounded-lg bg-warning-bg px-3 py-2 text-sm font-medium text-warning">
+                {t('orders.form.noProducts')}
+              </p>
+            ) : null}
+
+            {form.items.map((item, index) => {
+              const selectedProduct = productById.get(item.productId);
+              const quantity = parsePositiveInteger(item.quantity);
+              const unitPrice = parseNonNegativeNumber(item.unitPrice);
+              const lineTotal = Number((quantity * unitPrice).toFixed(2));
+
+              return (
+                <div
+                  key={item.id}
+                  className="grid gap-2.5 rounded-xl bg-surface-subtle/85 p-3"
+                >
+                  <div className="grid gap-2.5 sm:grid-cols-[minmax(0,1fr),100px,130px,auto]">
+                    <label className="grid gap-1.5">
+                      <span className={labelClassName}>
+                        {t('orders.form.product')}
+                      </span>
+                      <FilterSelect
+                        value={item.productId}
+                        options={productOptions}
+                        onChange={(value) => {
+                          const product = productById.get(value);
+                          updateItem(item.id, {
+                            productId: value,
+                            unitPrice: String(
+                              Number(
+                                (
+                                  product?.promoPrice ??
+                                  product?.price ??
+                                  0
+                                ).toFixed(2),
+                              ),
+                            ),
+                          });
+                        }}
+                        disabled={isSubmitting || productOptions.length === 0}
+                      />
+                    </label>
+
+                    <div className="grid gap-1.5">
+                      <label
+                        className={labelClassName}
+                        htmlFor={`order-form-item-qty-${index}`}
+                      >
+                        {t('orders.form.quantity')}
+                      </label>
+                      <input
+                        id={`order-form-item-qty-${index}`}
+                        type="number"
+                        min="1"
+                        step="1"
+                        value={item.quantity}
+                        onChange={(event) =>
+                          updateItem(item.id, { quantity: event.target.value })
+                        }
+                        className={inputClassName}
+                        disabled={isSubmitting}
+                      />
+                    </div>
+
+                    <div className="grid gap-1.5">
+                      <label
+                        className={labelClassName}
+                        htmlFor={`order-form-item-price-${index}`}
+                      >
+                        {t('orders.form.unitPrice')}
+                      </label>
+                      <input
+                        id={`order-form-item-price-${index}`}
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={item.unitPrice}
+                        onChange={(event) =>
+                          updateItem(item.id, { unitPrice: event.target.value })
+                        }
+                        className={inputClassName}
+                        disabled={isSubmitting}
+                      />
+                    </div>
+
+                    <div className="grid gap-1.5">
+                      <span className={labelClassName}>{t('common.delete')}</span>
+                      <button
+                        type="button"
+                        className="inline-flex min-h-[44px] items-center justify-center rounded-lg bg-danger-bg px-3 text-danger transition duration-fast hover:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-danger/35 disabled:opacity-60"
+                        onClick={() => removeItemRow(item.id)}
+                        disabled={isSubmitting || form.items.length <= 1}
+                        aria-label={t('orders.form.removeItem')}
+                      >
+                        <FiTrash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-surface-card px-3 py-2">
+                    <span className="text-[12px] font-medium text-text-secondary">
+                      {selectedProduct?.name ?? t('common.na')}
+                    </span>
+                    <span className="text-sm font-semibold text-text-primary">
+                      {new Intl.NumberFormat(locale, {
+                        style: 'currency',
+                        currency: selectedProduct?.currency ?? 'USD',
+                        maximumFractionDigits: 2,
+                      }).format(lineTotal)}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+
+            <div className="flex items-center justify-between gap-3 rounded-xl bg-primary/10 px-4 py-3">
+              <span className="text-sm font-semibold text-text-primary">
+                {t('orders.form.totalAmount')}
+              </span>
+              <span className="text-base font-extrabold text-text-accent">
+                {new Intl.NumberFormat(locale, {
+                  style: 'currency',
+                  currency: resolveCurrency(form.items, products),
+                  maximumFractionDigits: 2,
+                }).format(totalAmount)}
+              </span>
+            </div>
+          </section>
+
+          {fieldError ? (
+            <p className="m-0 rounded-lg bg-danger-bg px-3 py-2 text-sm font-medium text-danger">
+              {fieldError}
+            </p>
+          ) : null}
+
+          {errorMessage ? (
+            <p className="m-0 rounded-lg bg-danger-bg px-3 py-2 text-sm font-medium text-danger">
+              {errorMessage}
+            </p>
+          ) : null}
+
+          <div className="mt-1 flex flex-wrap items-center gap-2">
+            <button
+              type="submit"
+              className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-primary px-4 text-sm font-semibold text-primary-foreground transition duration-fast hover:bg-primary-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35 disabled:cursor-not-allowed disabled:opacity-60"
+              disabled={isSubmitting || !canSubmit}
+            >
+              {isSubmitting
+                ? mode === 'create'
+                  ? t('orders.form.creating')
+                  : t('orders.form.saving')
+                : mode === 'create'
+                  ? t('orders.form.createSubmit')
+                  : t('orders.form.editSubmit')}
+            </button>
+            <button
+              type="button"
+              className="inline-flex min-h-10 items-center justify-center rounded-lg bg-surface-card px-4 text-sm font-semibold text-text-secondary shadow-sm ring-1 ring-border-soft/40 transition duration-fast hover:bg-surface-subtle hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/25 disabled:cursor-not-allowed disabled:opacity-60"
+              onClick={onClose}
+              disabled={isSubmitting}
+            >
+              {t('common.cancel')}
+            </button>
+          </div>
+        </form>
+      </aside>
+    </div>
+  );
+}
+
+export default OrderFormPanel;

@@ -1,0 +1,1070 @@
+# Frontend API Documentation
+
+This document is the frontend-facing API reference for the current backend running in this repository.
+
+Base local URL:
+- `http://127.0.0.1:8000`
+
+Main docs:
+- Swagger UI: `http://127.0.0.1:8000/api/docs/`
+- OpenAPI schema: `http://127.0.0.1:8000/api/schema/`
+
+## 1. General Rules
+
+### Authentication
+
+Most endpoints require JWT auth.
+
+Header format:
+
+```http
+Authorization: Bearer <access_token>
+```
+
+Auth endpoints:
+- `POST /api/auth/login/`
+- `POST /api/auth/refresh/`
+- `GET /api/auth/me/`
+
+### Response style
+
+- List endpoints return plain arrays.
+- Pagination is not enabled.
+- UUID fields are returned as strings.
+- Decimal fields are returned as strings.
+- DateTime fields are returned as ISO datetime strings.
+- `JSONField` values are returned as JSON objects or arrays.
+
+### Common query params
+
+Many list endpoints support these:
+- `search=<text>`
+- `ordering=<field>`
+- filter params defined per endpoint
+
+Examples:
+- `GET /api/leads/?search=ali`
+- `GET /api/orders/?status=waiting_payment`
+- `GET /api/products/?ordering=price`
+
+### Common error codes
+
+- `400` validation error
+- `401` missing or invalid token
+- `403` authenticated but permission denied
+- `404` object not found
+
+Validation errors usually come as:
+
+```json
+{
+  "field_name": ["error message"]
+}
+```
+
+or
+
+```json
+{
+  "detail": "error message"
+}
+```
+
+## 2. Roles And Permissions
+
+Roles:
+- `developer`
+- `admin`
+- `operator`
+
+Important behavior:
+- `developer` has full access
+- `admin` has broad CRM access, but not developer-only modules
+- `operator` access depends on permission codes
+
+Permission codes used by frontend:
+- `can_view_dashboard`
+- `can_view_leads`
+- `can_manage_leads`
+- `can_view_customers`
+- `can_manage_customers`
+- `can_view_products`
+- `can_manage_products`
+- `can_view_orders`
+- `can_update_orders`
+- `can_view_payments`
+- `can_manage_payments`
+- `can_chat`
+- `can_view_notifications`
+- `can_manage_users`
+- `can_manage_integrations`
+- `can_manage_ai_settings`
+- `can_view_logs`
+
+Frontend should use `/api/auth/me/` to build permission-aware navigation and action buttons.
+
+## 3. Auth API
+
+### POST `/api/auth/login/`
+
+Login with email and password.
+
+Request:
+
+```json
+{
+  "email": "developer@example.com",
+  "password": "Password123!"
+}
+```
+
+Response:
+
+```json
+{
+  "refresh": "jwt_refresh_token",
+  "access": "jwt_access_token",
+  "user": {
+    "id": "uuid",
+    "email": "developer@example.com",
+    "full_name": "Developer User",
+    "phone": "",
+    "role": "developer",
+    "permissions": []
+  }
+}
+```
+
+Fields:
+- `refresh`: string
+- `access`: string
+- `user.id`: UUID string
+- `user.email`: string
+- `user.full_name`: string
+- `user.phone`: string
+- `user.role`: `developer | admin | operator`
+- `user.permissions`: string array
+
+Notes:
+- For developer, `permissions` returns an empty array, but access is full.
+- Store `access` for API calls and `refresh` for token refresh.
+
+### POST `/api/auth/refresh/`
+
+Request:
+
+```json
+{
+  "refresh": "jwt_refresh_token"
+}
+```
+
+Response:
+
+```json
+{
+  "access": "new_access_token",
+  "refresh": "new_refresh_token"
+}
+```
+
+### GET `/api/auth/me/`
+
+Returns the current authenticated user.
+
+Response:
+
+```json
+{
+  "id": "uuid",
+  "email": "developer@example.com",
+  "full_name": "Developer User",
+  "phone": "",
+  "role": "developer",
+  "permissions": []
+}
+```
+
+## 4. Common API
+
+### GET `/api/common/health/`
+
+Public endpoint.
+
+Response:
+
+```json
+{
+  "status": "ok",
+  "database": "ok",
+  "redis": "ok"
+}
+```
+
+### GET `/api/common/dashboard/`
+
+Permission:
+- `can_view_dashboard`
+
+Response fields:
+- `leads`: integer
+- `customers`: integer
+- `orders`: integer
+- `pending_payments`: integer
+- `unread_messages`: integer
+- `revenue`: decimal string
+
+### GET `/api/common/logs/`
+### GET `/api/common/logs/{id}/`
+
+Developer only.
+
+Filters:
+- `type`
+- `search`
+- `ordering=created_at`
+
+Log object:
+- `id`: UUID
+- `type`: `ai | webhook | error | payment | system`
+- `message`: string
+- `metadata`: object
+- `created_at`: datetime
+
+## 5. Users API
+
+Base path:
+- `/api/users/`
+
+Permission:
+- `can_manage_users`
+
+Admin behavior:
+- admin cannot see developer users
+
+### Permission object
+
+- `id`: UUID
+- `code`: string
+- `name`: string
+- `description`: string
+
+### GET `/api/users/permissions/`
+### GET `/api/users/permissions/{id}/`
+
+Search:
+- `code`
+- `name`
+
+### User read object
+
+- `id`: UUID
+- `email`: string
+- `full_name`: string
+- `phone`: string
+- `role`: `developer | admin | operator`
+- `is_active`: boolean
+- `custom_permissions`: array of permission objects
+- `created_by`: UUID or `null`
+- `created_at`: datetime
+- `updated_at`: datetime
+
+### User write payload
+
+- `email`: string, required on create
+- `full_name`: string, required on create
+- `phone`: string
+- `role`: `developer | admin | operator`
+- `is_active`: boolean
+- `password`: string, optional, min 8 chars
+- `custom_permission_ids`: UUID array, only meaningful for `operator`
+
+Notes:
+- Only developer can create another developer.
+- For non-operator roles, custom permissions are cleared automatically.
+- If `password` is omitted on create, user gets unusable password.
+
+### GET `/api/users/`
+### GET `/api/users/{id}/`
+### POST `/api/users/`
+### PUT `/api/users/{id}/`
+### PATCH `/api/users/{id}/`
+### DELETE `/api/users/{id}/`
+
+Filters:
+- `role`
+- `is_active`
+
+Search:
+- `email`
+- `full_name`
+- `phone`
+
+### POST `/api/users/{id}/toggle_active/`
+
+Response:
+- returns updated user read object
+
+## 6. Leads API
+
+Base path:
+- `/api/leads/`
+
+Permissions:
+- list/retrieve: `can_view_leads`
+- create/update/delete: `can_manage_leads`
+
+### Lead object
+
+- `id`: UUID
+- `created_at`: datetime
+- `updated_at`: datetime
+- `full_name`: string
+- `phone`: string
+- `email`: string
+- `instagram_username`: string
+- `telegram_username`: string
+- `source`: `telegram | instagram | manual | website | web`
+- `status`: `new | contacted | qualified | negotiating | converted | lost`
+- `notes`: string
+- `metadata`: object
+- `assigned_operator`: UUID or `null`
+
+### GET `/api/leads/`
+### GET `/api/leads/{id}/`
+### POST `/api/leads/`
+### PUT `/api/leads/{id}/`
+### PATCH `/api/leads/{id}/`
+### DELETE `/api/leads/{id}/`
+
+Filters:
+- `source`
+- `status`
+- `assigned_operator`
+
+Search:
+- `full_name`
+- `phone`
+- `email`
+- `instagram_username`
+- `telegram_username`
+
+Ordering:
+- `created_at`
+- `updated_at`
+
+Create/update example:
+
+```json
+{
+  "full_name": "Ali Valiyev",
+  "phone": "+998901234567",
+  "email": "ali@example.com",
+  "instagram_username": "",
+  "telegram_username": "ali_sales",
+  "source": "telegram",
+  "status": "new",
+  "notes": "Interested in diapers",
+  "metadata": {
+    "campaign": "spring"
+  },
+  "assigned_operator": "user-uuid"
+}
+```
+
+## 7. Customers API
+
+Base path:
+- `/api/customers/`
+
+Permissions:
+- list/retrieve: `can_view_customers`
+- create/update/delete: `can_manage_customers`
+
+### Customer object
+
+- `id`: UUID
+- `created_at`: datetime
+- `updated_at`: datetime
+- `lead`: UUID or `null`
+- `full_name`: string
+- `phone`: string
+- `email`: string
+- `address`: string
+- `notes`: string
+- `metadata`: object
+- `assigned_operator`: UUID or `null`
+
+### GET `/api/customers/`
+### GET `/api/customers/{id}/`
+### POST `/api/customers/`
+### PUT `/api/customers/{id}/`
+### PATCH `/api/customers/{id}/`
+### DELETE `/api/customers/{id}/`
+
+Filters:
+- `assigned_operator`
+
+Search:
+- `full_name`
+- `phone`
+- `email`
+- `address`
+
+Ordering:
+- `created_at`
+- `updated_at`
+
+## 8. Products API
+
+Base path:
+- `/api/products/`
+
+Permissions:
+- list/retrieve: `can_view_products`
+- create/update/delete: `can_manage_products`
+
+### Product object
+
+- `id`: UUID
+- `created_at`: datetime
+- `updated_at`: datetime
+- `name`: string
+- `sku`: string
+- `description`: string
+- `price`: decimal string
+- `currency`: string
+- `stock_quantity`: integer
+- `is_active`: boolean
+- `embedding`: array
+- `metadata`: object
+
+### GET `/api/products/`
+### GET `/api/products/{id}/`
+### POST `/api/products/`
+### PUT `/api/products/{id}/`
+### PATCH `/api/products/{id}/`
+### DELETE `/api/products/{id}/`
+
+Filters:
+- `is_active`
+- `currency`
+
+Search:
+- `name`
+- `sku`
+- `description`
+
+Ordering:
+- `name`
+- `price`
+- `created_at`
+
+## 9. Orders API
+
+Base path:
+- `/api/orders/`
+
+Permissions:
+- list/retrieve: `can_view_orders`
+- create/update/delete/recalculate: `can_update_orders`
+
+### Order item read object
+
+- `id`: UUID
+- `product`: string, product name
+- `quantity`: integer
+- `unit_price`: decimal string
+- `line_total`: decimal string
+
+### Order item write object
+
+- `product_id`: UUID, required
+- `quantity`: integer
+- `unit_price`: decimal string, optional
+
+### Order object
+
+- `id`: UUID
+- `customer`: UUID or `null`
+- `lead`: UUID or `null`
+- `status`: `draft | waiting_payment | pending | confirmed | paid | completed | cancelled`
+- `source`: `telegram | instagram | manual | website | web`
+- `contact_name`: string
+- `contact_phone`: string
+- `shipping_address`: string
+- `notes`: string
+- `metadata`: object
+- `ai_generated`: boolean
+- `total_amount`: decimal string, read only
+- `items`: order item array
+- `created_at`: datetime
+- `updated_at`: datetime
+
+### GET `/api/orders/`
+### GET `/api/orders/{id}/`
+### POST `/api/orders/`
+### PUT `/api/orders/{id}/`
+### PATCH `/api/orders/{id}/`
+### DELETE `/api/orders/{id}/`
+
+Filters:
+- `status`
+- `source`
+- `ai_generated`
+
+Search:
+- `contact_name`
+- `contact_phone`
+- `shipping_address`
+
+Ordering:
+- `created_at`
+- `updated_at`
+- `total_amount`
+
+Create example:
+
+```json
+{
+  "customer": "customer-uuid",
+  "lead": null,
+  "status": "waiting_payment",
+  "source": "manual",
+  "contact_name": "Ali Valiyev",
+  "contact_phone": "+998901234567",
+  "shipping_address": "Chilonzor 5",
+  "notes": "Manual order",
+  "metadata": {},
+  "ai_generated": false,
+  "items": [
+    {
+      "product_id": "product-uuid",
+      "quantity": 2,
+      "unit_price": "86000.00"
+    }
+  ]
+}
+```
+
+Update note:
+- When `items` is sent on update, old items are deleted and replaced.
+
+### POST `/api/orders/{id}/recalculate/`
+
+Recomputes item totals and `total_amount`.
+
+Response:
+- full updated order object
+
+## 10. Payments API
+
+Base path:
+- `/api/payments/`
+
+Permissions:
+- list/retrieve: `can_view_payments`
+- create/update/delete/approve/reject/verify: `can_manage_payments`
+
+### Payment object
+
+- `id`: UUID
+- `created_at`: datetime
+- `updated_at`: datetime
+- `order`: UUID
+- `amount`: decimal string
+- `status`: `pending | approved | rejected | verified | failed`
+- `method`: `manual | payme | click`
+- `screenshot`: file URL or `null`
+- `last_four_digits`: string
+- `submitted_by_name`: string
+- `reviewed_by`: UUID or `null`, read only
+- `reviewed_at`: datetime or `null`, read only
+- `metadata`: object
+- `verification_reference`: string
+
+### GET `/api/payments/`
+### GET `/api/payments/{id}/`
+### POST `/api/payments/`
+### PUT `/api/payments/{id}/`
+### PATCH `/api/payments/{id}/`
+### DELETE `/api/payments/{id}/`
+
+Filters:
+- `status`
+- `method`
+- `order`
+
+Search:
+- `order__contact_name`
+- `submitted_by_name`
+- `last_four_digits`
+
+Ordering:
+- `created_at`
+- `amount`
+- `updated_at`
+
+Create example:
+
+```json
+{
+  "order": "order-uuid",
+  "amount": "172000.00",
+  "status": "pending",
+  "method": "manual",
+  "last_four_digits": "1234",
+  "submitted_by_name": "Ali Valiyev",
+  "metadata": {},
+  "verification_reference": ""
+}
+```
+
+Notes:
+- `reviewed_by`, `reviewed_at`, `created_at`, `updated_at` are read only.
+- Duplicate protection applies if the same `order + amount + last_four_digits` exists recently in `pending`, `approved`, or `verified`.
+- For file upload, send `multipart/form-data` and include `screenshot`.
+
+### POST `/api/payments/{id}/approve/`
+
+Request body:
+- empty body is allowed
+
+Effect:
+- payment status becomes `approved`
+- order status becomes `paid`
+
+Response:
+- full updated payment object
+
+### POST `/api/payments/{id}/reject/`
+
+Request:
+
+```json
+{
+  "reason": "Screenshot unreadable"
+}
+```
+
+Effect:
+- payment status becomes `rejected`
+- rejection reason is stored in `metadata.rejection_reason`
+
+Response:
+- full updated payment object
+
+### POST `/api/payments/{id}/verify/`
+
+Request body:
+- empty body is allowed
+
+Effect:
+- queues async verification job
+
+Response:
+- `202 Accepted`
+- body is the current payment object
+
+## 11. Chat API
+
+Base path:
+- `/api/chat/`
+
+Permission:
+- `can_chat`
+
+### Chat session object
+
+- `id`: UUID
+- `channel`: `telegram | instagram | web | manual`
+- `external_id`: string
+- `lead`: UUID or `null`
+- `customer`: UUID or `null`
+- `assigned_operator`: UUID or `null`
+- `ai_paused_until`: datetime or `null`
+- `is_operator_active`: boolean
+- `last_message_at`: datetime or `null`
+- `state`: object
+- `last_message`: chat message object or `null`
+- `created_at`: datetime
+- `updated_at`: datetime
+
+### Chat message object
+
+- `id`: UUID
+- `created_at`: datetime
+- `updated_at`: datetime
+- `session`: UUID
+- `sender_type`: `customer | ai | operator | system`
+- `direction`: `incoming | outgoing`
+- `content`: string
+- `external_message_id`: string
+- `metadata`: object
+- `sent_by`: UUID or `null`, read only
+- `is_read`: boolean
+
+### GET `/api/chat/sessions/`
+### GET `/api/chat/sessions/{id}/`
+
+Filters:
+- `channel`
+- `assigned_operator`
+- `is_operator_active`
+
+Search:
+- `external_id`
+- `lead__full_name`
+- `customer__full_name`
+- `customer__phone`
+
+Ordering:
+- `last_message_at`
+- `created_at`
+
+### POST `/api/chat/sessions/{id}/send_message/`
+
+Request:
+
+```json
+{
+  "content": "Assalomu alaykum, buyurtmangiz tayyor."
+}
+```
+
+Response:
+- created chat message object
+
+Validation:
+- empty `content` returns `400`
+
+### POST `/api/chat/sessions/{id}/mark_read/`
+
+Response:
+- updated chat session object
+
+### GET `/api/chat/messages/`
+### GET `/api/chat/messages/{id}/`
+
+Filters:
+- `session`
+- `sender_type`
+- `direction`
+
+Search:
+- `content`
+- `external_message_id`
+
+Ordering:
+- `created_at`
+
+Useful frontend query:
+- `GET /api/chat/messages/?session=<session_uuid>`
+
+## 12. AI Settings API
+
+Base path:
+- `/api/ai/settings/`
+
+Developer only.
+
+### AI settings object
+
+- `id`: UUID
+- `created_at`: datetime
+- `updated_at`: datetime
+- `name`: string
+- `system_prompt`: string
+- `model_name`: string
+- `temperature`: decimal string
+- `auto_order_enabled`: boolean
+- `order_confidence_threshold`: decimal string
+- `resume_after_operator_minutes`: integer
+- `is_active`: boolean
+- `updated_by`: UUID or `null`, read only
+
+### GET `/api/ai/settings/`
+### GET `/api/ai/settings/{id}/`
+### POST `/api/ai/settings/`
+### PUT `/api/ai/settings/{id}/`
+### PATCH `/api/ai/settings/{id}/`
+### DELETE `/api/ai/settings/{id}/`
+
+### GET `/api/ai/settings/active/`
+
+Returns:
+- active settings object
+- or `{}` if there is no active config
+
+## 13. Integrations API
+
+Base path:
+- `/api/integrations/`
+
+### Integration events
+
+Permission:
+- `can_manage_integrations`
+
+Read only endpoints:
+- `GET /api/integrations/events/`
+- `GET /api/integrations/events/{id}/`
+
+Integration event object:
+- `id`: UUID
+- `created_at`: datetime
+- `updated_at`: datetime
+- `platform`: `instagram | telegram | userbot | payment`
+- `event_type`: string
+- `external_id`: string
+- `event_key`: string
+- `payload`: object
+- `processed`: boolean, read only
+- `processing_attempts`: integer
+- `error_message`: string, read only
+
+Filters:
+- `platform`
+- `processed`
+- `event_type`
+
+Search:
+- `external_id`
+- `event_type`
+
+Ordering:
+- `created_at`
+
+### Integration configs
+
+Developer only.
+
+Endpoints:
+- `GET /api/integrations/configs/`
+- `GET /api/integrations/configs/{id}/`
+- `POST /api/integrations/configs/`
+- `PUT /api/integrations/configs/{id}/`
+- `PATCH /api/integrations/configs/{id}/`
+- `DELETE /api/integrations/configs/{id}/`
+
+Integration config object:
+- `id`: UUID
+- `created_at`: datetime
+- `updated_at`: datetime
+- `provider`: `openai | telegram | instagram`
+- `key`: string
+- `label`: string
+- `value`: string
+- `is_secret`: boolean
+- `is_active`: boolean
+- `updated_by`: UUID or `null`, read only
+
+Filters:
+- `provider`
+- `key`
+- `is_active`
+- `is_secret`
+
+Search:
+- `provider`
+- `key`
+- `label`
+
+Ordering:
+- `provider`
+- `key`
+- `updated_at`
+
+### POST `/api/integrations/instagram/webhook/`
+
+Public endpoint.
+
+Response:
+
+```json
+{
+  "status": "accepted"
+}
+```
+
+### GET `/api/integrations/instagram/webhook/`
+
+Public verification endpoint used by Meta.
+
+Query params:
+- `hub.mode`
+- `hub.verify_token`
+- `hub.challenge`
+
+### POST `/api/integrations/telegram/inbound/`
+
+Public endpoint.
+
+Optional header:
+
+```http
+X-Telegram-Bot-Api-Secret-Token: <secret>
+```
+
+Response:
+
+```json
+{
+  "status": "accepted"
+}
+```
+
+## 14. Notifications API
+
+Base path:
+- `/api/notifications/`
+
+Permission:
+- `can_view_notifications`
+
+Visibility behavior:
+- developer and admin can see all notifications
+- operator only sees own notifications
+
+### Notification object
+
+- `id`: UUID
+- `created_at`: datetime
+- `updated_at`: datetime
+- `user`: UUID
+- `title`: string
+- `message`: string
+- `channel`: `in_app | telegram | system`
+- `is_read`: boolean
+- `metadata`: object
+
+### GET `/api/notifications/`
+### GET `/api/notifications/{id}/`
+
+Filters:
+- `channel`
+- `is_read`
+
+Ordering:
+- `created_at`
+
+### POST `/api/notifications/{id}/mark_read/`
+
+Response:
+- updated notification object
+
+## 15. WebSocket API
+
+WebSocket auth uses JWT in query string.
+
+Format:
+
+```text
+ws://127.0.0.1:8000/ws/chat/<session_uuid>/?token=<access_token>
+```
+
+or
+
+```text
+ws://127.0.0.1:8000/ws/logs/?token=<access_token>
+```
+
+### Chat socket
+
+URL:
+- `/ws/chat/<session_uuid>/`
+
+Access:
+- authenticated user
+- must have `can_chat`
+- session must exist
+
+Close codes:
+- `4401` unauthenticated
+- `4403` no permission
+- `4404` chat session not found
+
+Client send payload:
+
+```json
+{
+  "content": "Operator message text"
+}
+```
+
+Server sends JSON event payload generated by backend chat service.
+Frontend should treat incoming payload as a new chat message event and append it to the active chat thread.
+
+### Developer logs socket
+
+URL:
+- `/ws/logs/`
+
+Access:
+- authenticated developer only
+
+Close codes:
+- `4401` unauthenticated
+- `4403` not a developer
+
+Server sends JSON log payloads.
+
+## 16. Frontend Implementation Notes
+
+### Recommended auth flow
+
+1. Login with `/api/auth/login/`
+2. Save `access` and `refresh`
+3. Call `/api/auth/me/`
+4. Build navigation from `role` and `permissions`
+5. On `401`, try `/api/auth/refresh/`
+6. If refresh fails, force logout
+
+### Recommended route gating
+
+- `developer`: full access
+- `admin`: all CRM routes except developer-only modules
+- `operator`: gate per permission code
+
+Suggested page-to-permission mapping:
+- dashboard -> `can_view_dashboard`
+- leads -> `can_view_leads`
+- leads edit/create -> `can_manage_leads`
+- customers -> `can_view_customers`
+- customers edit/create -> `can_manage_customers`
+- products -> `can_view_products`
+- products edit/create -> `can_manage_products`
+- orders -> `can_view_orders`
+- orders edit/create -> `can_update_orders`
+- payments -> `can_view_payments`
+- payment review actions -> `can_manage_payments`
+- chat -> `can_chat`
+- notifications -> `can_view_notifications`
+- users -> `can_manage_users`
+- integrations events -> `can_manage_integrations`
+- AI settings -> developer only
+- logs -> developer only
+
+### File upload note
+
+For `Payment.screenshot`, use `multipart/form-data`.
+
+### Decimal handling
+
+Frontend should treat decimal values as strings for transport:
+- `price`
+- `unit_price`
+- `line_total`
+- `total_amount`
+- `amount`
+- `temperature`
+- `order_confidence_threshold`
+- `revenue`
+
+### Current demo users
+
+- `developer@example.com` / `Password123!`
+- `admin@example.com` / `Password123!`
+- `operator.sales@example.com` / `Password123!`
+- `operator.payments@example.com` / `Password123!`
+

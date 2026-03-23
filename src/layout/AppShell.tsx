@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { getRouteByPathname } from '../config/routes';
 import AppSidebar from './AppSidebar';
 import AppTopbar from './AppTopbar';
 
 function AppShell() {
+  const { t } = useTranslation();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const location = useLocation();
 
@@ -18,10 +20,10 @@ function AppShell() {
   );
 
   return (
-    <div className="relative flex min-h-screen bg-transparent">
+    <div className="relative flex h-dvh w-full overflow-hidden bg-background-default">
       <div
         className={[
-          'fixed inset-0 z-20 bg-background-overlay transition-opacity duration-base min-[960px]:hidden',
+          'fixed inset-0 z-40 bg-background-overlay transition-opacity duration-base min-[960px]:hidden',
           isSidebarOpen
             ? 'pointer-events-auto opacity-100'
             : 'pointer-events-none opacity-0',
@@ -35,21 +37,30 @@ function AppShell() {
         onClose={() => setIsSidebarOpen(false)}
       />
 
-      <div className="flex min-h-screen min-w-0 flex-1 flex-col overflow-x-hidden bg-background-subtle">
+      <div className="flex h-dvh min-w-0 w-full flex-1 flex-col overflow-hidden bg-background-default">
         <AppTopbar
-          title={currentRoute?.title ?? 'Chikko'}
+          title={
+            currentRoute
+              ? t(`routes.${currentRoute.id}.title`, { defaultValue: currentRoute.title })
+              : t('common.appName')
+          }
           subtitle={
-            currentRoute?.description ??
-            'Shared application shell for internal routes.'
+            currentRoute
+              ? t(`routes.${currentRoute.id}.description`, {
+                  defaultValue: currentRoute.description,
+                })
+              : ''
           }
           onMenuToggle={() => setIsSidebarOpen((open) => !open)}
         />
 
-        <div className="flex-1 px-3 pb-4 pt-4 min-[640px]:px-4 min-[640px]:pb-5 min-[640px]:pt-5 min-[960px]:px-7 min-[960px]:pb-8 min-[960px]:pt-6">
+        <main className="flex-1 overflow-y-auto overscroll-contain">
+          <div className="px-3 pb-5 pt-3 min-[640px]:px-4 min-[640px]:pb-6 min-[640px]:pt-4 min-[960px]:px-7 min-[960px]:pb-8 min-[960px]:pt-4">
           <div className="mx-auto w-full max-w-page min-w-0">
             <Outlet />
           </div>
-        </div>
+          </div>
+        </main>
       </div>
     </div>
   );

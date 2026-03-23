@@ -45,35 +45,32 @@ export const LEAD_STATUS_OPTIONS: SelectOption[] = [
 
 export const ORDER_STATUSES = [
   'draft',
+  'waiting_payment',
   'pending',
   'confirmed',
-  'packed',
-  'shipped',
-  'delivered',
+  'paid',
+  'completed',
   'cancelled',
-  'returned',
 ] as const satisfies readonly OrderStatus[];
 
 export const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
   draft: 'Draft',
+  waiting_payment: 'Waiting Payment',
   pending: 'Pending',
   confirmed: 'Confirmed',
-  packed: 'Packed',
-  shipped: 'Shipped',
-  delivered: 'Delivered',
+  paid: 'Paid',
+  completed: 'Completed',
   cancelled: 'Cancelled',
-  returned: 'Returned',
 };
 
 export const ORDER_STATUS_OPTIONS: SelectOption[] = [
   { value: 'draft', label: ORDER_STATUS_LABELS.draft },
+  { value: 'waiting_payment', label: ORDER_STATUS_LABELS.waiting_payment },
   { value: 'pending', label: ORDER_STATUS_LABELS.pending },
   { value: 'confirmed', label: ORDER_STATUS_LABELS.confirmed },
-  { value: 'packed', label: ORDER_STATUS_LABELS.packed },
-  { value: 'shipped', label: ORDER_STATUS_LABELS.shipped },
-  { value: 'delivered', label: ORDER_STATUS_LABELS.delivered },
+  { value: 'paid', label: ORDER_STATUS_LABELS.paid },
+  { value: 'completed', label: ORDER_STATUS_LABELS.completed },
   { value: 'cancelled', label: ORDER_STATUS_LABELS.cancelled },
-  { value: 'returned', label: ORDER_STATUS_LABELS.returned },
 ];
 
 export const PAYMENT_STATUSES = [

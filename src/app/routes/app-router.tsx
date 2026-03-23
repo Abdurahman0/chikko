@@ -17,6 +17,8 @@ import OrdersPage from '../pages/protected/OrdersPage';
 import PaymentsPage from '../pages/protected/PaymentsPage';
 import ProductsPage from '../pages/protected/ProductsPage';
 import ProfilePage from '../pages/protected/ProfilePage';
+import UsersPage from '../pages/protected/UsersPage';
+import IntegrationsPage from '../pages/protected/IntegrationsPage';
 import AppShell from '../../layout/AppShell';
 
 type RoutedPageId = Exclude<AppRouteId, 'home'>;
@@ -27,6 +29,7 @@ const pageRegistry: Record<RoutedPageId, ComponentType> = {
   chat: ChatPage,
   customers: CustomersPage,
   dashboard: DashboardPage,
+  integrations: IntegrationsPage,
   leads: LeadsPage,
   login: LoginPage,
   logs: LogsPage,
@@ -36,6 +39,7 @@ const pageRegistry: Record<RoutedPageId, ComponentType> = {
   payments: PaymentsPage,
   products: ProductsPage,
   profile: ProfilePage,
+  users: UsersPage,
 };
 
 function renderRouteElement(route: AppRouteConfig): JSX.Element {

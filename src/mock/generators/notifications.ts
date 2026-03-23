@@ -70,21 +70,22 @@ export function generateMockNotifications(
 
     if (type === 'order' || type === 'payment') {
       const order = orders[index % orders.length]!;
+      const orderLabel = order.orderNumber ?? order.id;
       return {
         id: createMockId('notification', index),
         type,
         title: type === 'order' ? 'Order status updated' : 'Payment needs attention',
         message:
           type === 'order'
-            ? `${order.orderNumber} moved to ${order.orderStatus}.`
-            : `${order.orderNumber} has payment status ${order.paymentStatus}.`,
+            ? `${orderLabel} moved to ${order.status}.`
+            : `${orderLabel} has payment status ${order.paymentStatus ?? 'pending'}.`,
         severity: deriveSeverity(type, index),
         isRead: index % 3 === 0,
         createdAt: timestampFromIndex(index, { hourOffset: 1 }),
         relatedEntity: {
           entityType: 'order',
           entityId: order.id,
-          label: order.orderNumber,
+          label: orderLabel,
           path: `/orders/${order.id}`,
         },
       };

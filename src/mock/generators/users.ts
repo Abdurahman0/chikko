@@ -5,6 +5,7 @@ import {
   createEmail,
   createMockId,
   createPersonName,
+  createPhoneNumber,
   cycleValue,
   timestampFromIndex,
 } from '../core/helpers';
@@ -28,6 +29,7 @@ export function generateMockUsers(
       id: createMockId('user', index),
       fullName,
       email: createEmail(index),
+      phone: createPhoneNumber(index),
       role,
       status: cycleValue(USER_STATUSES, index),
       avatarUrl: `/mock/avatars/user-${(index % 6) + 1}.png`,

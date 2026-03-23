@@ -2,53 +2,84 @@ import type {
   AuditInfo,
   CurrencyCode,
   EntityId,
-  PlatformChannel,
+  TimestampString,
 } from './common';
 import type { CustomerSummary } from './customer';
+import type { LeadSummary } from './lead';
 import type { PaymentStatus } from './payment';
 import type { ProductSummary } from './product';
-import type { UserSummary } from './user';
 
 export type OrderStatus =
   | 'draft'
+  | 'waiting_payment'
   | 'pending'
   | 'confirmed'
-  | 'packed'
-  | 'shipped'
-  | 'delivered'
-  | 'cancelled'
-  | 'returned';
+  | 'paid'
+  | 'completed'
+  | 'cancelled';
+
+export type OrderSource = 'telegram' | 'instagram' | 'manual';
 
 export interface OrderItem {
   id: EntityId;
   product: ProductSummary;
   quantity: number;
   unitPrice: number;
-  totalPrice: number;
+  lineTotal: number;
+  totalPrice?: number;
 }
 
-export interface OrderSummary {
-  id: EntityId;
-  orderNumber: string;
-  totalAmount: number;
-  currency: CurrencyCode;
-  orderStatus: OrderStatus;
-  paymentStatus: PaymentStatus;
+export interface OrderItemMutationInput {
+  productId: EntityId;
+  quantity: number;
+  unitPrice: number;
 }
 
 export interface Order extends AuditInfo {
   id: EntityId;
-  orderNumber: string;
-  customer: CustomerSummary;
-  items: OrderItem[];
-  subtotal: number;
-  discountAmount: number;
-  deliveryFee: number;
+  customer?: CustomerSummary;
+  lead?: LeadSummary;
+  status: OrderStatus;
+  source: OrderSource;
+  contactName: string;
+  contactPhone: string;
+  shippingAddress: string;
+  notes?: string;
+  metadata?: Record<string, string | number | boolean | null>;
+  aiGenerated: boolean;
   totalAmount: number;
   currency: CurrencyCode;
-  orderStatus: OrderStatus;
-  paymentStatus: PaymentStatus;
-  assignedOperator?: UserSummary;
-  source: PlatformChannel;
+  items: OrderItem[];
+  orderNumber?: string;
+  orderStatus?: OrderStatus;
+  paymentStatus?: PaymentStatus;
   notesSummary?: string;
+}
+
+export interface OrderMutationInput {
+  customerId?: EntityId;
+  leadId?: EntityId;
+  status: OrderStatus;
+  source: OrderSource;
+  contactName: string;
+  contactPhone: string;
+  shippingAddress: string;
+  notes: string;
+  metadata?: Record<string, string | number | boolean | null>;
+  aiGenerated: boolean;
+  items: OrderItemMutationInput[];
+  currency?: CurrencyCode;
+}
+
+export type OrderPatchInput = Partial<OrderMutationInput>;
+
+export interface OrderSummary {
+  id: EntityId;
+  status: OrderStatus;
+  source: OrderSource;
+  totalAmount: number;
+  currency: CurrencyCode;
+  contactName: string;
+  contactPhone: string;
+  updatedAt: TimestampString;
 }

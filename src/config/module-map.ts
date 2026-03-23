@@ -292,12 +292,52 @@ export const moduleMap: AppModule[] = [
       'Personal module rather than a business module. Safe to keep simple and independent from operational access rules.',
   },
   {
+    id: 'users',
+    label: 'Users',
+    description: 'User access and account management.',
+    category: 'system',
+    priority: 'low',
+    priorityOrder: 10,
+    allowedRoles: ['developer', 'admin', 'operator'],
+    accessStrategy: 'permission-based',
+    pages: [
+      {
+        id: 'users-list',
+        label: 'Users',
+        kind: 'list',
+        path: '/users',
+      },
+    ],
+    notes:
+      'Access remains permission-driven in route guards. Admin and operator visibility depends on granted capabilities.',
+  },
+  {
+    id: 'integrations',
+    label: 'Integrations',
+    description: 'Connected apps and external channels.',
+    category: 'system',
+    priority: 'low',
+    priorityOrder: 11,
+    allowedRoles: ['developer', 'admin', 'operator'],
+    accessStrategy: 'permission-based',
+    pages: [
+      {
+        id: 'integrations-list',
+        label: 'Integrations',
+        kind: 'configuration',
+        path: '/integrations',
+      },
+    ],
+    notes:
+      'Protected by permission-aware guards. This is intentionally hidden unless the account is explicitly allowed.',
+  },
+  {
     id: 'ai-settings',
     label: 'AI Settings',
     description: 'AI agent setup and guardrails.',
     category: 'intelligence',
     priority: 'low',
-    priorityOrder: 10,
+    priorityOrder: 12,
     allowedRoles: ['developer'],
     accessStrategy: 'static-role-based',
     pages: [
@@ -329,7 +369,7 @@ export const moduleMap: AppModule[] = [
     description: 'Audit trail and system events.',
     category: 'system',
     priority: 'low',
-    priorityOrder: 11,
+    priorityOrder: 13,
     allowedRoles: ['developer'],
     accessStrategy: 'static-role-based',
     pages: [

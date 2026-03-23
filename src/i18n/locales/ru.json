@@ -1,0 +1,749 @@
+{
+  "common": {
+    "appName": "chikko",
+    "loading": "Yuklanmoqda...",
+    "save": "Saqlash",
+    "cancel": "Bekor qilish",
+    "create": "Yaratish",
+    "edit": "Tahrirlash",
+    "delete": "O'chirish",
+    "search": "Qidirish",
+    "all": "Barchasi",
+    "yes": "Ha",
+    "no": "Yo'q",
+    "na": "Mavjud emas",
+    "active": "Faol",
+    "inactive": "Nofaol",
+    "unassigned": "Biriktirilmagan",
+    "notAvailable": "Mavjud emas",
+    "language": "Til",
+    "languages": {
+      "uz": "O'zbekcha",
+      "ru": "Ruscha"
+    }
+  },
+  "routes": {
+    "home": {
+      "title": "Bosh sahifa",
+      "description": "Sessiya holatiga qarab yo'naltirish sahifasi."
+    },
+    "login": {
+      "title": "Kirish",
+      "description": "Tizimga kirish sahifasi."
+    },
+    "access-denied": {
+      "title": "Kirish taqiqlangan",
+      "description": "Ruxsat berilmagan sahifalar uchun xabar."
+    },
+    "not-found": {
+      "title": "Sahifa topilmadi",
+      "description": "Noma'lum yo'nalishlar uchun zaxira sahifa."
+    },
+    "dashboard": {
+      "title": "Boshqaruv paneli",
+      "description": "Asosiy ko'rsatkichlar va umumiy analitika."
+    },
+    "leads": {
+      "title": "Lidlar",
+      "description": "Lidlarni boshqarish va kuzatish."
+    },
+    "customers": {
+      "title": "Mijozlar",
+      "description": "Mijozlar ro'yxati va profillari."
+    },
+    "products": {
+      "title": "Mahsulotlar",
+      "description": "Katalog, narx va zaxira boshqaruvi."
+    },
+    "orders": {
+      "title": "Buyurtmalar",
+      "description": "Buyurtmalarni boshqarish."
+    },
+    "payments": {
+      "title": "To'lovlar",
+      "description": "To'lov holati va tranzaksiyalar."
+    },
+    "chat": {
+      "title": "Chat",
+      "description": "Muloqot va xabarlar oynasi."
+    },
+    "notifications": {
+      "title": "Bildirishnomalar",
+      "description": "Muhim hodisalar va ogohlantirishlar."
+    },
+    "profile": {
+      "title": "Profil",
+      "description": "Foydalanuvchi sozlamalari va ma'lumotlari."
+    },
+    "users": {
+      "title": "Foydalanuvchilar",
+      "description": "Jamoa a'zolari va ruxsatlar boshqaruvi."
+    },
+    "integrations": {
+      "title": "Integratsiyalar",
+      "description": "Tashqi xizmatlar ulanishlari."
+    },
+    "ai-settings": {
+      "title": "AI sozlamalari",
+      "description": "Sun'iy intellekt konfiguratsiyasi."
+    },
+    "logs": {
+      "title": "Jurnallar",
+      "description": "Tizim hodisalari va audit jurnallari."
+    }
+  },
+  "navigation": {
+    "groups": {
+      "main": "Ish joyi",
+      "operations": "Jarayonlar",
+      "communication": "Aloqa",
+      "system": "Boshqaruv"
+    },
+    "captions": {
+      "dashboard": "Umumiy",
+      "profile": "Hisob",
+      "users": "Ruxsatlar",
+      "integrations": "Ulanishlar",
+      "leads": "Lid oqimi",
+      "customers": "Mijozlar",
+      "products": "Katalog",
+      "orders": "Buyurtmalar",
+      "payments": "Tranzaksiyalar",
+      "chat": "Xabarlar",
+      "notifications": "Ogohlantirishlar",
+      "ai-settings": "Ish joyi",
+      "logs": "Audit"
+    }
+  },
+  "topbar": {
+    "menuOpen": "Navigatsiyani ochish",
+    "themeToggle": "Mavzuni almashtirish",
+    "notifications": "Bildirishnomalar",
+    "profileMenu": "Profil menyusini ochish",
+    "profile": "Profil",
+    "logout": "Chiqish",
+    "noRole": "Rol yo'q",
+    "noEmail": "Email yo'q"
+  },
+  "auth": {
+    "login": {
+      "eyebrow": "chikko crm",
+      "subtitle": "CRM boshqaruv platformasi",
+      "emailLabel": "Email yoki telefon",
+      "emailPlaceholder": "developer@example.com",
+      "passwordLabel": "Parol",
+      "emailError": "To'g'ri email manzilini kiriting.",
+      "passwordError": "Parol kamida 8 ta belgidan iborat bo'lishi kerak.",
+      "invalidCredentials": "Email yoki parol noto'g'ri.",
+      "signIn": "Kirish",
+      "signingIn": "Kirilmoqda...",
+      "hidePassword": "Parolni yashirish",
+      "showPassword": "Parolni ko'rsatish",
+      "footerRights": "(c) 2026 chikko. Barcha huquqlar himoyalangan.",
+      "footerPowered": "Ishlab chiquvchi"
+    },
+    "accessDenied": {
+      "eyebrow": "Kirish nazorati",
+      "title": "Kirish taqiqlangan",
+      "description": "Siz tizimga kirgansiz, lekin ushbu sahifa uchun ruxsatingiz yo'q.",
+      "currentAccount": "Joriy hisob:",
+      "notSignedIn": "Tizimga kirmagan",
+      "role": "Rol:",
+      "goAllowed": "Ruxsat etilgan sahifaga o'tish",
+      "signOut": "Chiqish",
+      "goLogin": "Kirish sahifasiga o'tish"
+    }
+  },
+  "shared": {
+    "table": {
+      "emptyTitle": "Yozuvlar topilmadi",
+      "emptyDescription": "Ma'lumot mavjud bo'lganda bu yerda ko'rsatiladi.",
+      "loadingTitle": "Jadval yuklanmoqda",
+      "loadingDescription": "Ma'lumotlar tayyor bo'lgach satrlar ko'rsatiladi."
+    },
+    "searchInput": {
+      "placeholder": "Qidirish"
+    },
+    "pagination": {
+      "page": "Sahifa",
+      "of": "dan",
+      "totalItems": "jami yozuv",
+      "previous": "Oldingi",
+      "next": "Keyingi"
+    },
+    "filterSelect": {
+      "select": "Tanlang"
+    },
+    "emptyState": {
+      "title": "Ma'lumot topilmadi",
+      "description": "Kerakli ma'lumot hozircha mavjud emas."
+    },
+    "loadingState": {
+      "title": "Yuklanmoqda",
+      "description": "Ma'lumotlar olinmoqda."
+    },
+    "placeholder": {
+      "sectionTitle": "Sahifa poydevori",
+      "sectionDescription": "Bu modul uchun umumiy sahifa tuzilmasi namunasi.",
+      "emptyTitle": "Modul interfeysi hali tayyor emas",
+      "emptyDescription": "Keyingi vazifalarda bu bo'lim real kontent bilan to'ldiriladi.",
+      "nextStateTitle": "Keyingi holat",
+      "loadingPatternTitle": "Yuklanish holati",
+      "loadingPatternHeading": "Kelajakdagi ma'lumot yuklanishi",
+      "loadingPatternDescription": "Xizmatlar ulanganda bu holat vaqtinchalik yuklanish interfeysi sifatida ishlatiladi.",
+      "publicRoute": "Ommaviy sahifa",
+      "protectedRoute": "Himoyalangan sahifa",
+      "routeId": "Sahifa ID",
+      "navigation": "Navigatsiya",
+      "listed": "Ko'rsatiladi",
+      "hidden": "Yashirin",
+      "access": "Kirish",
+      "allowedRoles": "Ruxsat etilgan rollar",
+      "accessStrategy": "Kirish strategiyasi"
+    }
+  },
+  "dashboard": {
+    "loadingTitle": "Boshqaruv paneli yuklanmoqda",
+    "loadingDescription": "Analitika va taqsimotlar olinmoqda.",
+    "errorTitle": "Boshqaruv paneli mavjud emas",
+    "errorDescription": "Boshqaruv paneli ma'lumotlarini yuklab bo'lmadi.",
+    "title": "Boshqaruv paneli",
+    "welcome": "Xush kelibsiz",
+    "workspaceFallback": "Ish maydoni",
+    "totalLeads": "Jami lidlar",
+    "sourceDataHint": "Yangi lidlar qayd etilgandan keyin manba ma'lumotlari ko'rsatiladi.",
+    "metrics": {
+      "leads": "Lidlar",
+      "customers": "Mijozlar",
+      "orders": "Buyurtmalar",
+      "pendingPayments": "Kutilayotgan to'lovlar",
+      "unreadMessages": "O'qilmagan xabarlar",
+      "revenue": "Daromad",
+      "newLeads": "yangi lid",
+      "newCustomers": "yangi mijoz",
+      "completed": "yakunlangan",
+      "pending": "kutilmoqda",
+      "activeSessions": "faol sessiya",
+      "collected": "yig'ilgan"
+    },
+    "sections": {
+      "trend": "Trendlar",
+      "source": "Lid manbalari",
+      "leadStatus": "Lid holatlari",
+      "orderStatus": "Buyurtma holati",
+      "paymentStatus": "To'lov holati",
+      "chatChannels": "Chat kanallari",
+      "performance": "Asosiy ko'rsatkichlar"
+    },
+    "descriptions": {
+      "trend": "Tanlangan davr bo'yicha lidlar, mijozlar va buyurtmalar dinamikasi.",
+      "source": "Lidlar hajmi bo'yicha eng faol kanallar.",
+      "leadStatus": "Jarayon bo'ylab holatlar taqsimoti."
+    },
+    "performance": {
+      "leadConversionRate": "Lid konversiya darajasi",
+      "orderCompletionRate": "Buyurtma yakunlanish darajasi",
+      "averageOrderValue": "O'rtacha buyurtma qiymati"
+    },
+    "noLeads": "Lidlar yo'q"
+  },
+  "leads": {
+    "pipelineEyebrow": "Jarayon",
+    "title": "Lidlar",
+    "lead": "Lid",
+    "subtitle": "Saralash, aloqa va kuzatuvni bitta navbatda boshqaring.",
+    "visible": "ko'rinmoqda",
+    "filters": "filtr",
+    "allStatuses": "Barcha holatlar",
+    "allChannels": "Barcha kanallar",
+    "status": "Holat",
+    "channel": "Kanal",
+    "searchPlaceholder": "Lid, telefon yoki username bo'yicha qidirish...",
+    "count": "lid",
+    "unknownHandle": "noma'lum",
+    "detailOpen": "Tafsilot ochiq",
+    "queueTitle": "Lidlar navbati",
+    "queueHint": "Tafsilotlarni ochish uchun satrni bosing",
+    "emptyTitle": "Mos lid topilmadi",
+    "emptyDescription": "Qidiruv yoki filtrlarni o'zgartirib ko'ring.",
+    "errorTitle": "Lidlar mavjud emas",
+    "errorDescription": "Joriy xizmatdan lidlarni yuklab bo'lmadi.",
+    "contact": "Kontakt",
+    "source": "Manba",
+    "owner": "Mas'ul",
+    "lastActivity": "So'nggi faollik",
+    "noPhone": "Telefon yo'q",
+    "noEmail": "Email yo'q",
+    "awaitingOutreach": "Aloqa kutilmoqda",
+    "dmSent": "Xabar yuborilgan",
+    "unassigned": "Biriktirilmagan",
+    "replied": "Javob berilgan",
+    "awaitingReply": "Javob kutilmoqda",
+    "detail": {
+      "ariaLabel": "Lid tafsilotlari",
+      "profile": "Lid profili",
+      "titleFallback": "Lid tafsilotlari",
+      "close": "Lid tafsilotlarini yopish",
+      "loadingTitle": "Lid tafsilotlari yuklanmoqda",
+      "loadingDescription": "Profil va faollik ma'lumotlari olinmoqda.",
+      "errorTitle": "Lid mavjud emas",
+      "errorDescription": "Tanlangan lidni yuklab bo'lmadi.",
+      "contactTitle": "Kontakt",
+      "contactDescription": "Asosiy profil va biriktirish ma'lumotlari.",
+      "phone": "Telefon",
+      "email": "Email",
+      "source": "Manba",
+      "owner": "Mas'ul",
+      "activityTitle": "Faollik",
+      "activityDescription": "Vaqt chizig'i va muloqot signallari.",
+      "created": "Yaratilgan",
+      "updated": "Yangilangan",
+      "lastContact": "So'nggi aloqa",
+      "lastMessage": "So'nggi xabar",
+      "leadReplied": "Lid javob berdi",
+      "dmSent": "Xabar yuborilgan",
+      "notesTitle": "Izohlar",
+      "notesDescription": "Keyingi aloqa oldidan kontekst.",
+      "noNotes": "Hali izohlar yo'q."
+    }
+  },
+  "customers": {
+    "eyebrow": "Jarayon",
+    "title": "Mijozlar",
+    "subtitle": "Mijozlar ro'yxati va biriktirilgan operatorlarni kuzating.",
+    "searchPlaceholder": "Mijoz, telefon, email yoki manzil bo'yicha qidirish...",
+    "allOperators": "Barcha operatorlar",
+    "assignedOperator": "Biriktirilgan operator",
+    "orderBy": "Saralash",
+    "updatedNewest": "Yangilangan (yangi)",
+    "updatedOldest": "Yangilangan (eski)",
+    "createdNewest": "Yaratilgan (yangi)",
+    "createdOldest": "Yaratilgan (eski)",
+    "records": "yozuv",
+    "activeFilters": "faol filtr",
+    "rowSelected": "Satr tanlangan",
+    "directoryTitle": "Mijozlar katalogi",
+    "directoryHint": "Qidiruv va filtrlar orqali kerakli mijozni toping.",
+    "emptyTitle": "Mos mijoz topilmadi",
+    "emptyDescription": "Qidiruv so'rovi yoki operator filtrini o'zgartiring.",
+    "errorTitle": "Mijozlar mavjud emas",
+    "errorDescription": "Joriy xizmatdan mijozlarni yuklab bo'lmadi.",
+    "loadingTitle": "Mijozlar yuklanmoqda",
+    "loadingDescription": "Mijozlar ro'yxati olinmoqda.",
+    "columns": {
+      "customer": "Mijoz",
+      "phone": "Telefon",
+      "address": "Manzil",
+      "operator": "Operator",
+      "created": "Yaratilgan sana",
+      "updated": "Yangilangan sana"
+    },
+    "noEmail": "Email yo'q",
+    "noPhone": "Telefon yo'q",
+    "noNotes": "Izoh yo'q",
+    "noAddress": "Manzil yo'q",
+    "defaultCountry": "O'zbekiston",
+    "noLeadLink": "Lid bog'lanmagan",
+    "leadPrefix": "Lid"
+  },
+  "products": {
+    "title": "Mahsulotlar",
+    "subtitle": "Narxlar, zaxira va faol holatni bitta katalogdan boshqaring.",
+    "newProduct": "Yangi mahsulot",
+    "allCurrencies": "Barcha valyutalar",
+    "allStatuses": "Barcha holatlar",
+    "status": "Holat",
+    "currency": "Valyuta",
+    "orderBy": "Saralash",
+    "createdNewest": "Yaratilgan (yangi)",
+    "createdOldest": "Yaratilgan (eski)",
+    "nameAz": "Nomi (A-Z)",
+    "nameZa": "Nomi (Z-A)",
+    "priceHighLow": "Narx (yuqori-past)",
+    "priceLowHigh": "Narx (past-yuqori)",
+    "searchPlaceholder": "Mahsulot nomi, SKU yoki tavsif bo'yicha qidirish...",
+    "records": "yozuv",
+    "activeFilters": "faol",
+    "catalogTitle": "Mahsulotlar katalogi",
+    "catalogHint": "Tafsilotlarni ko'rish uchun satrni bosing",
+    "loadingTitle": "Mahsulotlar yuklanmoqda",
+    "loadingDescription": "Katalog ma'lumotlari olinmoqda.",
+    "errorTitle": "Mahsulotlar mavjud emas",
+    "errorDescription": "Joriy xizmatdan mahsulotlarni yuklab bo'lmadi.",
+    "emptyTitle": "Mos mahsulot topilmadi",
+    "emptyDescription": "Qidiruv yoki filtr kombinatsiyasini o'zgartiring.",
+    "columns": {
+      "product": "Mahsulot",
+      "sku": "SKU",
+      "price": "Narx",
+      "currency": "Valyuta",
+      "stock": "Zaxira soni",
+      "status": "Holat",
+      "updated": "Yangilangan sana",
+      "actions": "Amallar"
+    },
+    "noDescription": "Tavsif yo'q",
+    "actions": {
+      "edit": "Tahrirlash",
+      "delete": "O'chirish"
+    },
+    "detail": {
+      "eyebrow": "Mahsulot profili",
+      "titleFallback": "Mahsulot tafsilotlari",
+      "skuPrefix": "SKU",
+      "close": "Mahsulot tafsilotlarini yopish",
+      "loadingTitle": "Mahsulot tafsilotlari yuklanmoqda",
+      "loadingDescription": "Mahsulot profili va metadata olinmoqda.",
+      "errorTitle": "Mahsulot mavjud emas",
+      "errorDescription": "Tanlangan mahsulotni yuklab bo'lmadi.",
+      "sectionDetails": "Mahsulot ma'lumotlari",
+      "sectionDetailsDesc": "Katalog profili va mavjudligi.",
+      "sectionLifecycle": "Hayotiy sikl",
+      "sectionLifecycleDesc": "Yaratilish va yangilanish tarixi.",
+      "sectionMetadata": "Metadata",
+      "price": "Narx",
+      "stockQuantity": "Zaxira soni",
+      "description": "Tavsif",
+      "created": "Yaratilgan",
+      "updated": "Yangilangan",
+      "noDescription": "Tavsif yo'q.",
+      "editProduct": "Mahsulotni tahrirlash",
+      "deleteProduct": "Mahsulotni o'chirish"
+    },
+    "form": {
+      "eyebrow": "Mahsulot formasi",
+      "createTitle": "Mahsulot yaratish",
+      "editTitle": "Mahsulotni tahrirlash",
+      "createSubtitle": "Katalogga yangi mahsulot qo'shing.",
+      "editSubtitle": "Tanlangan mahsulot ma'lumotlarini yangilang.",
+      "close": "Mahsulot formasini yopish",
+      "name": "Mahsulot nomi",
+      "sku": "SKU",
+      "description": "Tavsif",
+      "price": "Narx",
+      "stockQuantity": "Zaxira soni",
+      "currency": "Valyuta",
+      "activeProduct": "Faol mahsulot",
+      "activeProductHint": "Mahsulot operatsiyalarda ko'rinishini yoqing yoki o'chiring.",
+      "createSubmit": "Mahsulot yaratish",
+      "editSubmit": "O'zgarishlarni saqlash",
+      "creating": "Yaratilmoqda...",
+      "saving": "Saqlanmoqda...",
+      "requiredError": "Majburiy maydonlarni to'ldiring.",
+      "priceError": "Narx musbat yoki nol son bo'lishi kerak.",
+      "stockError": "Zaxira soni musbat yoki nol butun son bo'lishi kerak.",
+      "saveError": "Mahsulotni saqlab bo'lmadi."
+    },
+    "deleteDialog": {
+      "eyebrow": "O'chirishni tasdiqlash",
+      "title": "{{name}} mahsulotini o'chirasizmi?",
+      "description": "Bu amal mahsulotni katalogdan o'chiradi. Amalni bekor qilib bo'lmaydi.",
+      "confirm": "Mahsulotni o'chirish",
+      "deleting": "O'chirilmoqda..."
+    }
+  },
+  "orders": {
+    "title": "Buyurtmalar",
+    "subtitle": "Buyurtmalar oqimini bitta panelda boshqaring va nazorat qiling.",
+    "newOrder": "Yangi buyurtma",
+    "allStatuses": "Barcha holatlar",
+    "allSources": "Barcha manbalar",
+    "status": "Holat",
+    "source": "Manba",
+    "aiGenerated": "AI yaratilgan",
+    "aiAll": "Barchasi",
+    "aiYes": "AI",
+    "aiNo": "Qo'lda",
+    "orderBy": "Saralash",
+    "updatedNewest": "Yangilangan (yangi)",
+    "updatedOldest": "Yangilangan (eski)",
+    "createdNewest": "Yaratilgan (yangi)",
+    "createdOldest": "Yaratilgan (eski)",
+    "totalHighLow": "Jami (yuqori-past)",
+    "totalLowHigh": "Jami (past-yuqori)",
+    "searchPlaceholder": "Kontakt, telefon, manzil yoki ID bo'yicha qidiring...",
+    "records": "yozuv",
+    "activeFilters": "faol filtr",
+    "detailOpen": "Tafsilot ochiq",
+    "itemsSuffix": "pozitsiya",
+    "boardTitle": "Buyurtmalar ro'yxati",
+    "boardHint": "Tafsilotlarni ochish uchun satrni bosing",
+    "loadingTitle": "Buyurtmalar yuklanmoqda",
+    "loadingDescription": "Buyurtmalar ro'yxati va filtrlar tayyorlanmoqda.",
+    "errorTitle": "Buyurtmalar mavjud emas",
+    "errorDescription": "Joriy xizmatdan buyurtmalarni yuklab bo'lmadi.",
+    "emptyTitle": "Mos buyurtma topilmadi",
+    "emptyDescription": "Qidiruv yoki filtrlarni o'zgartirib qayta urinib ko'ring.",
+    "columns": {
+      "order": "Buyurtma",
+      "customerContact": "Mijoz / Kontakt",
+      "source": "Manba",
+      "status": "Holat",
+      "totalAmount": "Jami summa",
+      "aiGenerated": "AI",
+      "updated": "Yangilangan sana",
+      "actions": "Amallar"
+    },
+    "actions": {
+      "edit": "Tahrirlash",
+      "delete": "O'chirish",
+      "recalculate": "Qayta hisoblash",
+      "recalculating": "Hisoblanmoqda..."
+    },
+    "detail": {
+      "ariaLabel": "Buyurtma tafsilotlari",
+      "eyebrow": "Buyurtma profili",
+      "titleFallback": "Buyurtma tafsilotlari",
+      "close": "Buyurtma tafsilotlarini yopish",
+      "aiYes": "AI yaratilgan",
+      "aiNo": "Qo'lda yaratilgan",
+      "loadingTitle": "Buyurtma tafsilotlari yuklanmoqda",
+      "loadingDescription": "Buyurtma profili va elementlari olinmoqda.",
+      "errorTitle": "Buyurtma mavjud emas",
+      "errorDescription": "Tanlangan buyurtmani yuklab bo'lmadi.",
+      "sectionContact": "Kontakt va bog'lanish",
+      "sectionContactDescription": "Mijoz, lid va yetkazib berish ma'lumotlari.",
+      "contactPhone": "Kontakt telefoni",
+      "shippingAddress": "Yetkazib berish manzili",
+      "customer": "Mijoz",
+      "lead": "Lid",
+      "noCustomer": "Mijoz biriktirilmagan",
+      "noLead": "Lid bog'lanmagan",
+      "sectionItems": "Buyurtma elementlari",
+      "sectionItemsDescription": "Mahsulotlar soni va narxlari bo'yicha kesim.",
+      "itemProduct": "Mahsulot",
+      "itemQty": "Soni",
+      "itemUnitPrice": "Birlik narx",
+      "itemLineTotal": "Qator jami",
+      "sectionLifecycle": "Hayotiy sikl",
+      "createdAt": "Yaratilgan",
+      "updatedAt": "Yangilangan",
+      "notes": "Izohlar",
+      "noNotes": "Izoh qoldirilmagan.",
+      "recalculateError": "Buyurtmani qayta hisoblab bo'lmadi."
+    },
+    "form": {
+      "eyebrow": "Buyurtma formasi",
+      "createTitle": "Buyurtma yaratish",
+      "editTitle": "Buyurtmani tahrirlash",
+      "createSubtitle": "Yangi buyurtmani tezda qo'shing.",
+      "editSubtitle": "Buyurtma ma'lumotlarini yangilang.",
+      "close": "Buyurtma formasini yopish",
+      "customer": "Mijoz",
+      "lead": "Lid",
+      "noneCustomer": "Mijozsiz",
+      "noneLead": "Lidsiz",
+      "status": "Holat",
+      "source": "Manba",
+      "contactName": "Kontakt ismi",
+      "contactPhone": "Kontakt telefoni",
+      "shippingAddress": "Yetkazib berish manzili",
+      "notes": "Izoh",
+      "notesPlaceholder": "Ichki izohlar va yetkazib berish eslatmalari...",
+      "aiGenerated": "AI yaratilgan buyurtma",
+      "aiGeneratedHint": "Buyurtma AI tomonidan yaratilgan bo'lsa yoqing.",
+      "itemsTitle": "Buyurtma elementlari",
+      "addItem": "Element qo'shish",
+      "removeItem": "Elementni olib tashlash",
+      "noProducts": "Mahsulotlar mavjud emas. Avval mahsulot yarating.",
+      "product": "Mahsulot",
+      "quantity": "Soni",
+      "unitPrice": "Birlik narx",
+      "totalAmount": "Jami summa",
+      "createSubmit": "Buyurtma yaratish",
+      "editSubmit": "O'zgarishlarni saqlash",
+      "creating": "Yaratilmoqda...",
+      "saving": "Saqlanmoqda...",
+      "requiredError": "Majburiy maydonlarni to'ldiring.",
+      "itemsRequired": "Kamida bitta element qo'shing.",
+      "productRequired": "Har bir element uchun mahsulot tanlang.",
+      "saveError": "Buyurtmani saqlab bo'lmadi."
+    },
+    "deleteDialog": {
+      "ariaLabel": "Buyurtmani o'chirish oynasi",
+      "eyebrow": "O'chirishni tasdiqlash",
+      "title": "{{id}} buyurtmasini o'chirasizmi?",
+      "description": "Bu amal buyurtmani ro'yxatdan o'chiradi va ortga qaytarib bo'lmaydi.",
+      "confirm": "Buyurtmani o'chirish",
+      "deleting": "O'chirilmoqda..."
+    }
+  },
+  "profile": {
+    "eyebrow": "Hisob",
+    "title": "Profil",
+    "subtitle": "Hisobingiz va shaxsiy sozlamalaringizni boshqaring.",
+    "editProfile": "Profilni tahrirlash",
+    "loadingTitle": "Profil yuklanmoqda",
+    "loadingDescription": "Hisob ma'lumotlari olinmoqda.",
+    "errorTitle": "Profil mavjud emas",
+    "errorDescription": "Hisob ma'lumotlarini yuklab bo'lmadi.",
+    "notSet": "Kiritilmagan",
+    "sections": {
+      "editProfile": "Profilni tahrirlash",
+      "contactInformation": "Kontakt ma'lumotlari",
+      "accountDetails": "Hisob tafsilotlari",
+      "permissions": "Ruxsatlar",
+      "security": "Xavfsizlik"
+    },
+    "fields": {
+      "fullName": "To'liq ism",
+      "email": "Email",
+      "phone": "Telefon",
+      "role": "Rol",
+      "status": "Holat",
+      "userId": "Foydalanuvchi ID",
+      "joined": "Qo'shilgan sana",
+      "lastActive": "So'nggi faollik"
+    },
+    "placeholders": {
+      "fullName": "To'liq ismingizni kiriting",
+      "email": "user@example.com",
+      "phone": "+998 90 000 0000",
+      "password": "Kamida 8 ta belgi",
+      "confirmPassword": "Parolni qayta kiriting"
+    },
+    "accountStatus": {
+      "title": "Hisob holati",
+      "activeHint": "Hisobingiz faol va tizimda ko'rinadi.",
+      "inactiveHint": "Hisobingiz vaqtincha o'chirilgan."
+    },
+    "actions": {
+      "changePassword": "Parolni o'zgartirish",
+      "saveChanges": "O'zgarishlarni saqlash",
+      "saving": "Saqlanmoqda..."
+    },
+    "password": {
+      "newPasswordTitle": "Yangi parol",
+      "password": "Parol",
+      "confirmPassword": "Parolni tasdiqlash",
+      "mismatch": "Parollar mos kelmadi.",
+      "editModeHint": "Parolni yangilash uchun tahrirlash formasidagi bo'limdan foydalaning."
+    },
+    "permissions": {
+      "fullAccess": "To'liq kirish mavjud, alohida ruxsat kodlari talab qilinmaydi.",
+      "noneAssigned": "Maxsus ruxsatlar biriktirilmagan."
+    },
+    "security": {
+      "description": "Parol va xavfsizlik sozlamalaringizni boshqaring."
+    }
+  },
+  "labels": {
+    "roles": {
+      "developer": "Dasturchi",
+      "admin": "Administrator",
+      "operator": "Operator"
+    },
+    "userStatus": {
+      "active": "Faol",
+      "inactive": "Nofaol",
+      "invited": "Taklif qilingan"
+    },
+    "leadStatus": {
+      "new": "Yangi",
+      "contacted": "Bog'langan",
+      "qualified": "Malakali",
+      "negotiating": "Muzokara",
+      "converted": "Konvertatsiya",
+      "lost": "Yo'qotilgan",
+      "archived": "Arxiv"
+    },
+    "orderStatus": {
+      "draft": "Qoralama",
+      "waiting_payment": "To'lov kutilmoqda",
+      "pending": "Kutilmoqda",
+      "confirmed": "Tasdiqlangan",
+      "paid": "To'langan",
+      "completed": "Yakunlangan",
+      "cancelled": "Bekor qilingan"
+    },
+    "paymentStatus": {
+      "unpaid": "To'lanmagan",
+      "pending": "Kutilmoqda",
+      "paid": "To'langan",
+      "approved": "Tasdiqlangan",
+      "rejected": "Rad etilgan",
+      "verified": "Tekshirilgan",
+      "failed": "Muvaffaqiyatsiz",
+      "refunded": "Qaytarilgan",
+      "partially_refunded": "Qisman qaytarilgan"
+    },
+    "channels": {
+      "instagram": "Instagram",
+      "telegram": "Telegram",
+      "whatsapp": "WhatsApp",
+      "facebook": "Facebook",
+      "website": "Veb-sayt",
+      "marketplace": "Marketpleys",
+      "webchat": "Veb chat",
+      "web": "Veb",
+      "referral": "Tavsiya",
+      "manual": "Qo'lda",
+      "other": "Boshqa"
+    }
+  },
+  "placeholders": {
+    "orders": {
+      "summary": "Buyurtmalar bo'limi keyingi vazifalarda to'liq funksional holatga o'tkaziladi.",
+      "sectionTitle": "Buyurtmalar moduli",
+      "sectionDescription": "Bu bo'lim buyurtmalar ro'yxati va holat boshqaruvi uchun tayyor.",
+      "emptyTitle": "Buyurtmalar interfeysi hali tayyor emas",
+      "emptyDescription": "Keyingi bosqichda buyurtmalar bo'yicha real interfeys qo'shiladi."
+    },
+    "payments": {
+      "summary": "To'lovlar bo'limi keyingi vazifalarda to'liq funksional holatga o'tkaziladi.",
+      "sectionTitle": "To'lovlar moduli",
+      "sectionDescription": "Bu bo'lim tranzaksiya va to'lov holatlarini boshqarish uchun tayyor.",
+      "emptyTitle": "To'lovlar interfeysi hali tayyor emas",
+      "emptyDescription": "Keyingi bosqichda to'lovlar bo'yicha real interfeys qo'shiladi."
+    },
+    "chat": {
+      "summary": "Chat bo'limi keyingi vazifalarda to'liq funksional holatga o'tkaziladi.",
+      "sectionTitle": "Chat moduli",
+      "sectionDescription": "Bu bo'lim xabarlar oqimi va operator muloqoti uchun tayyor.",
+      "emptyTitle": "Chat interfeysi hali tayyor emas",
+      "emptyDescription": "Keyingi bosqichda chat bo'yicha real interfeys qo'shiladi."
+    },
+    "notifications": {
+      "summary": "Bildirishnomalar bo'limi keyingi vazifalarda to'liq funksional holatga o'tkaziladi.",
+      "sectionTitle": "Bildirishnomalar moduli",
+      "sectionDescription": "Bu bo'lim tizim ogohlantirishlari uchun tayyor.",
+      "emptyTitle": "Bildirishnomalar interfeysi hali tayyor emas",
+      "emptyDescription": "Keyingi bosqichda bildirishnomalar bo'yicha real interfeys qo'shiladi."
+    },
+    "users": {
+      "summary": "Foydalanuvchilar bo'limi keyingi vazifalarda to'liq funksional holatga o'tkaziladi.",
+      "sectionTitle": "Foydalanuvchilar moduli",
+      "sectionDescription": "Bu bo'lim jamoa va rollarni boshqarish uchun tayyor.",
+      "emptyTitle": "Foydalanuvchilar interfeysi hali tayyor emas",
+      "emptyDescription": "Keyingi bosqichda foydalanuvchilar bo'yicha real interfeys qo'shiladi."
+    },
+    "integrations": {
+      "summary": "Integratsiyalar bo'limi keyingi vazifalarda to'liq funksional holatga o'tkaziladi.",
+      "sectionTitle": "Integratsiyalar moduli",
+      "sectionDescription": "Bu bo'lim tashqi xizmat ulanishlari uchun tayyor.",
+      "emptyTitle": "Integratsiyalar interfeysi hali tayyor emas",
+      "emptyDescription": "Keyingi bosqichda integratsiyalar bo'yicha real interfeys qo'shiladi."
+    },
+    "aiSettings": {
+      "summary": "AI sozlamalari bo'limi keyingi vazifalarda to'liq funksional holatga o'tkaziladi.",
+      "sectionTitle": "AI sozlamalari moduli",
+      "sectionDescription": "Bu bo'lim model va prompt sozlamalari uchun tayyor.",
+      "emptyTitle": "AI sozlamalari interfeysi hali tayyor emas",
+      "emptyDescription": "Keyingi bosqichda AI sozlamalari bo'yicha real interfeys qo'shiladi."
+    },
+    "logs": {
+      "summary": "Jurnallar bo'limi keyingi vazifalarda to'liq funksional holatga o'tkaziladi.",
+      "sectionTitle": "Jurnallar moduli",
+      "sectionDescription": "Bu bo'lim audit va texnik yozuvlar uchun tayyor.",
+      "emptyTitle": "Jurnallar interfeysi hali tayyor emas",
+      "emptyDescription": "Keyingi bosqichda jurnallar bo'yicha real interfeys qo'shiladi."
+    },
+    "notFound": {
+      "summary": "Noma'lum yo'nalishlar uchun zaxira sahifa.",
+      "sectionTitle": "Sahifa topilmadi",
+      "sectionDescription": "Bu ommaviy sahifa xato yo'nalishlarda foydalanuvchini yo'naltirish uchun ishlatiladi.",
+      "emptyTitle": "404 interfeys hali tayyor emas",
+      "emptyDescription": "Keyingi bosqichda foydalanuvchini qayta yo'naltirish imkoniyatlari qo'shiladi."
+    }
+  }
+}

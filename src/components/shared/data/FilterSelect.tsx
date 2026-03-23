@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { SelectOption } from '../../../types/common';
 import AppIcon from '../icons/AppIcon';
+import { useTranslation } from 'react-i18next';
 
 interface FilterSelectProps {
   value: string;
@@ -15,6 +16,7 @@ function FilterSelect({
   onChange,
   disabled = false,
 }: FilterSelectProps) {
+  const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement | null>(null);
 
@@ -48,14 +50,14 @@ function FilterSelect({
   return (
     <div
       ref={rootRef}
-      className={['relative', isOpen ? 'z-[70]' : 'z-10'].join(' ')}
+      className={['relative', isOpen ? 'z-[140]' : 'z-10'].join(' ')}
     >
       <button
         type="button"
         className={[
-          'inline-flex min-h-[46px] w-full items-center justify-between gap-3 rounded-xl border border-border-soft bg-background-elevated px-4 text-left',
-          'text-sm font-medium text-text-primary shadow-[inset_0_1px_0_rgb(255_255_255/0.02)] outline-none transition duration-fast',
-          'hover:border-border-accent hover:bg-surface-card focus-visible:border-border-accent focus-visible:ring-4 focus-visible:ring-primary/10',
+          'inline-flex min-h-[44px] w-full items-center justify-between gap-3 rounded-lg border-0 bg-surface-card px-4 text-left',
+          'text-sm font-medium text-text-primary shadow-sm outline-none transition duration-fast',
+          'hover:bg-surface-subtle/90 focus-visible:ring-2 focus-visible:ring-primary/20',
           'disabled:cursor-not-allowed disabled:opacity-60',
         ].join(' ')}
         onClick={() => setIsOpen((current) => !current)}
@@ -63,7 +65,9 @@ function FilterSelect({
         aria-haspopup="listbox"
         aria-expanded={isOpen}
       >
-        <span className="truncate">{selectedOption?.label ?? 'Select'}</span>
+        <span className="truncate">
+          {selectedOption?.label ?? t('shared.filterSelect.select')}
+        </span>
         <AppIcon
           name="chevron-down"
           className={[
@@ -76,7 +80,7 @@ function FilterSelect({
 
       {isOpen ? (
         <div
-          className="absolute left-0 top-[calc(100%+8px)] z-[80] w-full overflow-hidden rounded-xl border border-border-accent/70 bg-surface-card p-1.5 shadow-[0_24px_60px_-34px_rgba(0,0,0,0.58)]"
+          className="absolute left-0 top-[calc(100%+8px)] z-[150] w-full overflow-hidden rounded-lg bg-surface-card p-1.5 shadow-[0_22px_44px_-30px_rgba(25,28,30,0.38)] ring-1 ring-border-soft/30"
           role="listbox"
         >
           <div className="max-h-64 overflow-y-auto py-1">
@@ -90,8 +94,8 @@ function FilterSelect({
                   className={[
                     'flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2.5 text-left text-sm transition duration-fast',
                     isSelected
-                      ? 'bg-primary/16 text-text-primary'
-                      : 'text-text-secondary hover:bg-background-subtle hover:text-text-primary',
+                      ? 'bg-primary/12 text-text-primary'
+                      : 'text-text-secondary hover:bg-surface-subtle hover:text-text-primary',
                   ].join(' ')}
                   onClick={() => {
                     onChange(option.value);

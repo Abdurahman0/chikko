@@ -7,21 +7,22 @@ interface StatusBadgeProps {
 }
 
 const BADGE_BASE_CLASS_NAME = [
-  'status-badge inline-flex min-h-7 items-center gap-1.5 rounded-pill border px-2.5',
-  'text-[11px] font-bold uppercase tracking-[0.08em] shadow-sm transition-[transform,box-shadow,border-color] duration-fast',
+  'status-badge inline-flex min-h-7 items-center gap-1.5 rounded-pill px-2.5',
+  'text-[11px] font-semibold uppercase tracking-[0.08em] shadow-sm transition-[transform,box-shadow] duration-fast',
 ].join(' ');
 
 const BADGE_TONE_CLASS_NAMES: Record<StatusBadgeTone, string> = {
-  success: 'status-badge--success border-success/10 bg-success-bg text-success',
-  warning: 'status-badge--warning border-warning/10 bg-warning-bg text-warning',
-  danger: 'status-badge--danger border-danger/10 bg-danger-bg text-danger',
-  info: 'status-badge--info border-info/10 bg-info-bg text-info',
-  neutral: 'status-badge--neutral border-neutral/10 bg-neutral-bg text-neutral',
+  success: 'status-badge--success bg-success-bg text-success',
+  warning: 'status-badge--warning bg-warning-bg text-warning',
+  danger: 'status-badge--danger bg-danger-bg text-danger',
+  info: 'status-badge--info bg-info-bg text-info',
+  neutral: 'status-badge--neutral bg-neutral-bg text-neutral',
 };
 
 const SUCCESS_STATUSES = new Set([
   'active',
   'paid',
+  'completed',
   'delivered',
   'converted',
   'success',
@@ -30,6 +31,7 @@ const SUCCESS_STATUSES = new Set([
 
 const WARNING_STATUSES = new Set([
   'pending',
+  'waiting_payment',
   'negotiating',
   'packed',
   'warning',

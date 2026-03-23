@@ -8,12 +8,10 @@ function PageCard({ muted = false, children }: PageCardProps) {
   return (
     <div
       className={[
-        'relative overflow-hidden rounded-[20px] border p-5 shadow-sm backdrop-blur-[12px] max-[640px]:p-4',
-        'before:pointer-events-none before:absolute before:inset-x-0 before:top-0 before:h-px',
-        'before:bg-border-accent/40 before:content-[""]',
+        'relative overflow-hidden rounded-xl p-5 shadow-sm ring-1 ring-border-soft/40 transition duration-base max-[640px]:p-4 hover:shadow-md hover:ring-border-soft/60',
         muted
-          ? 'border-border-subtle bg-surface-muted shadow-sm'
-          : 'border-border-soft bg-surface-card',
+          ? 'bg-surface-subtle/75'
+          : 'bg-surface-card',
       ].join(' ')}
     >
       {children}

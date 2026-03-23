@@ -1,15 +1,18 @@
 import { getRouteById } from '../../../config/routes';
 import PagePlaceholder from '../../../components/shared/PagePlaceholder';
+import { useTranslation } from 'react-i18next';
 
 function NotificationsPage() {
+  const { t } = useTranslation();
+
   return (
     <PagePlaceholder
       route={getRouteById('notifications')}
-      summary="Notification center scaffold for future alerts, unread state handling, and follow-up entry points."
-      sectionTitle="Notification Center Scaffold"
-      sectionDescription="This route is intended for alert listings, severity indicators, and notification follow-up actions."
-      emptyStateTitle="Notifications UI is not implemented yet"
-      emptyStateDescription="Future tasks can add notification lists, read state controls, and related entity links here while using the same page structure."
+      summary={t('placeholders.notifications.summary')}
+      sectionTitle={t('placeholders.notifications.sectionTitle')}
+      sectionDescription={t('placeholders.notifications.sectionDescription')}
+      emptyStateTitle={t('placeholders.notifications.emptyTitle')}
+      emptyStateDescription={t('placeholders.notifications.emptyDescription')}
     />
   );
 }
