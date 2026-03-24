@@ -1,15 +1,21 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { FiEdit2, FiTrash2 } from 'react-icons/fi';
 import { useTranslation } from 'react-i18next';
-import { StatusBadge } from '../../../components/shared/data';
+import { FilterSelect, StatusBadge } from '../../../components/shared/data';
 import AppIcon from '../../../components/shared/icons/AppIcon';
 import { EmptyState, LoadingState, PageCard } from '../../../components/shared/page';
 import { getChannelLabel, getLeadStatusLabel } from '../../../i18n/labels';
 import { services } from '../../../services';
-import type { EntityId, Lead } from '../../../types/domain';
+import type { EntityId, Lead, LeadStatus, SelectOption } from '../../../types/domain';
 
 interface LeadDetailPanelProps {
   leadId: EntityId;
+  refreshToken?: number;
+  canManageLeads: boolean;
   onClose: () => void;
+  onEdit: (lead: Lead) => void;
+  onDelete: (lead: Lead) => void;
+  onStatusChange: (id: EntityId, status: LeadStatus) => Promise<Lead | null>;
 }
 
 const labelClassName =
@@ -33,12 +39,34 @@ function formatDateTime(
   }).format(new Date(timestamp));
 }
 
-function LeadDetailPanel({ leadId, onClose }: LeadDetailPanelProps) {
+function LeadDetailPanel({
+  leadId,
+  refreshToken = 0,
+  canManageLeads,
+  onClose,
+  onEdit,
+  onDelete,
+  onStatusChange,
+}: LeadDetailPanelProps) {
   const { t, i18n } = useTranslation();
   const locale = i18n.language === 'ru' ? 'ru-RU' : 'uz-UZ';
   const [lead, setLead] = useState<Lead | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
+  const [isStatusUpdating, setIsStatusUpdating] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
+
+  const statusOptions = useMemo<SelectOption[]>(
+    () => [
+      { value: 'new', label: getLeadStatusLabel(t, 'new') },
+      { value: 'contacted', label: getLeadStatusLabel(t, 'contacted') },
+      { value: 'qualified', label: getLeadStatusLabel(t, 'qualified') },
+      { value: 'negotiating', label: getLeadStatusLabel(t, 'negotiating') },
+      { value: 'converted', label: getLeadStatusLabel(t, 'converted') },
+      { value: 'lost', label: getLeadStatusLabel(t, 'lost') },
+    ],
+    [t],
+  );
 
   useEffect(() => {
     let isActive = true;
@@ -46,6 +74,7 @@ function LeadDetailPanel({ leadId, onClose }: LeadDetailPanelProps) {
     async function loadLead() {
       setIsLoading(true);
       setHasError(false);
+      setActionError(null);
 
       try {
         const nextLead = await services.leads.getById(leadId);
@@ -74,7 +103,7 @@ function LeadDetailPanel({ leadId, onClose }: LeadDetailPanelProps) {
     return () => {
       isActive = false;
     };
-  }, [leadId]);
+  }, [leadId, refreshToken]);
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
@@ -90,6 +119,28 @@ function LeadDetailPanel({ leadId, onClose }: LeadDetailPanelProps) {
     };
   }, [onClose]);
 
+  async function handleStatusChange(nextStatus: LeadStatus) {
+    if (!lead || lead.status === nextStatus || isStatusUpdating) {
+      return;
+    }
+
+    setActionError(null);
+    setIsStatusUpdating(true);
+
+    try {
+      const updated = await onStatusChange(lead.id, nextStatus);
+      if (!updated) {
+        throw new Error();
+      }
+
+      setLead(updated);
+    } catch {
+      setActionError(t('leads.actions.statusUpdateError'));
+    } finally {
+      setIsStatusUpdating(false);
+    }
+  }
+
   return (
     <div
       className="fixed inset-0 z-40 flex justify-end bg-background-overlay/72 backdrop-blur-[3px]"
@@ -97,7 +148,7 @@ function LeadDetailPanel({ leadId, onClose }: LeadDetailPanelProps) {
       role="presentation"
     >
       <aside
-        className="h-full w-full overflow-y-auto bg-background-subtle p-4 shadow-xl ring-1 ring-border-soft/50 min-[641px]:max-w-[460px] min-[641px]:p-5"
+        className="h-full w-full overflow-y-auto bg-background-subtle p-4 shadow-xl ring-1 ring-border-soft/50 min-[641px]:max-w-[560px] min-[641px]:p-5"
         onClick={(event) => event.stopPropagation()}
         aria-label={t('leads.detail.ariaLabel')}
       >
@@ -112,10 +163,7 @@ function LeadDetailPanel({ leadId, onClose }: LeadDetailPanelProps) {
               </h2>
               {!isLoading && lead ? (
                 <p className="mt-1 text-sm text-text-secondary [overflow-wrap:anywhere]">
-                  @
-                  {lead.username ??
-                    lead.contact.username ??
-                    t('leads.unknownHandle')}
+                  @{lead.username ?? lead.instagramUsername ?? lead.telegramUsername ?? t('leads.unknownHandle')}
                 </p>
               ) : null}
             </div>
@@ -186,6 +234,18 @@ function LeadDetailPanel({ leadId, onClose }: LeadDetailPanelProps) {
                       </p>
                     </div>
                     <div className="rounded-lg bg-surface-subtle/80 p-3">
+                      <p className={labelClassName}>{t('leads.detail.instagram')}</p>
+                      <p className={`mt-1 ${valueClassName}`}>
+                        {lead.instagramUsername ?? t('common.na')}
+                      </p>
+                    </div>
+                    <div className="rounded-lg bg-surface-subtle/80 p-3">
+                      <p className={labelClassName}>{t('leads.detail.telegram')}</p>
+                      <p className={`mt-1 ${valueClassName}`}>
+                        {lead.telegramUsername ?? t('common.na')}
+                      </p>
+                    </div>
+                    <div className="rounded-lg bg-surface-subtle/80 p-3">
                       <p className={labelClassName}>{t('leads.detail.source')}</p>
                       <p className={`mt-1 ${valueClassName}`}>
                         {getChannelLabel(t, lead.source)}
@@ -237,49 +297,65 @@ function LeadDetailPanel({ leadId, onClose }: LeadDetailPanelProps) {
                         {formatDateTime(lead.lastMessageAt, locale, t('common.na'))}
                       </dd>
                     </div>
-                    <div className="flex items-center justify-between gap-3 rounded-lg bg-surface-subtle/80 px-3 py-2.5">
-                      <dt className={labelClassName}>{t('leads.detail.leadReplied')}</dt>
-                      <dd className={`m-0 ${valueClassName}`}>
-                        {lead.replied ? t('common.yes') : t('common.no')}
-                      </dd>
-                    </div>
-                    <div className="flex items-center justify-between gap-3 rounded-lg bg-surface-subtle/80 px-3 py-2.5">
-                      <dt className={labelClassName}>{t('leads.detail.dmSent')}</dt>
-                      <dd className={`m-0 ${valueClassName}`}>
-                        {lead.dmSent ? t('common.yes') : t('common.no')}
-                      </dd>
-                    </div>
                   </dl>
                 </div>
               </PageCard>
 
               <PageCard>
-                <div className="grid gap-4">
-                  <div className="grid gap-1">
-                    <h3 className="m-0 text-[1rem] font-semibold text-text-primary">
-                      {t('leads.detail.notesTitle')}
-                    </h3>
-                    <p className="m-0 text-sm text-text-secondary">
-                      {t('leads.detail.notesDescription')}
-                    </p>
-                  </div>
-
+                <div className="grid gap-3">
+                  <h3 className="m-0 text-[1rem] font-semibold text-text-primary">
+                    {t('leads.detail.notesTitle')}
+                  </h3>
                   <div className="rounded-lg bg-surface-subtle/80 p-3.5">
                     <p className="m-0 text-sm leading-6 text-text-secondary [overflow-wrap:anywhere]">
-                      {lead.notesSummary ?? t('leads.detail.noNotes')}
+                      {lead.notes ?? lead.notesSummary ?? t('leads.detail.noNotes')}
                     </p>
                   </div>
+                </div>
+              </PageCard>
 
-                  {lead.tags?.length ? (
-                    <div className="flex flex-wrap gap-2">
-                      {lead.tags.map((tag) => (
-                        <span
-                          key={tag}
-                          className="inline-flex min-h-7 max-w-full items-center rounded-pill bg-primary/12 px-3 text-[11px] font-semibold uppercase tracking-[0.07em] text-text-accent [overflow-wrap:anywhere]"
-                        >
-                          {tag}
-                        </span>
-                      ))}
+              {actionError ? (
+                <p className="m-0 rounded-lg bg-danger-bg px-3 py-2 text-sm font-medium text-danger">
+                  {actionError}
+                </p>
+              ) : null}
+
+              <PageCard allowOverflow>
+                <div className="grid gap-3">
+                  {canManageLeads ? (
+                    <div className="grid gap-1.5">
+                      <span className={labelClassName}>{t('leads.detail.statusControl')}</span>
+                      <FilterSelect
+                        value={lead.status}
+                        options={statusOptions}
+                        onChange={(value) => void handleStatusChange(value as LeadStatus)}
+                        disabled={isStatusUpdating}
+                      />
+                    </div>
+                  ) : (
+                    <p className="m-0 rounded-lg bg-surface-subtle/90 px-3 py-2.5 text-sm text-text-secondary">
+                      {t('leads.detail.readOnlyHint')}
+                    </p>
+                  )}
+
+                  {canManageLeads ? (
+                    <div className="flex flex-wrap items-center gap-2">
+                      <button
+                        type="button"
+                        className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-primary px-4 text-sm font-semibold text-primary-foreground transition duration-fast hover:bg-primary-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35"
+                        onClick={() => onEdit(lead)}
+                      >
+                        <FiEdit2 className="h-4 w-4" />
+                        {t('leads.actions.edit')}
+                      </button>
+                      <button
+                        type="button"
+                        className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-danger-bg px-4 text-sm font-semibold text-danger transition duration-fast hover:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-danger/30"
+                        onClick={() => onDelete(lead)}
+                      >
+                        <FiTrash2 className="h-4 w-4" />
+                        {t('leads.actions.delete')}
+                      </button>
                     </div>
                   ) : null}
                 </div>

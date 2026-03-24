@@ -84,6 +84,8 @@ export interface AddressInfo {
 export type PlatformChannel =
   | 'instagram'
   | 'telegram'
+  | 'manual'
+  | 'web'
   | 'whatsapp'
   | 'facebook'
   | 'website'

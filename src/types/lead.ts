@@ -2,10 +2,11 @@ import type {
   AuditInfo,
   ContactInfo,
   EntityId,
-  PlatformChannel,
   TimestampString,
 } from './common';
 import type { UserSummary } from './user';
+
+export type LeadSource = 'telegram' | 'instagram' | 'manual' | 'website' | 'web';
 
 export type LeadStatus =
   | 'new'
@@ -13,8 +14,11 @@ export type LeadStatus =
   | 'qualified'
   | 'negotiating'
   | 'converted'
-  | 'lost'
-  | 'archived';
+  | 'lost';
+
+export type LeadMetadataValue = string | number | boolean | null;
+
+export type LeadMetadata = Record<string, LeadMetadataValue>;
 
 export interface LeadSummary {
   id: EntityId;
@@ -29,9 +33,13 @@ export interface Lead extends AuditInfo {
   fullName: string;
   username?: string;
   contact: ContactInfo;
-  source: PlatformChannel;
+  source: LeadSource;
   status: LeadStatus;
   assignedOperator?: UserSummary;
+  instagramUsername?: string;
+  telegramUsername?: string;
+  notes?: string;
+  metadata?: LeadMetadata | null;
   notesSummary?: string;
   tags?: string[];
   lastMessageAt?: TimestampString;
@@ -39,3 +47,18 @@ export interface Lead extends AuditInfo {
   replied?: boolean;
   dmSent?: boolean;
 }
+
+export interface LeadMutationInput {
+  full_name: string;
+  phone?: string | null;
+  email?: string | null;
+  instagram_username?: string | null;
+  telegram_username?: string | null;
+  source: LeadSource;
+  status: LeadStatus;
+  notes?: string | null;
+  metadata?: LeadMetadata | null;
+  assigned_operator?: EntityId | null;
+}
+
+export type LeadPatchInput = Partial<LeadMutationInput>;

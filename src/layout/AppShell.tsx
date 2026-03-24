@@ -11,8 +11,16 @@ function AppShell() {
   const location = useLocation();
 
   useEffect(() => {
+    if (!isSidebarOpen) {
+      return;
+    }
+
+    if (typeof window !== 'undefined' && window.matchMedia('(min-width: 960px)').matches) {
+      return;
+    }
+
     setIsSidebarOpen(false);
-  }, [location.pathname]);
+  }, [isSidebarOpen, location.pathname]);
 
   const currentRoute = useMemo(
     () => getRouteByPathname(location.pathname),
@@ -52,6 +60,7 @@ function AppShell() {
               : ''
           }
           onMenuToggle={() => setIsSidebarOpen((open) => !open)}
+          showRouteMeta={currentRoute?.id === 'chat'}
         />
 
         <main className="flex-1 overflow-y-auto overscroll-contain">

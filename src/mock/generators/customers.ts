@@ -1,4 +1,5 @@
 import type { Customer, Lead, UserSummary } from '../../types/domain';
+import { DEFAULT_CURRENCY_CODE } from '../../constants';
 import {
   createEmail,
   createMockId,
@@ -104,7 +105,7 @@ export function generateMockCustomers(
       segments: [cycleValue(MOCK_SEGMENTS, index)],
       totalOrders,
       totalSpent,
-      currency: 'USD',
+      currency: DEFAULT_CURRENCY_CODE,
       lastOrderAt,
       createdAt: timestampFromIndex(index + 24, { dayStep: 3 }),
       updatedAt: timestampFromIndex(index, {

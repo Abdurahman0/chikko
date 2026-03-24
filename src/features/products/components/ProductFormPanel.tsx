@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import AppIcon from '../../../components/shared/icons/AppIcon';
 import { FilterSelect } from '../../../components/shared/data';
+import { DEFAULT_CURRENCY_CODE } from '../../../constants';
 import type { Product, ProductMutationInput, SelectOption } from '../../../types/domain';
 import { useTranslation } from 'react-i18next';
 
@@ -39,7 +40,7 @@ function createInitialState(
   product: Product | null | undefined,
   currencyOptions: SelectOption[],
 ): ProductFormState {
-  const fallbackCurrency = currencyOptions[0]?.value ?? 'USD';
+  const fallbackCurrency = currencyOptions[0]?.value ?? DEFAULT_CURRENCY_CODE;
 
   if (mode === 'edit' && product) {
     return {

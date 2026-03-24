@@ -26,6 +26,7 @@ const ADMIN_ALLOWED_ROUTES = new Set<AppRouteId>([
   'chat',
   'notifications',
   'profile',
+  'users',
 ]);
 
 const PUBLIC_ROUTE_IDS = new Set<AppRouteId>([

@@ -1,4 +1,5 @@
 import type { CurrencyCode, Product } from '../../types/domain';
+import { DEFAULT_CURRENCY_CODE } from '../../constants';
 import {
   createMockId,
   cycleValue,
@@ -37,7 +38,7 @@ const PRODUCT_DESCRIPTIONS = [
   'Mavsumiy aksiyalar va tez yetkazib berish uchun mashhur mahsulot.',
 ] as const;
 
-const PRODUCT_CURRENCIES: readonly CurrencyCode[] = ['USD', 'UZS', 'EUR'];
+const PRODUCT_CURRENCIES: readonly CurrencyCode[] = [DEFAULT_CURRENCY_CODE];
 
 function resolveProductStatus(isActive: boolean, stockQuantity: number): Product['status'] {
   if (!isActive) {

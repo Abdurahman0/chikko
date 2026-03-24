@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { FiEdit2, FiTrash2 } from 'react-icons/fi';
 import { useTranslation } from 'react-i18next';
+import { DEFAULT_CURRENCY_CODE, formatCurrencyAmount } from '../../../constants';
 import {
   DataTable,
   FilterBar,
@@ -341,11 +342,7 @@ function ProductsPage() {
         label: t('products.columns.price'),
         render: (product) => (
           <span className={tablePrimaryTextClassName}>
-            {new Intl.NumberFormat(locale, {
-              style: 'currency',
-              currency: product.currency,
-              maximumFractionDigits: 2,
-            }).format(product.price)}
+            {formatCurrencyAmount(product.price, locale)}
           </span>
         ),
       },
@@ -431,7 +428,9 @@ function ProductsPage() {
       (option) => option.value !== ALL_CURRENCIES_VALUE,
     );
 
-    return filtered.length > 0 ? filtered : [{ value: 'USD', label: 'USD' }];
+    return filtered.length > 0
+      ? filtered
+      : [{ value: DEFAULT_CURRENCY_CODE, label: DEFAULT_CURRENCY_CODE }];
   }, [currencyOptions]);
 
   const header = (

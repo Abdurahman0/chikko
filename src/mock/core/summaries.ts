@@ -24,7 +24,7 @@ export function toLeadSummary(lead: Lead): LeadSummary {
     fullName: lead.fullName,
     status: lead.status,
     phone: lead.contact.phone,
-    username: lead.username,
+    username: lead.username ?? lead.instagramUsername ?? lead.telegramUsername,
   };
 }
 

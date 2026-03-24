@@ -21,7 +21,9 @@ const BADGE_TONE_CLASS_NAMES: Record<StatusBadgeTone, string> = {
 
 const SUCCESS_STATUSES = new Set([
   'active',
+  'approved',
   'paid',
+  'verified',
   'completed',
   'delivered',
   'converted',
@@ -41,6 +43,7 @@ const WARNING_STATUSES = new Set([
 
 const DANGER_STATUSES = new Set([
   'failed',
+  'rejected',
   'cancelled',
   'lost',
   'out-of-stock',

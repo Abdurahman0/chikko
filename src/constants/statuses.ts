@@ -7,10 +7,6 @@ import type {
   MessageDeliveryStatus,
   MessageSenderType,
 } from '../types/chat';
-import type {
-  NotificationSeverity,
-  NotificationType,
-} from '../types/notification';
 import type { UserStatus } from '../types/user';
 
 export const LEAD_STATUSES = [
@@ -20,7 +16,6 @@ export const LEAD_STATUSES = [
   'negotiating',
   'converted',
   'lost',
-  'archived',
 ] as const satisfies readonly LeadStatus[];
 
 export const LEAD_STATUS_LABELS: Record<LeadStatus, string> = {
@@ -30,7 +25,6 @@ export const LEAD_STATUS_LABELS: Record<LeadStatus, string> = {
   negotiating: 'Negotiating',
   converted: 'Converted',
   lost: 'Lost',
-  archived: 'Archived',
 };
 
 export const LEAD_STATUS_OPTIONS: SelectOption[] = [
@@ -40,7 +34,6 @@ export const LEAD_STATUS_OPTIONS: SelectOption[] = [
   { value: 'negotiating', label: LEAD_STATUS_LABELS.negotiating },
   { value: 'converted', label: LEAD_STATUS_LABELS.converted },
   { value: 'lost', label: LEAD_STATUS_LABELS.lost },
-  { value: 'archived', label: LEAD_STATUS_LABELS.archived },
 ];
 
 export const ORDER_STATUSES = [
@@ -74,63 +67,45 @@ export const ORDER_STATUS_OPTIONS: SelectOption[] = [
 ];
 
 export const PAYMENT_STATUSES = [
-  'unpaid',
   'pending',
-  'paid',
+  'approved',
+  'rejected',
+  'verified',
   'failed',
-  'refunded',
-  'partially-refunded',
 ] as const satisfies readonly PaymentStatus[];
 
 export const PAYMENT_STATUS_LABELS: Record<PaymentStatus, string> = {
-  unpaid: 'Unpaid',
   pending: 'Pending',
-  paid: 'Paid',
+  approved: 'Approved',
+  rejected: 'Rejected',
+  verified: 'Verified',
   failed: 'Failed',
-  refunded: 'Refunded',
-  'partially-refunded': 'Partially Refunded',
 };
 
 export const PAYMENT_STATUS_OPTIONS: SelectOption[] = [
-  { value: 'unpaid', label: PAYMENT_STATUS_LABELS.unpaid },
   { value: 'pending', label: PAYMENT_STATUS_LABELS.pending },
-  { value: 'paid', label: PAYMENT_STATUS_LABELS.paid },
+  { value: 'approved', label: PAYMENT_STATUS_LABELS.approved },
+  { value: 'rejected', label: PAYMENT_STATUS_LABELS.rejected },
+  { value: 'verified', label: PAYMENT_STATUS_LABELS.verified },
   { value: 'failed', label: PAYMENT_STATUS_LABELS.failed },
-  { value: 'refunded', label: PAYMENT_STATUS_LABELS.refunded },
-  {
-    value: 'partially-refunded',
-    label: PAYMENT_STATUS_LABELS['partially-refunded'],
-  },
 ];
 
 export const PAYMENT_METHODS = [
-  'cash',
-  'card',
-  'bank-transfer',
-  'wallet',
-  'installment',
-  'other',
+  'manual',
+  'payme',
+  'click',
 ] as const satisfies readonly PaymentMethod[];
 
 export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
-  cash: 'Cash',
-  card: 'Card',
-  'bank-transfer': 'Bank Transfer',
-  wallet: 'Wallet',
-  installment: 'Installment',
-  other: 'Other',
+  manual: 'Manual',
+  payme: 'Payme',
+  click: 'Click',
 };
 
 export const PAYMENT_METHOD_OPTIONS: SelectOption[] = [
-  { value: 'cash', label: PAYMENT_METHOD_LABELS.cash },
-  { value: 'card', label: PAYMENT_METHOD_LABELS.card },
-  {
-    value: 'bank-transfer',
-    label: PAYMENT_METHOD_LABELS['bank-transfer'],
-  },
-  { value: 'wallet', label: PAYMENT_METHOD_LABELS.wallet },
-  { value: 'installment', label: PAYMENT_METHOD_LABELS.installment },
-  { value: 'other', label: PAYMENT_METHOD_LABELS.other },
+  { value: 'manual', label: PAYMENT_METHOD_LABELS.manual },
+  { value: 'payme', label: PAYMENT_METHOD_LABELS.payme },
+  { value: 'click', label: PAYMENT_METHOD_LABELS.click },
 ];
 
 export const PRODUCT_STATUSES = [
@@ -172,79 +147,24 @@ export const USER_STATUS_OPTIONS: SelectOption[] = [
   { value: 'invited', label: USER_STATUS_LABELS.invited },
 ];
 
-export const NOTIFICATION_SEVERITIES = [
-  'neutral',
-  'info',
-  'success',
-  'warning',
-  'danger',
-] as const satisfies readonly NotificationSeverity[];
-
-export const NOTIFICATION_SEVERITY_LABELS: Record<NotificationSeverity, string> =
-  {
-    neutral: 'Neutral',
-    info: 'Info',
-    success: 'Success',
-    warning: 'Warning',
-    danger: 'Danger',
-  };
-
-export const NOTIFICATION_SEVERITY_OPTIONS: SelectOption[] = [
-  { value: 'neutral', label: NOTIFICATION_SEVERITY_LABELS.neutral },
-  { value: 'info', label: NOTIFICATION_SEVERITY_LABELS.info },
-  { value: 'success', label: NOTIFICATION_SEVERITY_LABELS.success },
-  { value: 'warning', label: NOTIFICATION_SEVERITY_LABELS.warning },
-  { value: 'danger', label: NOTIFICATION_SEVERITY_LABELS.danger },
-];
-
-export const NOTIFICATION_TYPES = [
-  'system',
-  'lead',
-  'order',
-  'payment',
-  'conversation',
-  'user',
-] as const satisfies readonly NotificationType[];
-
-export const NOTIFICATION_TYPE_LABELS: Record<NotificationType, string> = {
-  system: 'System',
-  lead: 'Lead',
-  order: 'Order',
-  payment: 'Payment',
-  conversation: 'Conversation',
-  user: 'User',
-};
-
-export const NOTIFICATION_TYPE_OPTIONS: SelectOption[] = [
-  { value: 'system', label: NOTIFICATION_TYPE_LABELS.system },
-  { value: 'lead', label: NOTIFICATION_TYPE_LABELS.lead },
-  { value: 'order', label: NOTIFICATION_TYPE_LABELS.order },
-  { value: 'payment', label: NOTIFICATION_TYPE_LABELS.payment },
-  {
-    value: 'conversation',
-    label: NOTIFICATION_TYPE_LABELS.conversation,
-  },
-  { value: 'user', label: NOTIFICATION_TYPE_LABELS.user },
-];
-
 export const MESSAGE_SENDER_TYPES = [
   'customer',
+  'ai',
   'operator',
-  'ai-agent',
   'system',
 ] as const satisfies readonly MessageSenderType[];
 
 export const MESSAGE_SENDER_TYPE_LABELS: Record<MessageSenderType, string> = {
   customer: 'Customer',
+  ai: 'AI',
   operator: 'Operator',
-  'ai-agent': 'AI Agent',
   system: 'System',
 };
 
 export const MESSAGE_SENDER_TYPE_OPTIONS: SelectOption[] = [
   { value: 'customer', label: MESSAGE_SENDER_TYPE_LABELS.customer },
+  { value: 'ai', label: MESSAGE_SENDER_TYPE_LABELS.ai },
   { value: 'operator', label: MESSAGE_SENDER_TYPE_LABELS.operator },
-  { value: 'ai-agent', label: MESSAGE_SENDER_TYPE_LABELS['ai-agent'] },
   { value: 'system', label: MESSAGE_SENDER_TYPE_LABELS.system },
 ];
 

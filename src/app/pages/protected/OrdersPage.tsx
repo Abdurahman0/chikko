@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { FiEdit2, FiRefreshCw, FiTrash2 } from 'react-icons/fi';
 import { useTranslation } from 'react-i18next';
+import { formatCurrencyAmount } from '../../../constants';
 import {
   DataTable,
   FilterBar,
@@ -470,11 +471,7 @@ function OrdersPage() {
         label: t('orders.columns.totalAmount'),
         render: (order) => (
           <span className={tablePrimaryTextClassName}>
-            {new Intl.NumberFormat(locale, {
-              style: 'currency',
-              currency: order.currency,
-              maximumFractionDigits: 2,
-            }).format(order.totalAmount)}
+            {formatCurrencyAmount(order.totalAmount, locale)}
           </span>
         ),
       },

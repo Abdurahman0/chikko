@@ -1,43 +1,27 @@
-import type { EntityId, TimestampString } from './common';
+import type { EntityId, SortDirection, TimestampString } from './common';
+import type { UserSummary } from './user';
 
-export type NotificationType =
-  | 'system'
-  | 'lead'
-  | 'order'
-  | 'payment'
-  | 'conversation'
-  | 'user';
-
-export type NotificationSeverity =
-  | 'neutral'
-  | 'info'
-  | 'success'
-  | 'warning'
-  | 'danger';
-
-export type NotificationEntityType =
-  | 'lead'
-  | 'customer'
-  | 'order'
-  | 'product'
-  | 'payment'
-  | 'conversation'
-  | 'user';
-
-export interface NotificationEntityRef {
-  entityType: NotificationEntityType;
-  entityId: EntityId;
-  label?: string;
-  path?: string;
-}
+export type NotificationChannel = 'in_app' | 'telegram' | 'system';
 
 export interface AppNotification {
   id: EntityId;
-  type: NotificationType;
+  created_at: TimestampString;
+  updated_at: TimestampString;
   title: string;
   message: string;
-  severity: NotificationSeverity;
-  isRead: boolean;
-  createdAt: TimestampString;
-  relatedEntity?: NotificationEntityRef;
+  channel: NotificationChannel;
+  is_read: boolean;
+  metadata: Record<string, string | number | boolean | null> | null;
+  user: UserSummary | null;
+}
+
+export interface NotificationListParams {
+  page: number;
+  pageSize: number;
+  search?: string;
+  channel?: NotificationChannel;
+  is_read?: boolean;
+  ordering?: string;
+  sortBy?: string;
+  sortDirection?: SortDirection;
 }

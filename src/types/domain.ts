@@ -7,3 +7,6 @@ export type * from './payment';
 export type * from './order';
 export type * from './chat';
 export type * from './notification';
+export type * from './ai-setting';
+export type * from './integration';
+export type * from './log';

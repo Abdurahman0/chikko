@@ -1,8 +1,9 @@
 import type { ComponentType, JSX } from 'react';
-import { Navigate, createBrowserRouter } from 'react-router-dom';
+import { Navigate, Outlet, createBrowserRouter, useLocation } from 'react-router-dom';
 import type { AppRouteConfig, AppRouteId } from '../../config/routes';
 import { fallbackRoutes, moduleRoutes, publicRoutes, routePaths } from '../../config/routes';
 import RouteGate from './RouteGate';
+import { useAuth } from '../../auth';
 import AccessDeniedPage from '../pages/public/AccessDeniedPage';
 import AiSettingsPage from '../pages/protected/AiSettingsPage';
 import ChatPage from '../pages/protected/ChatPage';
@@ -56,6 +57,31 @@ function renderRouteElement(route: AppRouteConfig): JSX.Element {
   );
 }
 
+function ProtectedShellRoute(): JSX.Element {
+  const location = useLocation();
+  const { isAuthenticated, isBootstrapping } = useAuth();
+
+  if (isBootstrapping) {
+    return (
+      <main className="grid min-h-screen place-items-center bg-background-default p-6">
+        <p className="text-sm font-semibold text-text-secondary">Loading session...</p>
+      </main>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <Navigate
+        replace
+        to={routePaths.login}
+        state={{ from: location.pathname }}
+      />
+    );
+  }
+
+  return <Outlet />;
+}
+
 export const appRouter = createBrowserRouter([
   {
     path: routePaths.root,
@@ -68,11 +94,16 @@ export const appRouter = createBrowserRouter([
       element: renderRouteElement(route),
     })),
   {
-    element: <AppShell />,
-    children: moduleRoutes.map((route) => ({
-      path: route.path,
-      element: renderRouteElement(route),
-    })),
+    element: <ProtectedShellRoute />,
+    children: [
+      {
+        element: <AppShell />,
+        children: moduleRoutes.map((route) => ({
+          path: route.path,
+          element: renderRouteElement(route),
+        })),
+      },
+    ],
   },
   ...fallbackRoutes.map((route) => ({
     path: route.path,

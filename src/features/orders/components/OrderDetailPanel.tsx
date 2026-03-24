@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { StatusBadge } from '../../../components/shared/data';
 import AppIcon from '../../../components/shared/icons/AppIcon';
 import { EmptyState, LoadingState, PageCard } from '../../../components/shared/page';
+import { formatCurrencyAmount } from '../../../constants';
 import { getChannelLabel, getOrderStatusLabel } from '../../../i18n/labels';
 import { services } from '../../../services';
 import type { EntityId, Order } from '../../../types/domain';
@@ -37,18 +38,6 @@ function formatDateTime(
     dateStyle: 'medium',
     timeStyle: 'short',
   }).format(new Date(timestamp));
-}
-
-function formatCurrencyAmount(
-  value: number,
-  currency: string,
-  locale: string,
-): string {
-  return new Intl.NumberFormat(locale, {
-    style: 'currency',
-    currency,
-    maximumFractionDigits: 2,
-  }).format(value);
 }
 
 function OrderDetailPanel({
@@ -139,7 +128,7 @@ function OrderDetailPanel({
               </h2>
               {!isLoading && order ? (
                 <p className="mt-1 text-sm text-text-secondary [overflow-wrap:anywhere]">
-                  {formatCurrencyAmount(order.totalAmount, order.currency, locale)}
+                  {formatCurrencyAmount(order.totalAmount, locale)}
                 </p>
               ) : null}
             </div>
@@ -273,10 +262,10 @@ function OrderDetailPanel({
                               {item.quantity}
                             </td>
                             <td className="px-2 py-2 text-right text-sm text-text-secondary">
-                              {formatCurrencyAmount(item.unitPrice, order.currency, locale)}
+                              {formatCurrencyAmount(item.unitPrice, locale)}
                             </td>
                             <td className="rounded-r-lg px-2 py-2 text-right text-sm font-semibold text-text-primary">
-                              {formatCurrencyAmount(item.lineTotal, order.currency, locale)}
+                              {formatCurrencyAmount(item.lineTotal, locale)}
                             </td>
                           </tr>
                         ))}
@@ -298,7 +287,7 @@ function OrderDetailPanel({
                     <div className="flex items-center justify-between gap-3 rounded-lg bg-surface-subtle/80 px-3 py-2.5">
                       <dt className={labelClassName}>{t('orders.columns.totalAmount')}</dt>
                       <dd className={`m-0 ${valueClassName}`}>
-                        {formatCurrencyAmount(order.totalAmount, order.currency, locale)}
+                        {formatCurrencyAmount(order.totalAmount, locale)}
                       </dd>
                     </div>
                     <div className="flex items-center justify-between gap-3 rounded-lg bg-surface-subtle/80 px-3 py-2.5">
@@ -327,11 +316,6 @@ function OrderDetailPanel({
                       {order.notes || t('orders.detail.noNotes')}
                     </p>
                   </div>
-                  {order.metadata ? (
-                    <pre className="m-0 overflow-x-auto rounded-lg bg-surface-subtle/80 p-3 text-[12px] leading-6 text-text-secondary">
-                      {JSON.stringify(order.metadata, null, 2)}
-                    </pre>
-                  ) : null}
                 </div>
               </PageCard>
 

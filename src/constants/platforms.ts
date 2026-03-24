@@ -4,6 +4,8 @@ import type { PlatformChannel } from '../types/common';
 export const PLATFORM_CHANNELS = [
   'instagram',
   'telegram',
+  'manual',
+  'web',
   'whatsapp',
   'facebook',
   'website',
@@ -16,6 +18,8 @@ export const PLATFORM_CHANNELS = [
 export const PLATFORM_CHANNEL_LABELS: Record<PlatformChannel, string> = {
   instagram: 'Instagram',
   telegram: 'Telegram',
+  manual: 'Manual',
+  web: 'Web',
   whatsapp: 'WhatsApp',
   facebook: 'Facebook',
   website: 'Website',
@@ -28,6 +32,8 @@ export const PLATFORM_CHANNEL_LABELS: Record<PlatformChannel, string> = {
 export const PLATFORM_CHANNEL_OPTIONS: SelectOption[] = [
   { value: 'instagram', label: PLATFORM_CHANNEL_LABELS.instagram },
   { value: 'telegram', label: PLATFORM_CHANNEL_LABELS.telegram },
+  { value: 'manual', label: PLATFORM_CHANNEL_LABELS.manual },
+  { value: 'web', label: PLATFORM_CHANNEL_LABELS.web },
   { value: 'whatsapp', label: PLATFORM_CHANNEL_LABELS.whatsapp },
   { value: 'facebook', label: PLATFORM_CHANNEL_LABELS.facebook },
   { value: 'website', label: PLATFORM_CHANNEL_LABELS.website },

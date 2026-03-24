@@ -8,7 +8,6 @@ const LEAD_STATUS_KEYS: Record<LeadStatus, string> = {
   negotiating: 'labels.leadStatus.negotiating',
   converted: 'labels.leadStatus.converted',
   lost: 'labels.leadStatus.lost',
-  archived: 'labels.leadStatus.archived',
 };
 
 const CHANNEL_KEYS: Record<string, string> = {
@@ -45,6 +44,12 @@ const PAYMENT_STATUS_KEYS: Record<string, string> = {
   failed: 'labels.paymentStatus.failed',
   refunded: 'labels.paymentStatus.refunded',
   'partially-refunded': 'labels.paymentStatus.partially_refunded',
+};
+
+const PAYMENT_METHOD_KEYS: Record<string, string> = {
+  manual: 'labels.paymentMethod.manual',
+  payme: 'labels.paymentMethod.payme',
+  click: 'labels.paymentMethod.click',
 };
 
 const USER_ROLE_KEYS: Record<UserRole, string> = {
@@ -103,6 +108,14 @@ export function getPaymentStatusLabel(
   fallback?: string,
 ): string {
   return resolveLabel(t, PAYMENT_STATUS_KEYS, status, fallback);
+}
+
+export function getPaymentMethodLabel(
+  t: TFunction,
+  method: string,
+  fallback?: string,
+): string {
+  return resolveLabel(t, PAYMENT_METHOD_KEYS, method, fallback);
 }
 
 export function getUserRoleLabel(t: TFunction, role: UserRole): string {

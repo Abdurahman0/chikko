@@ -3,6 +3,10 @@ import { FiTrash2 } from 'react-icons/fi';
 import { useTranslation } from 'react-i18next';
 import { FilterSelect } from '../../../components/shared/data';
 import AppIcon from '../../../components/shared/icons/AppIcon';
+import {
+  DEFAULT_CURRENCY_CODE,
+  formatCurrencyAmount,
+} from '../../../constants';
 import type {
   CurrencyCode,
   Customer,
@@ -139,10 +143,10 @@ function resolveCurrency(items: OrderItemFormState[], products: Product[]): Curr
   const productById = new Map(products.map((product) => [product.id, product]));
   const firstResolved = items.find((item) => productById.has(item.productId));
   if (!firstResolved) {
-    return 'USD';
+    return DEFAULT_CURRENCY_CODE;
   }
 
-  return productById.get(firstResolved.productId)?.currency ?? 'USD';
+  return productById.get(firstResolved.productId)?.currency ?? DEFAULT_CURRENCY_CODE;
 }
 
 function OrderFormPanel({
@@ -688,11 +692,7 @@ function OrderFormPanel({
                       {selectedProduct?.name ?? t('common.na')}
                     </span>
                     <span className="text-sm font-semibold text-text-primary">
-                      {new Intl.NumberFormat(locale, {
-                        style: 'currency',
-                        currency: selectedProduct?.currency ?? 'USD',
-                        maximumFractionDigits: 2,
-                      }).format(lineTotal)}
+                      {formatCurrencyAmount(lineTotal, locale)}
                     </span>
                   </div>
                 </div>
@@ -704,11 +704,7 @@ function OrderFormPanel({
                 {t('orders.form.totalAmount')}
               </span>
               <span className="text-base font-extrabold text-text-accent">
-                {new Intl.NumberFormat(locale, {
-                  style: 'currency',
-                  currency: resolveCurrency(form.items, products),
-                  maximumFractionDigits: 2,
-                }).format(totalAmount)}
+                {formatCurrencyAmount(totalAmount, locale)}
               </span>
             </div>
           </section>

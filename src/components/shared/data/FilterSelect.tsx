@@ -18,6 +18,7 @@ function FilterSelect({
 }: FilterSelectProps) {
   const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
+  const [openAbove, setOpenAbove] = useState(false);
   const rootRef = useRef<HTMLDivElement | null>(null);
 
   const selectedOption = useMemo(
@@ -46,6 +47,36 @@ function FilterSelect({
       window.removeEventListener('keydown', handleKeyDown);
     };
   }, []);
+
+  useEffect(() => {
+    if (!isOpen) {
+      return;
+    }
+
+    function updatePlacement() {
+      const rect = rootRef.current?.getBoundingClientRect();
+      if (!rect) {
+        return;
+      }
+
+      const expectedMenuHeight = 260;
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const spaceAbove = rect.top;
+
+      setOpenAbove(
+        spaceBelow < expectedMenuHeight && spaceAbove > spaceBelow,
+      );
+    }
+
+    updatePlacement();
+    window.addEventListener('resize', updatePlacement);
+    window.addEventListener('scroll', updatePlacement, true);
+
+    return () => {
+      window.removeEventListener('resize', updatePlacement);
+      window.removeEventListener('scroll', updatePlacement, true);
+    };
+  }, [isOpen]);
 
   return (
     <div
@@ -80,7 +111,10 @@ function FilterSelect({
 
       {isOpen ? (
         <div
-          className="absolute left-0 top-[calc(100%+8px)] z-[150] w-full overflow-hidden rounded-lg bg-surface-card p-1.5 shadow-[0_22px_44px_-30px_rgba(25,28,30,0.38)] ring-1 ring-border-soft/30"
+          className={[
+            'absolute left-0 z-[150] w-full overflow-hidden rounded-lg bg-surface-card p-1.5 shadow-[0_22px_44px_-30px_rgba(25,28,30,0.38)] ring-1 ring-border-soft/30',
+            openAbove ? 'bottom-[calc(100%+8px)]' : 'top-[calc(100%+8px)]',
+          ].join(' ')}
           role="listbox"
         >
           <div className="max-h-64 overflow-y-auto py-1">

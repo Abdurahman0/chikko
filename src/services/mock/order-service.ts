@@ -8,6 +8,7 @@ import type {
   OrderPatchInput,
   OrderSource,
 } from '../../types/domain';
+import { DEFAULT_CURRENCY_CODE } from '../../constants';
 import type { OrderService } from '../core/contracts';
 import { mockDataStore } from './dataset';
 import { filterItemsBySearch, findById, paginateItems, withMockDelay } from './helpers';
@@ -239,7 +240,8 @@ export const mockOrderService: OrderService = {
       metadata: payload.metadata,
       aiGenerated: payload.aiGenerated,
       totalAmount,
-      currency: payload.currency ?? items[0]?.product.currency ?? 'USD',
+      currency:
+        payload.currency ?? items[0]?.product.currency ?? DEFAULT_CURRENCY_CODE,
       items,
       orderNumber,
       orderStatus: status,

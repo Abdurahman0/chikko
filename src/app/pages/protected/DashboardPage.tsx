@@ -13,6 +13,7 @@ import {
   getOrderStatusLabel,
   getPaymentStatusLabel,
 } from '../../../i18n/labels';
+import { formatCurrencyAmount } from '../../../constants';
 import { services } from '../../../services';
 import type {
   DashboardBreakdownItem,
@@ -70,10 +71,7 @@ function formatCount(value: number, locale: string): string {
 }
 
 function formatAmount(value: number | string, locale: string): string {
-  return new Intl.NumberFormat(locale, {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(asNumber(value));
+  return formatCurrencyAmount(asNumber(value), locale);
 }
 
 function formatPercent(value: number | string): string {

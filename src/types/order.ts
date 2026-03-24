@@ -6,7 +6,6 @@ import type {
 } from './common';
 import type { CustomerSummary } from './customer';
 import type { LeadSummary } from './lead';
-import type { PaymentStatus } from './payment';
 import type { ProductSummary } from './product';
 
 export type OrderStatus =
@@ -19,6 +18,14 @@ export type OrderStatus =
   | 'cancelled';
 
 export type OrderSource = 'telegram' | 'instagram' | 'manual';
+
+export type OrderPaymentStatus =
+  | 'unpaid'
+  | 'pending'
+  | 'paid'
+  | 'failed'
+  | 'refunded'
+  | 'partially-refunded';
 
 export interface OrderItem {
   id: EntityId;
@@ -52,7 +59,7 @@ export interface Order extends AuditInfo {
   items: OrderItem[];
   orderNumber?: string;
   orderStatus?: OrderStatus;
-  paymentStatus?: PaymentStatus;
+  paymentStatus?: OrderPaymentStatus;
   notesSummary?: string;
 }
 

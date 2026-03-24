@@ -1,19 +1,47 @@
 import type {
+  AISetting,
+  AISettingMutationInput,
+  AISettingPatchInput,
+  AISettingsListParams,
+  IntegrationConfig,
+  IntegrationConfigListParams,
+  IntegrationConfigMutationInput,
+  IntegrationConfigPatchInput,
+  IntegrationEvent,
+  IntegrationEventListParams,
+  AppLog,
   AppNotification,
   AppUser,
   ChatMessage,
   Conversation,
   Customer,
+  CustomerMutationInput,
+  CustomerPatchInput,
   EntityId,
   Lead,
+  LeadMutationInput,
+  LeadPatchInput,
+  MessageListParams,
+  NotificationListParams,
   Order,
   OrderMutationInput,
   OrderPatchInput,
   PaginatedResult,
   Payment,
+  PaymentListParams,
+  PaymentMutationInput,
+  PaymentUpdateInput,
   Product,
   ProductMutationInput,
+  SendMessageInput,
+  SessionListParams,
   TableQueryParams,
+  ManagedUser,
+  LogListParams,
+  UserListParams,
+  UserMutationInput,
+  UserPatchInput,
+  UserPermission,
 } from '../../types/domain';
 
 export type ServiceModuleKey =
@@ -25,7 +53,11 @@ export type ServiceModuleKey =
   | 'payments'
   | 'conversations'
   | 'notifications'
-  | 'profile';
+  | 'integrations'
+  | 'logs'
+  | 'aiSettings'
+  | 'profile'
+  | 'users';
 
 export interface DashboardDateRange {
   date_from: string;
@@ -121,11 +153,24 @@ export interface DashboardService {
 export interface LeadService {
   list(params?: TableQueryParams): Promise<PaginatedResult<Lead>>;
   getById(id: EntityId): Promise<Lead | null>;
+  create(input: LeadMutationInput): Promise<Lead>;
+  update(id: EntityId, input: LeadMutationInput): Promise<Lead | null>;
+  patch(id: EntityId, input: LeadPatchInput): Promise<Lead | null>;
+  delete(id: EntityId): Promise<boolean>;
 }
 
 export interface CustomerService {
   list(params?: TableQueryParams): Promise<PaginatedResult<Customer>>;
   getById(id: EntityId): Promise<Customer | null>;
+  listCustomers(params?: TableQueryParams): Promise<PaginatedResult<Customer>>;
+  getCustomerById(id: EntityId): Promise<Customer | null>;
+  createCustomer(input: CustomerMutationInput): Promise<Customer>;
+  updateCustomer(
+    id: EntityId,
+    input: CustomerMutationInput,
+  ): Promise<Customer | null>;
+  patchCustomer(id: EntityId, input: CustomerPatchInput): Promise<Customer | null>;
+  deleteCustomer(id: EntityId): Promise<boolean>;
 }
 
 export interface ProductService {
@@ -147,23 +192,99 @@ export interface OrderService {
 }
 
 export interface PaymentService {
-  list(params?: TableQueryParams): Promise<PaginatedResult<Payment>>;
+  list(params?: PaymentListParams): Promise<PaginatedResult<Payment>>;
   getById(id: EntityId): Promise<Payment | null>;
+  listPayments(params?: PaymentListParams): Promise<PaginatedResult<Payment>>;
+  getPaymentById(id: EntityId): Promise<Payment | null>;
+  createPayment(input: PaymentMutationInput): Promise<Payment>;
+  updatePayment(id: EntityId, input: PaymentUpdateInput): Promise<Payment | null>;
+  deletePayment(id: EntityId): Promise<boolean>;
+  approvePayment(id: EntityId): Promise<Payment | null>;
+  rejectPayment(id: EntityId): Promise<Payment | null>;
+  verifyPayment(id: EntityId): Promise<Payment | null>;
 }
 
 export interface ConversationService {
-  list(params?: TableQueryParams): Promise<PaginatedResult<Conversation>>;
+  list(params?: SessionListParams): Promise<PaginatedResult<Conversation>>;
   getById(id: EntityId): Promise<Conversation | null>;
-  listMessages(conversationId: EntityId): Promise<ChatMessage[]>;
+  listSessions(params?: SessionListParams): Promise<PaginatedResult<Conversation>>;
+  getSessionById(id: EntityId): Promise<Conversation | null>;
+  listMessages(params?: MessageListParams): Promise<PaginatedResult<ChatMessage>>;
+  getMessageById(id: EntityId): Promise<ChatMessage | null>;
+  sendMessage(sessionId: EntityId, payload: SendMessageInput): Promise<ChatMessage>;
+  markSessionRead(sessionId: EntityId): Promise<void>;
 }
 
 export interface NotificationService {
-  list(): Promise<AppNotification[]>;
-  markAsRead(id: EntityId): Promise<void>;
+  list(params?: NotificationListParams): Promise<PaginatedResult<AppNotification>>;
+  getById(id: EntityId): Promise<AppNotification | null>;
+  listNotifications(params?: NotificationListParams): Promise<PaginatedResult<AppNotification>>;
+  getNotificationById(id: EntityId): Promise<AppNotification | null>;
+  markAsRead(id: EntityId): Promise<AppNotification | null>;
+  markNotificationRead(id: EntityId): Promise<AppNotification | null>;
 }
 
 export interface ProfileService {
   getCurrentUser(): Promise<AppUser | null>;
+}
+
+export interface AISettingsService {
+  list(params?: AISettingsListParams): Promise<PaginatedResult<AISetting>>;
+  getById(id: EntityId): Promise<AISetting | null>;
+  listAISettings(params?: AISettingsListParams): Promise<PaginatedResult<AISetting>>;
+  getAISettingById(id: EntityId): Promise<AISetting | null>;
+  createAISetting(input: AISettingMutationInput): Promise<AISetting>;
+  updateAISetting(
+    id: EntityId,
+    input: AISettingMutationInput,
+  ): Promise<AISetting | null>;
+  patchAISetting(
+    id: EntityId,
+    input: AISettingPatchInput,
+  ): Promise<AISetting | null>;
+  deleteAISetting(id: EntityId): Promise<boolean>;
+  setActiveAISetting(id: EntityId): Promise<AISetting | null>;
+  getActiveAISetting(): Promise<AISetting | null>;
+}
+
+export interface IntegrationsService {
+  listIntegrationEvents(
+    params?: IntegrationEventListParams,
+  ): Promise<PaginatedResult<IntegrationEvent>>;
+  getIntegrationEventById(id: EntityId): Promise<IntegrationEvent | null>;
+  listIntegrationConfigs(
+    params?: IntegrationConfigListParams,
+  ): Promise<PaginatedResult<IntegrationConfig>>;
+  getIntegrationConfigById(id: EntityId): Promise<IntegrationConfig | null>;
+  createIntegrationConfig(
+    input: IntegrationConfigMutationInput,
+  ): Promise<IntegrationConfig>;
+  updateIntegrationConfig(
+    id: EntityId,
+    input: IntegrationConfigMutationInput,
+  ): Promise<IntegrationConfig | null>;
+  patchIntegrationConfig(
+    id: EntityId,
+    input: IntegrationConfigPatchInput,
+  ): Promise<IntegrationConfig | null>;
+  deleteIntegrationConfig(id: EntityId): Promise<boolean>;
+}
+
+export interface LogsService {
+  listLogs(params?: LogListParams): Promise<PaginatedResult<AppLog>>;
+  getLogById(id: EntityId): Promise<AppLog | null>;
+}
+
+export interface UserService {
+  listUsers(params?: UserListParams): Promise<PaginatedResult<ManagedUser>>;
+  getUserById(id: EntityId): Promise<ManagedUser | null>;
+  createUser(input: UserMutationInput): Promise<ManagedUser>;
+  updateUser(id: EntityId, input: UserMutationInput): Promise<ManagedUser | null>;
+  patchUser(id: EntityId, input: UserPatchInput): Promise<ManagedUser | null>;
+  deleteUser(id: EntityId): Promise<boolean>;
+  toggleUserActive(id: EntityId): Promise<ManagedUser | null>;
+  listPermissions(): Promise<UserPermission[]>;
+  getPermissionById(id: EntityId): Promise<UserPermission | null>;
 }
 
 export interface AppServices {
@@ -175,5 +296,9 @@ export interface AppServices {
   payments: PaymentService;
   conversations: ConversationService;
   notifications: NotificationService;
+  integrations: IntegrationsService;
+  logs: LogsService;
+  aiSettings: AISettingsService;
   profile: ProfileService;
+  users: UserService;
 }

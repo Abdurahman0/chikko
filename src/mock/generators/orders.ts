@@ -1,4 +1,4 @@
-import { ORDER_STATUSES } from '../../constants';
+import { DEFAULT_CURRENCY_CODE, ORDER_STATUSES } from '../../constants';
 import type {
   Customer,
   Lead,
@@ -119,7 +119,7 @@ export function generateMockOrders(
     const totalAmount = Number(
       items.reduce((sum, item) => sum + item.lineTotal, 0).toFixed(2),
     );
-    const currency = items[0]?.product.currency ?? 'USD';
+    const currency = items[0]?.product.currency ?? DEFAULT_CURRENCY_CODE;
 
     return {
       id: createMockId('order', index),

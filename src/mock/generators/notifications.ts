@@ -1,142 +1,156 @@
-import {
-  NOTIFICATION_SEVERITIES,
-  NOTIFICATION_TYPES,
-} from '../../constants';
 import type {
   AppNotification,
-  Conversation,
-  Lead,
-  NotificationSeverity,
-  NotificationType,
-  Order,
   AppUser,
+  Conversation,
+  Customer,
+  Lead,
+  NotificationChannel,
+  Order,
+  Payment,
+  UserSummary,
 } from '../../types/domain';
+import { formatCurrencyAmount } from '../../constants';
 import { createMockId, cycleValue, timestampFromIndex } from '../core/helpers';
-import { generateMockConversations } from './conversations';
-import { generateMockLeads } from './leads';
-import { generateMockOrders } from './orders';
-import { generateMockUsers } from './users';
 
 interface GenerateMockNotificationsOptions {
   leads?: Lead[];
+  customers?: Customer[];
   orders?: Order[];
+  payments?: Payment[];
   conversations?: Conversation[];
   users?: AppUser[];
 }
 
-function deriveSeverity(type: NotificationType, index: number): NotificationSeverity {
-  if (type === 'payment' || type === 'order') {
-    return cycleValue(['warning', 'info', 'success'], index) as NotificationSeverity;
-  }
+interface NotificationTemplate {
+  title: string;
+  messageBuilder: (index: number) => string;
+  channel: NotificationChannel;
+}
 
-  if (type === 'system') {
-    return cycleValue(['info', 'danger'], index) as NotificationSeverity;
-  }
-
-  return cycleValue(NOTIFICATION_SEVERITIES, index, 1);
+function toUserSummary(user: AppUser): UserSummary {
+  return {
+    id: user.id,
+    fullName: user.fullName,
+    role: user.role,
+    avatarUrl: user.avatarUrl,
+  };
 }
 
 export function generateMockNotifications(
   count: number,
   options?: GenerateMockNotificationsOptions,
 ): AppNotification[] {
-  const leads = options?.leads ?? generateMockLeads(Math.max(count, 3));
-  const orders = options?.orders ?? generateMockOrders(Math.max(count, 3));
-  const conversations =
-    options?.conversations ?? generateMockConversations(Math.max(count, 3));
-  const users = options?.users ?? generateMockUsers(3, { roles: ['operator', 'admin'] });
+  const leads = options?.leads ?? [];
+  const customers = options?.customers ?? [];
+  const orders = options?.orders ?? [];
+  const payments = options?.payments ?? [];
+  const conversations = options?.conversations ?? [];
+  const users = options?.users ?? [];
+
+  const templates: NotificationTemplate[] = [
+    {
+      title: "Yangi buyurtma qabul qilindi",
+      channel: 'in_app',
+      messageBuilder: (index) => {
+        const order = orders[index % (orders.length || 1)];
+        return `Buyurtma ${order?.orderNumber ?? `ORD-${5400 + index}`} navbatga qo'shildi.`;
+      },
+    },
+    {
+      title: "To'lov kutilmoqda",
+      channel: 'in_app',
+      messageBuilder: (index) => {
+        const order = orders[index % (orders.length || 1)];
+        return `${order?.orderNumber ?? `ORD-${6600 + index}`} uchun to'lov hali tasdiqlanmadi.`;
+      },
+    },
+    {
+      title: "To'lov qabul qilindi",
+      channel: 'telegram',
+      messageBuilder: (index) => {
+        const payment = payments[index % (payments.length || 1)];
+        const amount = payment?.amount ?? 100 + (index * 5);
+        return `Yangi to'lov: ${formatCurrencyAmount(amount, 'uz-UZ')}. Tranzaksiya tekshiruv navbatiga qo'shildi.`;
+      },
+    },
+    {
+      title: "Chatda yangi xabar",
+      channel: 'telegram',
+      messageBuilder: (index) => {
+        const conversation = conversations[index % (conversations.length || 1)];
+        const participant =
+          conversation?.customer?.fullName ??
+          conversation?.lead?.fullName ??
+          conversation?.external_id ??
+          `chat-${index + 1}`;
+        return `${participant} suhbatida yangi xabar mavjud.`;
+      },
+    },
+    {
+      title: "Lid holati yangilandi",
+      channel: 'in_app',
+      messageBuilder: (index) => {
+        const lead = leads[index % (leads.length || 1)];
+        return `${lead?.fullName ?? `Lid-${index + 1}`} bo'yicha holat qayta belgilandi.`;
+      },
+    },
+    {
+      title: "Yangi mijoz qo'shildi",
+      channel: 'in_app',
+      messageBuilder: (index) => {
+        const customer = customers[index % (customers.length || 1)];
+        return `${customer?.fullName ?? `Mijoz-${index + 1}`} CRM bazasiga qo'shildi.`;
+      },
+    },
+    {
+      title: "To'lov tekshiruvi talab etiladi",
+      channel: 'system',
+      messageBuilder: (index) => {
+        const payment = payments[index % (payments.length || 1)];
+        const orderId = payment?.order ?? `order-${index + 1}`;
+        return `${orderId} bilan bog'liq to'lov uchun qo'shimcha tekshiruv talab qilindi.`;
+      },
+    },
+    {
+      title: "Tizim ogohlantirishi",
+      channel: 'system',
+      messageBuilder: (index) =>
+        index % 2 === 0
+          ? "Rejalashtirilgan texnik ishlar 23:00 da boshlanadi."
+          : "Xavfsizlik tekshiruvi yakunlandi. Tizim barqaror ishlamoqda.",
+    },
+  ];
 
   return Array.from({ length: count }, (_, index) => {
-    const type = cycleValue(NOTIFICATION_TYPES, index);
-
-    if (type === 'lead') {
-      const lead = leads[index % leads.length]!;
-      return {
-        id: createMockId('notification', index),
-        type,
-        title: 'Lead requires follow-up',
-        message: `${lead.fullName} has a recent message waiting for review.`,
-        severity: deriveSeverity(type, index),
-        isRead: index % 3 === 0,
-        createdAt: timestampFromIndex(index, { hourOffset: 1 }),
-        relatedEntity: {
-          entityType: 'lead',
-          entityId: lead.id,
-          label: lead.fullName,
-          path: `/leads/${lead.id}`,
-        },
-      };
-    }
-
-    if (type === 'order' || type === 'payment') {
-      const order = orders[index % orders.length]!;
-      const orderLabel = order.orderNumber ?? order.id;
-      return {
-        id: createMockId('notification', index),
-        type,
-        title: type === 'order' ? 'Order status updated' : 'Payment needs attention',
-        message:
-          type === 'order'
-            ? `${orderLabel} moved to ${order.status}.`
-            : `${orderLabel} has payment status ${order.paymentStatus ?? 'pending'}.`,
-        severity: deriveSeverity(type, index),
-        isRead: index % 3 === 0,
-        createdAt: timestampFromIndex(index, { hourOffset: 1 }),
-        relatedEntity: {
-          entityType: 'order',
-          entityId: order.id,
-          label: orderLabel,
-          path: `/orders/${order.id}`,
-        },
-      };
-    }
-
-    if (type === 'conversation') {
-      const conversation = conversations[index % conversations.length]!;
-      return {
-        id: createMockId('notification', index),
-        type,
-        title: 'Unread conversation activity',
-        message: `${conversation.participantName} has new conversation activity on ${conversation.platform}.`,
-        severity: deriveSeverity(type, index),
-        isRead: index % 3 === 0,
-        createdAt: timestampFromIndex(index, { hourOffset: 1 }),
-        relatedEntity: {
-          entityType: 'conversation',
-          entityId: conversation.id,
-          label: conversation.participantName,
-          path: `/chat`,
-        },
-      };
-    }
-
-    if (type === 'user') {
-      const user = users[index % users.length]!;
-      return {
-        id: createMockId('notification', index),
-        type,
-        title: 'Operator activity updated',
-        message: `${user.fullName} has recent account activity.`,
-        severity: deriveSeverity(type, index),
-        isRead: index % 3 === 0,
-        createdAt: timestampFromIndex(index, { hourOffset: 1 }),
-        relatedEntity: {
-          entityType: 'user',
-          entityId: user.id,
-          label: user.fullName,
-          path: `/profile`,
-        },
-      };
-    }
+    const template = cycleValue(templates, index);
+    const createdAt = timestampFromIndex(index, {
+      hourOffset: 2 + (index % 8),
+      minuteOffset: index % 37,
+    });
+    const updatedAt = timestampFromIndex(index, {
+      hourOffset: 1 + (index % 5),
+      minuteOffset: index % 19,
+    });
+    const user = users.length ? toUserSummary(cycleValue(users, index)) : null;
+    const isRead = index % 3 === 0 || index % 7 === 0;
 
     return {
       id: createMockId('notification', index),
-      type,
-      title: 'System notice',
-      message: 'The foundation is ready for service integration and feature development.',
-      severity: deriveSeverity(type, index),
-      isRead: index % 3 === 0,
-      createdAt: timestampFromIndex(index, { hourOffset: 1 }),
+      created_at: createdAt,
+      updated_at: updatedAt,
+      title: template.title,
+      message: template.messageBuilder(index),
+      channel: template.channel,
+      is_read: isRead,
+      metadata:
+        index % 4 === 0
+          ? {
+              source: template.channel,
+              priority: index % 8 === 0 ? 'high' : 'normal',
+              retry_count: index % 5,
+            }
+          : null,
+      user: template.channel === 'system' && index % 2 === 0 ? null : user,
     };
   });
 }

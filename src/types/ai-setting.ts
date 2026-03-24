@@ -1,0 +1,39 @@
+import type { EntityId, SortDirection, TimestampString } from './common';
+
+export interface AISetting {
+  id: EntityId;
+  created_at: TimestampString;
+  updated_at: TimestampString;
+  name: string;
+  system_prompt: string;
+  model_name: string;
+  temperature: number;
+  auto_order_enabled: boolean;
+  order_confidence_threshold: number;
+  resume_after_operator_minutes: number;
+  is_active: boolean;
+  updated_by: EntityId | null;
+}
+
+export interface AISettingsListParams {
+  page: number;
+  pageSize: number;
+  search?: string;
+  ordering?: string;
+  sortBy?: string;
+  sortDirection?: SortDirection;
+  is_active?: boolean;
+}
+
+export interface AISettingMutationInput {
+  name: string;
+  system_prompt: string;
+  model_name: string;
+  temperature: number;
+  auto_order_enabled: boolean;
+  order_confidence_threshold: number;
+  resume_after_operator_minutes: number;
+  is_active?: boolean;
+}
+
+export type AISettingPatchInput = Partial<AISettingMutationInput>;

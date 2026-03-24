@@ -8,4 +8,16 @@ export const apiLeadService: LeadService = {
   async getById() {
     throw createNotImplementedError('LeadService', 'getById');
   },
+  async create() {
+    throw createNotImplementedError('LeadService', 'create');
+  },
+  async update() {
+    throw createNotImplementedError('LeadService', 'update');
+  },
+  async patch() {
+    throw createNotImplementedError('LeadService', 'patch');
+  },
+  async delete() {
+    throw createNotImplementedError('LeadService', 'delete');
+  },
 };

@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { StatusBadge } from '../../../components/shared/data';
 import AppIcon from '../../../components/shared/icons/AppIcon';
 import { EmptyState, LoadingState, PageCard } from '../../../components/shared/page';
+import { formatCurrencyAmount } from '../../../constants';
 import { services } from '../../../services';
 import type { EntityId, Product } from '../../../types/domain';
 
@@ -29,14 +30,6 @@ function formatDateTime(timestamp: string | undefined, locale: string): string {
     dateStyle: 'medium',
     timeStyle: 'short',
   }).format(new Date(timestamp));
-}
-
-function formatCurrencyAmount(value: number, currency: string, locale: string): string {
-  return new Intl.NumberFormat(locale, {
-    style: 'currency',
-    currency,
-    maximumFractionDigits: 2,
-  }).format(value);
 }
 
 function ProductDetailPanel({
@@ -184,7 +177,7 @@ function ProductDetailPanel({
                         {t('products.detail.price')}
                       </p>
                       <p className={`mt-1 ${valueClassName}`}>
-                        {formatCurrencyAmount(product.price, product.currency, locale)}
+                        {formatCurrencyAmount(product.price, locale)}
                       </p>
                     </div>
                     <div className="rounded-lg bg-surface-subtle/80 p-3">
@@ -238,19 +231,6 @@ function ProductDetailPanel({
                   </dl>
                 </div>
               </PageCard>
-
-              {product.metadata ? (
-                <PageCard>
-                  <div className="grid gap-3">
-                    <h3 className="m-0 text-[1rem] font-semibold text-text-primary">
-                      {t('products.detail.sectionMetadata')}
-                    </h3>
-                    <pre className="m-0 overflow-x-auto rounded-lg bg-surface-subtle/80 p-3 text-[12px] leading-6 text-text-secondary">
-                      {JSON.stringify(product.metadata, null, 2)}
-                    </pre>
-                  </div>
-                </PageCard>
-              ) : null}
 
               <PageCard>
                 <div className="flex flex-wrap items-center gap-2">

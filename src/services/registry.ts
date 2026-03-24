@@ -1,26 +1,34 @@
 import type { AppServices } from './core';
 import { resolveDataSourceMode } from './core';
 import {
+  apiAISettingsService,
   apiConversationService,
   apiCustomerService,
   apiDashboardService,
+  apiIntegrationsService,
   apiLeadService,
+  apiLogsService,
   apiNotificationService,
   apiOrderService,
   apiPaymentService,
   apiProductService,
   apiProfileService,
+  apiUserService,
 } from './api';
 import {
+  mockAISettingsService,
   mockConversationService,
   mockCustomerService,
   mockDashboardService,
+  mockIntegrationsService,
   mockLeadService,
+  mockLogsService,
   mockNotificationService,
   mockOrderService,
   mockPaymentService,
   mockProductService,
   mockProfileService,
+  mockUserService,
 } from './mock';
 
 export const services: AppServices = {
@@ -54,8 +62,24 @@ export const services: AppServices = {
     resolveDataSourceMode('notifications') === 'api'
       ? apiNotificationService
       : mockNotificationService,
+  integrations:
+    resolveDataSourceMode('integrations') === 'api'
+      ? apiIntegrationsService
+      : mockIntegrationsService,
+  logs:
+    resolveDataSourceMode('logs') === 'api'
+      ? apiLogsService
+      : mockLogsService,
+  aiSettings:
+    resolveDataSourceMode('aiSettings') === 'api'
+      ? apiAISettingsService
+      : mockAISettingsService,
   profile:
     resolveDataSourceMode('profile') === 'api'
       ? apiProfileService
       : mockProfileService,
+  users:
+    resolveDataSourceMode('users') === 'api'
+      ? apiUserService
+      : mockUserService,
 };

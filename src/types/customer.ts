@@ -23,7 +23,7 @@ export interface Customer extends AuditInfo {
   contact: ContactInfo;
   address?: AddressInfo;
   notes?: string;
-  metadata?: Record<string, string | number | boolean | null>;
+  metadata?: CustomerMetadata | null;
   lead?: LeadSummary;
   assignedOperator?: UserSummary;
   segments?: string[];
@@ -33,3 +33,20 @@ export interface Customer extends AuditInfo {
   lastOrderAt?: TimestampString;
   notesSummary?: string;
 }
+
+export type CustomerMetadataValue = string | number | boolean | null;
+
+export type CustomerMetadata = Record<string, CustomerMetadataValue>;
+
+export interface CustomerMutationInput {
+  full_name: string;
+  phone: string;
+  email?: string | null;
+  address?: string | null;
+  notes?: string | null;
+  metadata?: CustomerMetadata | null;
+  lead?: EntityId | null;
+  assigned_operator?: EntityId | null;
+}
+
+export type CustomerPatchInput = Partial<CustomerMutationInput>;

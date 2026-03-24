@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import AppIcon from '../components/shared/icons/AppIcon';
 import { useAuth } from '../auth';
+import { services } from '../services';
 import { routePaths } from '../config/routes';
 import { SUPPORTED_LANGUAGES } from '../i18n';
 
@@ -10,6 +11,7 @@ interface AppTopbarProps {
   title: string;
   subtitle: string;
   onMenuToggle: () => void;
+  showRouteMeta?: boolean;
 }
 
 const THEME_STORAGE_KEY = 'chikko-theme';
@@ -47,12 +49,18 @@ const topbarIconButtonClassName = [
   'hover:bg-primary/10 hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/25 min-[960px]:inline-flex',
 ].join(' ');
 
-function AppTopbar({ title, subtitle, onMenuToggle }: AppTopbarProps) {
+function AppTopbar({
+  title,
+  subtitle,
+  onMenuToggle,
+  showRouteMeta = false,
+}: AppTopbarProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const { t, i18n } = useTranslation();
   const [isDarkTheme, setIsDarkTheme] = useState(getInitialIsDarkTheme);
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
+  const [chatSessionCount, setChatSessionCount] = useState<number | null>(null);
   const profileMenuRef = useRef<HTMLDivElement | null>(null);
   const { currentUser, logout } = useAuth();
 
@@ -94,6 +102,46 @@ function AppTopbar({ title, subtitle, onMenuToggle }: AppTopbarProps) {
     setIsProfileMenuOpen(false);
   }, [location.pathname]);
 
+  useEffect(() => {
+    let isMounted = true;
+    const isChatRoute = location.pathname === routePaths.chat;
+
+    if (!showRouteMeta || !isChatRoute) {
+      setChatSessionCount(null);
+      return () => {
+        isMounted = false;
+      };
+    }
+
+    async function loadChatSessionCount() {
+      try {
+        const response = await services.conversations.listSessions({
+          page: 1,
+          pageSize: 1,
+          ordering: '-last_message_at',
+        });
+
+        if (!isMounted) {
+          return;
+        }
+
+        setChatSessionCount(response.meta.totalItems);
+      } catch {
+        if (!isMounted) {
+          return;
+        }
+
+        setChatSessionCount(null);
+      }
+    }
+
+    void loadChatSessionCount();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [location.pathname, showRouteMeta]);
+
   function handleOpenProfile() {
     setIsProfileMenuOpen(false);
     navigate(routePaths.profile);
@@ -116,9 +164,29 @@ function AppTopbar({ title, subtitle, onMenuToggle }: AppTopbarProps) {
         >
           <AppIcon name="menu" className="h-[18px] w-[18px]" aria-hidden="true" />
         </button>
+
+        {showRouteMeta ? (
+          <div className="min-w-0">
+            <h1 className="m-0 truncate text-[1.02rem] font-semibold leading-tight text-text-primary">
+              {title}
+            </h1>
+            {subtitle ? (
+              <p className="m-0 truncate text-[12px] text-text-secondary">
+                {subtitle}
+              </p>
+            ) : null}
+          </div>
+        ) : null}
       </div>
 
       <div className="flex shrink-0 items-center gap-2 text-text-muted max-[640px]:ml-auto">
+        {showRouteMeta && chatSessionCount !== null ? (
+          <span className="inline-flex min-h-8 items-center gap-2 rounded-pill bg-primary/12 px-3 text-[12px] font-semibold text-text-accent">
+            <AppIcon name="chat" className="h-3.5 w-3.5" aria-hidden="true" />
+            {chatSessionCount} ta sessiya
+          </span>
+        ) : null}
+
         <button
           type="button"
           className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-surface-card text-text-secondary transition duration-fast hover:bg-primary/10 hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/25"
@@ -242,11 +310,6 @@ function AppTopbar({ title, subtitle, onMenuToggle }: AppTopbarProps) {
             </div>
           ) : null}
         </div>
-      </div>
-
-      <div className="sr-only">
-        <h2>{title}</h2>
-        <p>{subtitle}</p>
       </div>
     </header>
   );

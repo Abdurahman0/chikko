@@ -9,8 +9,11 @@ const FULL_ACCESS_PERMISSIONS: PermissionCode[] = [...PERMISSION_CODES];
 const ADMIN_PERMISSIONS: PermissionCode[] = [
   'can_chat',
   'can_manage_customers',
+  'can_manage_products',
+  'can_manage_integrations',
   'can_manage_leads',
   'can_manage_payments',
+  'can_manage_users',
   'can_update_orders',
   'can_view_customers',
   'can_view_dashboard',
