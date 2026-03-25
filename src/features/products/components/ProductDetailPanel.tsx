@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { FiEdit2, FiTrash2 } from 'react-icons/fi';
+import { FiEdit2, FiImage, FiTrash2 } from 'react-icons/fi';
 import { useTranslation } from 'react-i18next';
 import { StatusBadge } from '../../../components/shared/data';
 import AppIcon from '../../../components/shared/icons/AppIcon';
@@ -11,6 +11,7 @@ import type { EntityId, Product } from '../../../types/domain';
 interface ProductDetailPanelProps {
   productId: EntityId;
   onClose: () => void;
+  onProductChanged?: () => void;
   onEdit: (product: Product) => void;
   onDelete: (product: Product) => void;
 }
@@ -35,6 +36,7 @@ function formatDateTime(timestamp: string | undefined, locale: string): string {
 function ProductDetailPanel({
   productId,
   onClose,
+  onProductChanged,
   onEdit,
   onDelete,
 }: ProductDetailPanelProps) {
@@ -43,6 +45,7 @@ function ProductDetailPanel({
   const [product, setProduct] = useState<Product | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
+  const [deletingImageId, setDeletingImageId] = useState<string | null>(null);
 
   useEffect(() => {
     let isActive = true;
@@ -91,6 +94,39 @@ function ProductDetailPanel({
       window.removeEventListener('keydown', handleKeyDown);
     };
   }, [onClose]);
+
+  async function handleDeleteImage(imageId: string) {
+    if (!product || deletingImageId) {
+      return;
+    }
+
+    setDeletingImageId(imageId);
+
+    try {
+      const deleted = await services.products.deleteProductImage(product.id, imageId);
+      if (!deleted) {
+        return;
+      }
+
+      setProduct((current) => {
+        if (!current) {
+          return current;
+        }
+
+        const nextImages = current.images.filter((image) => image.id !== imageId);
+        return {
+          ...current,
+          images: nextImages,
+          imageUrl: nextImages[0]?.imageUrl,
+        };
+      });
+      onProductChanged?.();
+    } catch {
+      // Keep current state if image deletion fails.
+    } finally {
+      setDeletingImageId(null);
+    }
+  }
 
   return (
     <div
@@ -160,6 +196,54 @@ function ProductDetailPanel({
 
           {!isLoading && product ? (
             <>
+              <PageCard>
+                <div className="grid gap-4">
+                  <div className="grid gap-1">
+                    <h3 className="m-0 text-[1rem] font-semibold text-text-primary">
+                      {t('products.detail.images')}
+                    </h3>
+                    <p className="m-0 text-sm text-text-secondary">
+                      {t('products.detail.imagesDesc')}
+                    </p>
+                  </div>
+
+                  {product.images.length ? (
+                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                      {product.images.slice(0, 3).map((image) => (
+                        <div
+                          key={image.id}
+                          className="relative aspect-square overflow-hidden rounded-md bg-surface-subtle/70 ring-1 ring-border-soft/45"
+                        >
+                          <img
+                            src={image.imageUrl}
+                            alt={product.name}
+                            className="h-full w-full object-cover"
+                            loading="lazy"
+                          />
+                          <button
+                            type="button"
+                            className="absolute right-2 top-2 inline-flex h-8 w-8 items-center justify-center rounded-md bg-background-subtle/90 text-danger transition duration-fast hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-60"
+                            onClick={() => {
+                              void handleDeleteImage(image.id);
+                            }}
+                            disabled={deletingImageId === image.id}
+                            aria-label={t('products.detail.deleteImage')}
+                            title={t('products.detail.deleteImage')}
+                          >
+                            <FiTrash2 className="h-4 w-4" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2 rounded-lg bg-surface-subtle/80 px-3 py-3 text-sm font-medium text-text-secondary">
+                      <FiImage className="h-4 w-4" />
+                      {t('products.detail.noImages')}
+                    </div>
+                  )}
+                </div>
+              </PageCard>
+
               <PageCard>
                 <div className="grid gap-4">
                   <div className="grid gap-1">

@@ -15,8 +15,15 @@ import {
   hasRole as hasRoleForUser,
   resolveDefaultLandingPathForUser,
 } from './access-control';
-import { mockAuthService } from './mock-auth-service';
 import type { AuthSession, AuthenticatedUser, LoginInput, PermissionCode } from './types';
+import {
+  getAuthState,
+  login as loginWithApi,
+  logout as logoutFromApi,
+  restoreSession,
+  subscribeAuthState,
+} from '../features/auth/auth-store';
+import { getAccessToken, getRefreshToken } from '../lib/auth-storage';
 
 interface AuthContextValue {
   currentUser: AuthenticatedUser | null;
@@ -34,26 +41,43 @@ interface AuthContextValue {
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: PropsWithChildren) {
-  const [session, setSession] = useState<AuthSession | null>(null);
-  const [isBootstrapping, setIsBootstrapping] = useState(true);
+  const [storeState, setStoreState] = useState(getAuthState);
 
   useEffect(() => {
-    setSession(mockAuthService.getSession());
-    setIsBootstrapping(false);
+    const unsubscribe = subscribeAuthState(setStoreState);
+    void restoreSession();
+
+    return unsubscribe;
   }, []);
 
-  const currentUser = session?.user ?? null;
-  const isAuthenticated = currentUser !== null;
+  const currentUser = storeState.user;
+  const isAuthenticated = storeState.isAuthenticated;
+  const isBootstrapping = storeState.loading;
+
+  const session = useMemo<AuthSession | null>(() => {
+    const accessToken = getAccessToken();
+    const refreshToken = getRefreshToken();
+
+    if (!currentUser || !accessToken || !refreshToken) {
+      return null;
+    }
+
+    const now = new Date().toISOString();
+    return {
+      accessToken,
+      refreshToken,
+      issuedAt: now,
+      expiresAt: now,
+      user: currentUser,
+    };
+  }, [currentUser]);
 
   const login = useCallback(async (input: LoginInput) => {
-    const nextSession = await mockAuthService.login(input);
-    setSession(nextSession);
-    return nextSession.user;
+    return loginWithApi(input.email, input.password);
   }, []);
 
   const logout = useCallback(() => {
-    mockAuthService.logout();
-    setSession(null);
+    logoutFromApi();
   }, []);
 
   const hasPermission = useCallback(

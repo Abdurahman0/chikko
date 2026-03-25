@@ -46,10 +46,10 @@ const EMPTY_OPTION_VALUE = '';
 const DEFAULT_ORDERING: CustomerOrdering = '-updated_at';
 
 const TABLE_PRIMARY_TEXT_CLASS_NAME =
-  'block text-sm font-semibold leading-[1.35] text-text-primary [overflow-wrap:anywhere]';
+  'block max-w-[140px] truncate text-sm font-semibold leading-[1.35] text-text-primary min-[640px]:max-w-[220px]';
 
 const TABLE_SECONDARY_TEXT_CLASS_NAME =
-  'block text-[12px] leading-[1.45] text-text-secondary [overflow-wrap:anywhere]';
+  'block max-w-[140px] truncate text-[12px] leading-[1.45] text-text-secondary min-[640px]:max-w-[220px]';
 
 const LABEL_CLASS_NAME =
   'text-[11px] font-semibold uppercase tracking-[0.12em] text-text-muted';
@@ -63,6 +63,16 @@ const DEFAULT_PAGINATION_META: PaginationMeta = {
   totalItems: 0,
   totalPages: 1,
 };
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+function isUuidLike(value: string | undefined): boolean {
+  if (!value) {
+    return false;
+  }
+
+  return UUID_PATTERN.test(value);
+}
 
 function formatAddress(address: NonNullable<Customer['address']>): string {
   const parts = [address.line1, address.city, address.region].filter(Boolean);
@@ -108,6 +118,9 @@ function CustomersPage() {
     null,
   );
   const [operatorOptions, setOperatorOptions] = useState<SelectOption[]>([]);
+  const [operatorNameById, setOperatorNameById] = useState<Map<string, string>>(
+    () => new Map(),
+  );
   const [leadOptions, setLeadOptions] = useState<SelectOption[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
@@ -132,67 +145,77 @@ function CustomersPage() {
     let isActive = true;
 
     async function loadReferenceOptions() {
-      try {
-        const [customerResult, leadsResult] = await Promise.all([
-          services.customers.listCustomers({
-            page: 1,
-            pageSize: SERVICE_FETCH_SIZE,
-            ordering: '-updated_at',
-          }),
-          services.leads.list({
-            page: 1,
-            pageSize: SERVICE_FETCH_SIZE,
-            ordering: '-updated_at',
-          }),
-        ]);
+      const [usersResult, customerResult, leadsResult] = await Promise.allSettled([
+        services.users.listUsers({
+          page: 1,
+          pageSize: SERVICE_FETCH_SIZE,
+          role: 'operator',
+          ordering: 'full_name',
+        }),
+        services.customers.listCustomers({
+          page: 1,
+          pageSize: SERVICE_FETCH_SIZE,
+          ordering: '-updated_at',
+        }),
+        services.leads.list({
+          page: 1,
+          pageSize: SERVICE_FETCH_SIZE,
+          ordering: '-updated_at',
+        }),
+      ]);
 
-        if (!isActive) {
-          return;
-        }
+      if (!isActive) {
+        return;
+      }
 
-        const operatorsById = new Map<string, string>();
-        customerResult.items.forEach((customer) => {
-          if (!customer.assignedOperator) {
+      const operatorsById = new Map<string, string>();
+
+      if (usersResult.status === 'fulfilled') {
+        usersResult.value.items.forEach((operator) => {
+          if (operator.full_name) {
+            operatorsById.set(operator.id, operator.full_name);
+          }
+        });
+      }
+
+      if (customerResult.status === 'fulfilled') {
+        customerResult.value.items.forEach((customer) => {
+          if (!customer.assignedOperator?.id) {
             return;
           }
 
-          operatorsById.set(
-            customer.assignedOperator.id,
-            customer.assignedOperator.fullName,
-          );
+          const fallbackName = customer.assignedOperator.fullName;
+          if (!isUuidLike(fallbackName) && fallbackName) {
+            operatorsById.set(customer.assignedOperator.id, fallbackName);
+          }
         });
-
-        if (currentUser?.role === 'operator') {
-          operatorsById.set(currentUser.id, currentUser.fullName);
-        }
-
-        const nextOperatorOptions: SelectOption[] = [
-          allOperatorsOption,
-          ...Array.from(operatorsById.entries())
-            .sort((left, right) => left[1].localeCompare(right[1]))
-            .map(([value, label]) => ({ value, label })),
-        ];
-
-        const nextLeadOptions: SelectOption[] = [
-          { value: EMPTY_OPTION_VALUE, label: t('customers.form.noLead') },
-          ...[...leadsResult.items]
-            .sort((left: Lead, right: Lead) => left.fullName.localeCompare(right.fullName))
-            .map((lead: Lead) => ({
-              value: lead.id,
-              label: lead.fullName,
-            })),
-        ];
-
-        setOperatorOptions(nextOperatorOptions);
-        setLeadOptions(nextLeadOptions);
-      } catch {
-        if (!isActive) {
-          return;
-        }
-
-        setOperatorOptions([allOperatorsOption]);
-        setLeadOptions([{ value: EMPTY_OPTION_VALUE, label: t('customers.form.noLead') }]);
       }
+
+      if (currentUser?.role === 'operator') {
+        operatorsById.set(currentUser.id, currentUser.fullName);
+      }
+
+      const nextOperatorOptions: SelectOption[] = [
+        allOperatorsOption,
+        ...Array.from(operatorsById.entries())
+          .sort((left, right) => left[1].localeCompare(right[1]))
+          .map(([value, label]) => ({ value, label })),
+      ];
+
+      const leadItems = leadsResult.status === 'fulfilled' ? leadsResult.value.items : [];
+      const nextLeadOptions: SelectOption[] = [
+        { value: EMPTY_OPTION_VALUE, label: t('customers.form.noLead') },
+        ...[...leadItems]
+          .sort((left: Lead, right: Lead) => left.fullName.localeCompare(right.fullName))
+          .map((lead: Lead) => ({
+            value: lead.id,
+            label: lead.fullName,
+          })),
+      ];
+
+      setOperatorNameById(new Map(operatorsById));
+      setOperatorOptions(nextOperatorOptions);
+      setLeadOptions(nextLeadOptions);
     }
 
     void loadReferenceOptions();
@@ -201,6 +224,32 @@ function CustomersPage() {
       isActive = false;
     };
   }, [allOperatorsOption, currentUser, reloadCursor, t]);
+
+  const customersWithOperatorNames = useMemo<Customer[]>(() => {
+    if (operatorNameById.size === 0) {
+      return customers;
+    }
+
+    return customers.map((customer) => {
+      const assignedOperator = customer.assignedOperator;
+      if (!assignedOperator?.id) {
+        return customer;
+      }
+
+      const resolvedName = operatorNameById.get(assignedOperator.id);
+      if (!resolvedName || resolvedName === assignedOperator.fullName) {
+        return customer;
+      }
+
+      return {
+        ...customer,
+        assignedOperator: {
+          ...assignedOperator,
+          fullName: resolvedName,
+        },
+      };
+    });
+  }, [customers, operatorNameById]);
 
   useEffect(() => {
     let isActive = true;
@@ -262,13 +311,13 @@ function CustomersPage() {
       return;
     }
 
-    const isSelectedCustomerVisible = customers.some(
+    const isSelectedCustomerVisible = customersWithOperatorNames.some(
       (customer) => customer.id === selectedCustomerId,
     );
     if (!isSelectedCustomerVisible) {
       setSelectedCustomerId(null);
     }
-  }, [customers, selectedCustomerId]);
+  }, [customersWithOperatorNames, selectedCustomerId]);
 
   function openCreateForm() {
     setFormMode('create');
@@ -600,7 +649,7 @@ function CustomersPage() {
             </div>
 
             <DataTable
-              data={customers}
+              data={customersWithOperatorNames}
               columns={columns}
               rowKey="id"
               selectedRowKey={selectedCustomerId}
@@ -640,6 +689,9 @@ function CustomersPage() {
             requestDelete(customer);
             setSelectedCustomerId(null);
           }}
+          resolveOperatorName={(operatorId, fallbackName) =>
+            operatorNameById.get(operatorId) ?? fallbackName
+          }
         />
       ) : null}
 

@@ -2,6 +2,13 @@ import type { AuditInfo, CurrencyCode, EntityId } from './common';
 
 export type ProductStatus = 'draft' | 'active' | 'out-of-stock' | 'archived';
 
+export interface ProductImage extends AuditInfo {
+  id: EntityId;
+  sortOrder: number;
+  image?: string | null;
+  imageUrl: string;
+}
+
 export interface ProductSummary {
   id: EntityId;
   name: string;
@@ -23,9 +30,10 @@ export interface Product extends AuditInfo {
   stockQuantity?: number;
   isActive: boolean;
   embedding?: number[] | null;
-  metadata?: Record<string, string | number | boolean | null>;
+  metadata?: Record<string, string | number | boolean | null> | null;
   status: ProductStatus;
   imageUrl?: string;
+  images: ProductImage[];
 }
 
 export interface ProductMutationInput {
@@ -36,4 +44,7 @@ export interface ProductMutationInput {
   currency: CurrencyCode;
   stockQuantity: number;
   isActive: boolean;
+  metadata?: Record<string, string | number | boolean | null> | null;
 }
+
+export interface ProductPatchInput extends Partial<ProductMutationInput> {}

@@ -29,14 +29,19 @@ import type {
   LeadMutationInput,
   LeadSource,
   LeadStatus,
+  PaginationMeta,
   SelectOption,
+  TableQueryParams,
 } from '../../../types/domain';
 
 type LeadStatusFilter = LeadStatus | 'all';
 type LeadSourceFilter = LeadSource | 'all';
+type LeadOrdering = '-updated_at' | 'updated_at' | '-created_at' | 'created_at';
 
 const PAGE_SIZE = 8;
 const SERVICE_FETCH_SIZE = 300;
+const DEFAULT_ORDERING: LeadOrdering = '-updated_at';
+const ALL_OPERATORS_VALUE = 'all';
 const STATUS_VALUES: readonly LeadStatus[] = [
   'new',
   'contacted',
@@ -53,11 +58,18 @@ const SOURCE_VALUES: readonly LeadSource[] = [
   'web',
 ];
 
+const DEFAULT_PAGINATION_META: PaginationMeta = {
+  page: 1,
+  pageSize: PAGE_SIZE,
+  totalItems: 0,
+  totalPages: 1,
+};
+
 const tablePrimaryTextClassName =
-  'block text-sm font-semibold leading-[1.35] text-text-primary [overflow-wrap:anywhere]';
+  'block max-w-[140px] truncate text-sm font-semibold leading-[1.35] text-text-primary min-[640px]:max-w-[220px]';
 
 const tableSecondaryTextClassName =
-  'block text-[12px] leading-[1.45] text-text-secondary [overflow-wrap:anywhere]';
+  'block max-w-[140px] truncate text-[12px] leading-[1.45] text-text-secondary min-[640px]:max-w-[220px]';
 
 const labelClassName =
   'text-[11px] font-semibold uppercase tracking-[0.12em] text-text-muted';
@@ -66,6 +78,16 @@ const actionButtonClassName =
   'inline-flex h-8 w-8 items-center justify-center rounded-md bg-surface-card text-text-secondary shadow-sm ring-1 ring-border-soft/40 transition duration-fast hover:bg-surface-subtle hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20';
 
 const UNASSIGNED_OPERATOR_VALUE = '';
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+function isUuidLike(value: string | undefined): boolean {
+  if (!value) {
+    return false;
+  }
+
+  return UUID_PATTERN.test(value);
+}
 
 function formatDate(
   timestamp: string | undefined,
@@ -129,28 +151,36 @@ function channelAbbreviation(source: LeadSource): string {
   }
 }
 
-function leadSearchValue(lead: Lead): string {
-  return [
-    lead.fullName,
-    lead.contact.phone ?? '',
-    lead.contact.email ?? '',
-    lead.instagramUsername ?? '',
-    lead.telegramUsername ?? '',
-    lead.username ?? '',
-    lead.status,
-    lead.source,
-  ]
-    .join(' ')
-    .toLowerCase();
+function getLeadStatusTone(status: LeadStatus): 'info' | 'warning' | 'accent' | 'success' | 'danger' {
+  switch (status) {
+    case 'new':
+      return 'info';
+    case 'contacted':
+      return 'warning';
+    case 'qualified':
+      return 'accent';
+    case 'negotiating':
+      return 'warning';
+    case 'converted':
+      return 'success';
+    case 'lost':
+      return 'danger';
+    default:
+      return 'info';
+  }
 }
 
-function matchesSearch(lead: Lead, search: string): boolean {
-  const normalized = search.trim().toLowerCase();
-  if (!normalized) {
-    return true;
-  }
+function parseOrdering(ordering: LeadOrdering): Pick<
+  TableQueryParams,
+  'sortBy' | 'sortDirection'
+> {
+  const direction = ordering.startsWith('-') ? 'desc' : 'asc';
+  const sortBy = ordering.replace('-', '');
 
-  return leadSearchValue(lead).includes(normalized);
+  return {
+    sortBy,
+    sortDirection: direction,
+  };
 }
 
 function LeadsPage() {
@@ -159,6 +189,15 @@ function LeadsPage() {
   const canManageLeads = hasPermission('can_manage_leads');
   const locale = i18n.language === 'ru' ? 'ru-RU' : 'uz-UZ';
   const relativeLocale = i18n.language === 'ru' ? 'ru' : 'uz';
+
+  const allOperatorsOption = useMemo<SelectOption>(
+    () => ({
+      value: ALL_OPERATORS_VALUE,
+      label: t('leads.allOperators'),
+    }),
+    [t],
+  );
+
   const statusOptions = useMemo<SelectOption[]>(
     () => [
       { value: 'all', label: t('leads.allStatuses') },
@@ -169,6 +208,7 @@ function LeadsPage() {
     ],
     [t],
   );
+
   const sourceOptions = useMemo<SelectOption[]>(
     () => [
       { value: 'all', label: t('leads.allChannels') },
@@ -180,15 +220,38 @@ function LeadsPage() {
     [t],
   );
 
+  const orderingOptions = useMemo<SelectOption[]>(
+    () => [
+      { value: '-updated_at', label: t('leads.updatedNewest') },
+      { value: 'updated_at', label: t('leads.updatedOldest') },
+      { value: '-created_at', label: t('leads.createdNewest') },
+      { value: 'created_at', label: t('leads.createdOldest') },
+    ],
+    [t],
+  );
+
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<LeadStatusFilter>('all');
   const [sourceFilter, setSourceFilter] = useState<LeadSourceFilter>('all');
+  const [assignedOperatorFilter, setAssignedOperatorFilter] =
+    useState<string>(ALL_OPERATORS_VALUE);
+  const [ordering, setOrdering] = useState<LeadOrdering>(DEFAULT_ORDERING);
   const [currentPage, setCurrentPage] = useState(1);
   const [leads, setLeads] = useState<Lead[]>([]);
+  const [paginationMeta, setPaginationMeta] = useState<PaginationMeta>(
+    DEFAULT_PAGINATION_META,
+  );
   const [selectedLeadId, setSelectedLeadId] = useState<EntityId | null>(null);
+  const [operatorOptions, setOperatorOptions] = useState<SelectOption[]>([
+    allOperatorsOption,
+  ]);
+  const [operatorNameById, setOperatorNameById] = useState<Map<string, string>>(
+    () => new Map(),
+  );
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
   const [detailRefreshToken, setDetailRefreshToken] = useState(0);
+  const [reloadCursor, setReloadCursor] = useState(0);
 
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [formMode, setFormMode] = useState<'create' | 'edit'>('create');
@@ -200,6 +263,103 @@ function LeadsPage() {
   const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
+    setCurrentPage(1);
+  }, [search, statusFilter, sourceFilter, assignedOperatorFilter, ordering]);
+
+  useEffect(() => {
+    let isActive = true;
+
+    async function loadOperatorOptions() {
+      const [usersResult, leadsResult] = await Promise.allSettled([
+        services.users.listUsers({
+          page: 1,
+          pageSize: SERVICE_FETCH_SIZE,
+          role: 'operator',
+          ordering: 'full_name',
+        }),
+        services.leads.listLeads({
+          page: 1,
+          pageSize: SERVICE_FETCH_SIZE,
+          ordering: '-updated_at',
+        }),
+      ]);
+
+      if (!isActive) {
+        return;
+      }
+
+      const operatorsById = new Map<string, string>();
+
+      if (usersResult.status === 'fulfilled') {
+        usersResult.value.items.forEach((operator) => {
+          if (operator.full_name) {
+            operatorsById.set(operator.id, operator.full_name);
+          }
+        });
+      }
+
+      if (leadsResult.status === 'fulfilled') {
+        leadsResult.value.items.forEach((lead) => {
+          if (!lead.assignedOperator?.id) {
+            return;
+          }
+
+          const fallbackName = lead.assignedOperator.fullName;
+          if (!isUuidLike(fallbackName) && fallbackName) {
+            operatorsById.set(lead.assignedOperator.id, fallbackName);
+          }
+        });
+      }
+
+      if (currentUser?.role === 'operator') {
+        operatorsById.set(currentUser.id, currentUser.fullName);
+      }
+
+      const nextOptions: SelectOption[] = [
+        allOperatorsOption,
+        ...Array.from(operatorsById.entries())
+          .sort((left, right) => left[1].localeCompare(right[1]))
+          .map(([value, label]) => ({ value, label })),
+      ];
+
+      setOperatorNameById(new Map(operatorsById));
+      setOperatorOptions(nextOptions);
+    }
+
+    void loadOperatorOptions();
+
+    return () => {
+      isActive = false;
+    };
+  }, [allOperatorsOption, currentUser, reloadCursor]);
+
+  const leadsWithOperatorNames = useMemo<Lead[]>(() => {
+    if (operatorNameById.size === 0) {
+      return leads;
+    }
+
+    return leads.map((lead) => {
+      const assignedOperator = lead.assignedOperator;
+      if (!assignedOperator?.id) {
+        return lead;
+      }
+
+      const resolvedName = operatorNameById.get(assignedOperator.id);
+      if (!resolvedName || resolvedName === assignedOperator.fullName) {
+        return lead;
+      }
+
+      return {
+        ...lead,
+        assignedOperator: {
+          ...assignedOperator,
+          fullName: resolvedName,
+        },
+      };
+    });
+  }, [leads, operatorNameById]);
+
+  useEffect(() => {
     let isActive = true;
 
     async function loadLeads() {
@@ -207,17 +367,32 @@ function LeadsPage() {
       setHasError(false);
 
       try {
-        const result = await services.leads.list({
-          page: 1,
-          pageSize: SERVICE_FETCH_SIZE,
-          search,
+        const sortConfig = parseOrdering(ordering);
+        const result = await services.leads.listLeads({
+          page: currentPage,
+          pageSize: PAGE_SIZE,
+          search: search.trim() || undefined,
+          status: statusFilter === 'all' ? undefined : statusFilter,
+          source: sourceFilter === 'all' ? undefined : sourceFilter,
+          assigned_operator:
+            assignedOperatorFilter === ALL_OPERATORS_VALUE
+              ? undefined
+              : assignedOperatorFilter,
+          ordering,
+          ...sortConfig,
         });
 
         if (!isActive) {
           return;
         }
 
+        if (currentPage > result.meta.totalPages) {
+          setCurrentPage(result.meta.totalPages);
+          return;
+        }
+
         setLeads(result.items);
+        setPaginationMeta(result.meta);
       } catch {
         if (!isActive) {
           return;
@@ -225,6 +400,7 @@ function LeadsPage() {
 
         setHasError(true);
         setLeads([]);
+        setPaginationMeta(DEFAULT_PAGINATION_META);
       } finally {
         if (isActive) {
           setIsLoading(false);
@@ -237,55 +413,36 @@ function LeadsPage() {
     return () => {
       isActive = false;
     };
-  }, [search]);
+  }, [
+    assignedOperatorFilter,
+    currentPage,
+    ordering,
+    reloadCursor,
+    search,
+    sourceFilter,
+    statusFilter,
+  ]);
 
   useEffect(() => {
-    setCurrentPage(1);
-  }, [search, statusFilter, sourceFilter]);
-
-  const filteredLeads = useMemo(() => {
-    return leads.filter((lead) => {
-      const matchesStatus =
-        statusFilter === 'all' || lead.status === statusFilter;
-      const matchesSource =
-        sourceFilter === 'all' || lead.source === sourceFilter;
-
-      return matchesStatus && matchesSource;
-    });
-  }, [leads, sourceFilter, statusFilter]);
-
-  const totalPages = Math.max(1, Math.ceil(filteredLeads.length / PAGE_SIZE));
-  const activeFilterCount =
-    Number(statusFilter !== 'all') + Number(sourceFilter !== 'all');
-
-  const paginatedLeads = useMemo(() => {
-    const safePage = Math.min(currentPage, totalPages);
-    const startIndex = (safePage - 1) * PAGE_SIZE;
-    return filteredLeads.slice(startIndex, startIndex + PAGE_SIZE);
-  }, [currentPage, filteredLeads, totalPages]);
-
-  const operatorSelectOptions = useMemo<SelectOption[]>(() => {
-    const operatorMap = new Map<string, string>();
-
-    leads.forEach((lead) => {
-      if (lead.assignedOperator?.id && lead.assignedOperator.fullName) {
-        operatorMap.set(lead.assignedOperator.id, lead.assignedOperator.fullName);
-      }
-    });
-
-    if (currentUser?.role === 'operator') {
-      operatorMap.set(currentUser.id, currentUser.fullName);
+    if (selectedLeadId === null) {
+      return;
     }
 
-    const options = Array.from(operatorMap.entries())
-      .sort((left, right) => left[1].localeCompare(right[1]))
-      .map(([value, label]) => ({ value, label }));
+    const isSelectedLeadVisible = leadsWithOperatorNames.some(
+      (lead) => lead.id === selectedLeadId,
+    );
+    if (!isSelectedLeadVisible) {
+      setSelectedLeadId(null);
+    }
+  }, [leadsWithOperatorNames, selectedLeadId]);
 
-    return [
+  const operatorSelectOptions = useMemo<SelectOption[]>(
+    () => [
       { value: UNASSIGNED_OPERATOR_VALUE, label: t('common.unassigned') },
-      ...options,
-    ];
-  }, [currentUser, leads, t]);
+      ...operatorOptions.filter((option) => option.value !== ALL_OPERATORS_VALUE),
+    ],
+    [operatorOptions, t],
+  );
 
   function openCreateForm() {
     setFormMode('create');
@@ -311,14 +468,7 @@ function LeadsPage() {
 
     try {
       if (formMode === 'create') {
-        const created = await services.leads.create(payload);
-        setLeads((current) => {
-          if (!matchesSearch(created, search)) {
-            return current;
-          }
-
-          return [created, ...current];
-        });
+        await services.leads.createLead(payload);
         setCurrentPage(1);
       } else {
         const editId = editingLead?.id;
@@ -326,30 +476,17 @@ function LeadsPage() {
           throw new Error(t('leads.form.saveError'));
         }
 
-        const updated = await services.leads.update(editId, payload);
+        const updated = await services.leads.updateLead(editId, payload);
         if (!updated) {
           throw new Error(t('leads.form.saveError'));
         }
 
-        setLeads((current) => {
-          const hasExisting = current.some((lead) => lead.id === editId);
-          const nextMatchesSearch = matchesSearch(updated, search);
-
-          if (!hasExisting) {
-            return nextMatchesSearch ? [updated, ...current] : current;
-          }
-
-          if (!nextMatchesSearch) {
-            return current.filter((lead) => lead.id !== editId);
-          }
-
-          return current.map((lead) => (lead.id === editId ? updated : lead));
-        });
         setDetailRefreshToken((current) => current + 1);
       }
 
       setIsFormOpen(false);
       setEditingLead(null);
+      setReloadCursor((current) => current + 1);
     } catch (error) {
       const message = error instanceof Error ? error.message : t('leads.form.saveError');
       setFormErrorMessage(message);
@@ -366,16 +503,17 @@ function LeadsPage() {
     setIsDeleting(true);
 
     try {
-      const deleted = await services.leads.delete(leadToDelete.id);
+      const deleted = await services.leads.deleteLead(leadToDelete.id);
       if (!deleted) {
         throw new Error();
       }
 
-      setLeads((current) => current.filter((lead) => lead.id !== leadToDelete.id));
       if (selectedLeadId === leadToDelete.id) {
         setSelectedLeadId(null);
       }
+
       setLeadToDelete(null);
+      setReloadCursor((current) => current + 1);
     } catch {
       // keep modal open if deletion fails
     } finally {
@@ -387,7 +525,7 @@ function LeadsPage() {
     id: EntityId,
     status: LeadStatus,
   ): Promise<Lead | null> {
-    const updated = await services.leads.patch(id, { status });
+    const updated = await services.leads.patchLead(id, { status });
     if (!updated) {
       return null;
     }
@@ -456,6 +594,7 @@ function LeadsPage() {
           <StatusBadge
             status={lead.status}
             label={getLeadStatusLabel(t, lead.status)}
+            tone={getLeadStatusTone(lead.status)}
           />
         ),
       },
@@ -474,21 +613,18 @@ function LeadsPage() {
         ),
       },
       {
-        key: 'activity',
-        label: t('leads.lastActivity'),
-        render: (lead) => {
-          const lastActivity = lead.lastContactAt ?? lead.updatedAt;
-          return (
-            <div className="grid gap-0.5">
-              <span className={tablePrimaryTextClassName}>
-                {formatRelativeTime(lastActivity, relativeLocale, t('common.na'))}
-              </span>
-              <span className={tableSecondaryTextClassName}>
-                {formatDate(lastActivity, locale, t('common.na'))}
-              </span>
-            </div>
-          );
-        },
+        key: 'createdAt',
+        label: t('leads.detail.created'),
+        render: (lead) => (
+          <div className="grid gap-0.5">
+            <span className={tablePrimaryTextClassName}>
+              {formatDate(lead.createdAt, locale, t('common.na'))}
+            </span>
+            <span className={tableSecondaryTextClassName}>
+              {formatRelativeTime(lead.createdAt, relativeLocale, t('common.na'))}
+            </span>
+          </div>
+        ),
       },
     ];
 
@@ -532,6 +668,12 @@ function LeadsPage() {
     ];
   }, [canManageLeads, locale, relativeLocale, t]);
 
+  const activeFilterCount =
+    Number(statusFilter !== 'all') +
+    Number(sourceFilter !== 'all') +
+    Number(assignedOperatorFilter !== ALL_OPERATORS_VALUE) +
+    Number(ordering !== DEFAULT_ORDERING);
+
   const header = (
     <PageHeader
       eyebrow={t('leads.pipelineEyebrow')}
@@ -551,7 +693,7 @@ function LeadsPage() {
           ) : null}
           <span className="inline-flex min-h-8 items-center gap-2 rounded-pill bg-primary/12 px-3 text-[12px] font-semibold text-text-accent">
             <AppIcon name="leads" className="h-3.5 w-3.5" aria-hidden="true" />
-            {filteredLeads.length} {t('leads.visible')}
+            {paginationMeta.totalItems} {t('leads.visible')}
           </span>
           {activeFilterCount > 0 ? (
             <span className="inline-flex min-h-8 items-center gap-2 rounded-pill bg-surface-subtle px-3 text-[12px] font-semibold text-text-secondary">
@@ -587,7 +729,7 @@ function LeadsPage() {
                   className="h-4 w-4 text-text-muted"
                   aria-hidden="true"
                 />
-                {filteredLeads.length} {t('leads.count')}
+                {paginationMeta.totalItems} {t('leads.count')}
               </span>
               {selectedLeadId ? (
                 <span className="inline-flex min-h-9 items-center gap-2 rounded-lg bg-primary/12 px-3 text-sm font-semibold text-text-accent">
@@ -632,9 +774,33 @@ function LeadsPage() {
               disabled={isLoading}
             />
           </label>
+
+          <label className="grid min-w-[min(180px,100%)] flex-[1_1_180px] gap-1.5 min-[640px]:flex-[0_1_220px]">
+            <span className={labelClassName}>
+              {t('leads.assignedOperator')}
+            </span>
+            <FilterSelect
+              value={assignedOperatorFilter}
+              options={operatorOptions}
+              onChange={setAssignedOperatorFilter}
+              disabled={isLoading}
+            />
+          </label>
+
+          <label className="grid min-w-[min(180px,100%)] flex-[1_1_180px] gap-1.5 min-[640px]:flex-[0_1_220px]">
+            <span className={labelClassName}>
+              {t('leads.orderBy')}
+            </span>
+            <FilterSelect
+              value={ordering}
+              options={orderingOptions}
+              onChange={(value) => setOrdering(value as LeadOrdering)}
+              disabled={isLoading}
+            />
+          </label>
         </FilterBar>
 
-        <div className="grid gap-3">
+        <div className="grid min-w-0 gap-3">
           <div className="flex flex-wrap items-center justify-between gap-2 px-1">
             <h2 className="m-0 text-[1rem] font-semibold text-text-primary">
               {t('leads.queueTitle')}
@@ -644,9 +810,9 @@ function LeadsPage() {
             </span>
           </div>
 
-          <div className="[&_.data-table__row--clickable:hover_.status-badge]:-translate-y-px">
+          <div className="min-w-0 [&_.data-table__row--clickable:hover_.status-badge]:-translate-y-px">
             <DataTable
-              data={paginatedLeads}
+              data={leadsWithOperatorNames}
               columns={columns}
               rowKey="id"
               selectedRowKey={selectedLeadId}
@@ -658,11 +824,11 @@ function LeadsPage() {
           </div>
         </div>
 
-        {!isLoading && filteredLeads.length > 0 ? (
+        {!isLoading && paginationMeta.totalItems > 0 ? (
           <Pagination
-            currentPage={Math.min(currentPage, totalPages)}
-            totalPages={totalPages}
-            totalItems={filteredLeads.length}
+            currentPage={Math.min(currentPage, paginationMeta.totalPages)}
+            totalPages={paginationMeta.totalPages}
+            totalItems={paginationMeta.totalItems}
             onPageChange={setCurrentPage}
           />
         ) : null}
@@ -683,6 +849,9 @@ function LeadsPage() {
             setSelectedLeadId(null);
           }}
           onStatusChange={handleStatusChange}
+          resolveOperatorName={(operatorId, fallbackName) =>
+            operatorNameById.get(operatorId) ?? fallbackName
+          }
         />
       ) : null}
 

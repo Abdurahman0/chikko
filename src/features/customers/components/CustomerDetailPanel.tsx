@@ -10,6 +10,7 @@ interface CustomerDetailPanelProps {
   customerId: EntityId;
   refreshToken?: number;
   canManageCustomers: boolean;
+  resolveOperatorName?: (operatorId: EntityId, fallbackName?: string) => string | undefined;
   onClose: () => void;
   onEdit: (customer: Customer) => void;
   onDelete: (customer: Customer) => void;
@@ -20,6 +21,16 @@ const labelClassName =
 
 const valueClassName =
   'text-sm font-semibold text-text-primary [overflow-wrap:anywhere]';
+
+function isUuidLike(value: string | undefined): boolean {
+  if (!value) {
+    return false;
+  }
+
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+    value,
+  );
+}
 
 function formatDateTime(
   timestamp: string | undefined,
@@ -54,6 +65,7 @@ function CustomerDetailPanel({
   customerId,
   refreshToken = 0,
   canManageCustomers,
+  resolveOperatorName,
   onClose,
   onEdit,
   onDelete,
@@ -111,6 +123,14 @@ function CustomerDetailPanel({
       window.removeEventListener('keydown', handleKeyDown);
     };
   }, [onClose]);
+
+  const resolvedOperatorName =
+    customer?.assignedOperator?.id
+      ? resolveOperatorName?.(
+          customer.assignedOperator.id,
+          customer.assignedOperator.fullName,
+        ) ?? customer.assignedOperator.fullName
+      : customer?.assignedOperator?.fullName;
 
   return (
     <div
@@ -199,13 +219,27 @@ function CustomerDetailPanel({
                     </div>
                     <div className="rounded-lg bg-surface-subtle/80 p-3">
                       <p className={labelClassName}>{t('customers.detail.operator')}</p>
-                      <p className={`mt-1 ${valueClassName}`}>
-                        {customer.assignedOperator?.fullName ?? t('common.unassigned')}
+                      <p
+                        className={[
+                          'mt-1',
+                          isUuidLike(resolvedOperatorName)
+                            ? 'text-sm font-medium text-text-secondary [overflow-wrap:anywhere]'
+                            : valueClassName,
+                        ].join(' ')}
+                      >
+                        {resolvedOperatorName ?? t('common.unassigned')}
                       </p>
                     </div>
                     <div className="rounded-lg bg-surface-subtle/80 p-3">
                       <p className={labelClassName}>{t('customers.detail.linkedLead')}</p>
-                      <p className={`mt-1 ${valueClassName}`}>
+                      <p
+                        className={[
+                          'mt-1',
+                          isUuidLike(customer.lead?.fullName)
+                            ? 'text-sm font-medium text-text-secondary [overflow-wrap:anywhere]'
+                            : valueClassName,
+                        ].join(' ')}
+                      >
                         {customer.lead?.fullName ?? t('customers.noLeadLink')}
                       </p>
                     </div>

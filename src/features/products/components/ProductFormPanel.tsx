@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from 'react';
+import { FiImage, FiTrash2 } from 'react-icons/fi';
 import AppIcon from '../../../components/shared/icons/AppIcon';
 import { FilterSelect } from '../../../components/shared/data';
 import { DEFAULT_CURRENCY_CODE } from '../../../constants';
@@ -12,7 +13,13 @@ interface ProductFormPanelProps {
   isSubmitting: boolean;
   errorMessage?: string | null;
   onClose: () => void;
-  onSubmit: (payload: ProductMutationInput) => void;
+  onSubmit: (
+    payload: ProductMutationInput,
+    options: {
+      newImages: File[];
+      deletedImageIds: string[];
+    },
+  ) => void;
 }
 
 interface ProductFormState {
@@ -23,6 +30,7 @@ interface ProductFormState {
   currency: string;
   stockQuantity: string;
   isActive: boolean;
+  category: string;
 }
 
 const inputClassName = [
@@ -51,6 +59,14 @@ function createInitialState(
       currency: product.currency,
       stockQuantity: String(product.stockQuantity ?? 0),
       isActive: product.isActive,
+      category:
+        product.category ??
+        (typeof product.metadata?.category === 'string'
+          ? product.metadata.category
+          : typeof product.metadata?.category === 'number' ||
+              typeof product.metadata?.category === 'boolean'
+            ? String(product.metadata.category)
+            : ''),
     };
   }
 
@@ -62,6 +78,7 @@ function createInitialState(
     currency: fallbackCurrency,
     stockQuantity: '0',
     isActive: true,
+    category: '',
   };
 }
 
@@ -79,10 +96,14 @@ function ProductFormPanel({
     createInitialState(mode, product, currencyOptions),
   );
   const [fieldError, setFieldError] = useState<string | null>(null);
+  const [newImages, setNewImages] = useState<File[]>([]);
+  const [deletedImageIds, setDeletedImageIds] = useState<string[]>([]);
 
   useEffect(() => {
     setForm(createInitialState(mode, product, currencyOptions));
     setFieldError(null);
+    setNewImages([]);
+    setDeletedImageIds([]);
   }, [mode, product, currencyOptions]);
 
   useEffect(() => {
@@ -103,6 +124,7 @@ function ProductFormPanel({
       form.name.trim().length > 0 &&
       form.sku.trim().length > 0 &&
       form.description.trim().length > 0 &&
+      form.category.trim().length > 0 &&
       form.currency.trim().length > 0 &&
       Number(form.price) >= 0 &&
       Number(form.stockQuantity) >= 0
@@ -116,6 +138,7 @@ function ProductFormPanel({
     const normalizedName = form.name.trim();
     const normalizedSku = form.sku.trim().toUpperCase();
     const normalizedDescription = form.description.trim();
+    const normalizedCategory = form.category.trim();
     const parsedPrice = Number(form.price);
     const parsedStock = Number(form.stockQuantity);
 
@@ -123,6 +146,7 @@ function ProductFormPanel({
       !normalizedName ||
       !normalizedSku ||
       !normalizedDescription ||
+      !normalizedCategory ||
       !form.currency.trim()
     ) {
       setFieldError(t('products.form.requiredError'));
@@ -139,6 +163,18 @@ function ProductFormPanel({
       return;
     }
 
+    if (mode === 'create') {
+      if (newImages.length < 1) {
+        setFieldError(t('products.form.imagesMinError'));
+        return;
+      }
+
+      if (newImages.length > 3) {
+        setFieldError(t('products.form.imagesMaxError'));
+        return;
+      }
+    }
+
     onSubmit({
       name: normalizedName,
       sku: normalizedSku,
@@ -147,7 +183,56 @@ function ProductFormPanel({
       currency: form.currency,
       stockQuantity: Math.floor(parsedStock),
       isActive: form.isActive,
+      metadata: {
+        category: normalizedCategory,
+      },
+    }, {
+      newImages,
+      deletedImageIds,
     });
+  }
+
+  function handleImagesChange(event: ChangeEvent<HTMLInputElement>) {
+    const files = event.target.files ? Array.from(event.target.files) : [];
+    if (!files.length) {
+      return;
+    }
+
+    if (mode === 'create') {
+      const remainingSlots = Math.max(0, 3 - newImages.length);
+      if (remainingSlots <= 0) {
+        setFieldError(t('products.form.imagesMaxError'));
+        event.target.value = '';
+        return;
+      }
+
+      const nextFiles = files.slice(0, remainingSlots);
+      if (files.length > remainingSlots) {
+        setFieldError(t('products.form.imagesMaxError'));
+      } else {
+        setFieldError(null);
+      }
+
+      setNewImages((current) => [...current, ...nextFiles]);
+      event.target.value = '';
+      return;
+    }
+
+    setFieldError(null);
+    setNewImages((current) => [...current, ...files]);
+    event.target.value = '';
+  }
+
+  function removeNewImage(indexToRemove: number) {
+    setNewImages((current) => current.filter((_, index) => index !== indexToRemove));
+  }
+
+  function toggleDeleteExistingImage(imageId: string) {
+    setDeletedImageIds((current) =>
+      current.includes(imageId)
+        ? current.filter((id) => id !== imageId)
+        : [...current, imageId],
+    );
   }
 
   return (
@@ -345,6 +430,116 @@ function ProductFormPanel({
                 ].join(' ')}
               />
             </button>
+          </div>
+
+          {mode === 'edit' && product ? (
+            <div className="grid gap-1.5">
+              <p className={labelClassName}>{t('products.form.currentImages')}</p>
+              {product.images.length ? (
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                  {product.images.map((image) => {
+                    const markedForDelete = deletedImageIds.includes(image.id);
+
+                    return (
+                      <div
+                        key={image.id}
+                        className={[
+                          'relative aspect-square overflow-hidden rounded-md ring-1',
+                          markedForDelete
+                            ? 'opacity-50 ring-danger/35'
+                            : 'ring-border-soft/45',
+                        ].join(' ')}
+                      >
+                        <img
+                          src={image.imageUrl}
+                          alt={product.name}
+                          className="h-full w-full object-cover"
+                          loading="lazy"
+                        />
+                        <button
+                          type="button"
+                          className={[
+                            'absolute right-1.5 top-1.5 inline-flex h-7 w-7 items-center justify-center rounded-md',
+                            markedForDelete
+                              ? 'bg-danger text-white'
+                              : 'bg-background-subtle/90 text-danger',
+                          ].join(' ')}
+                          onClick={() => toggleDeleteExistingImage(image.id)}
+                          disabled={isSubmitting}
+                          aria-label={t('products.form.removeImage')}
+                        >
+                          <FiTrash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="rounded-lg bg-surface-subtle/80 px-3 py-3 text-sm font-medium text-text-secondary">
+                  {t('products.form.noImages')}
+                </div>
+              )}
+            </div>
+          ) : null}
+
+          <div className="grid gap-1.5">
+            <label className={labelClassName} htmlFor="product-form-images">
+              {t('products.form.images')}
+            </label>
+            <div className="rounded-lg border border-dashed border-border-soft/70 bg-surface-card p-3">
+              <input
+                id="product-form-images"
+                type="file"
+                accept="image/*"
+                multiple
+                onChange={handleImagesChange}
+                disabled={isSubmitting}
+                className="block w-full cursor-pointer text-sm text-text-secondary file:mr-3 file:cursor-pointer file:rounded-md file:border-0 file:bg-primary/12 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-text-accent hover:file:bg-primary/16"
+              />
+            </div>
+
+            {newImages.length ? (
+              <div className="grid gap-2">
+                {newImages.map((file, index) => (
+                  <div
+                    key={`${file.name}-${index}`}
+                    className="flex items-center justify-between gap-2 rounded-lg bg-surface-subtle/80 px-3 py-2"
+                  >
+                    <span className="inline-flex min-w-0 items-center gap-2 text-sm font-medium text-text-secondary">
+                      <FiImage className="h-4 w-4 shrink-0" />
+                      <span className="truncate">{file.name}</span>
+                    </span>
+                    <button
+                      type="button"
+                      className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-danger-bg text-danger transition duration-fast hover:brightness-95"
+                      onClick={() => removeNewImage(index)}
+                      disabled={isSubmitting}
+                      aria-label={t('products.form.removeImage')}
+                    >
+                      <FiTrash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            ) : null}
+          </div>
+
+          <div className="grid gap-1.5">
+            <label className={labelClassName} htmlFor="product-form-category">
+              {t('products.form.category')}
+            </label>
+            <input
+              id="product-form-category"
+              type="text"
+              value={form.category}
+              onChange={(event) =>
+                setForm((current) => ({ ...current, category: event.target.value }))
+              }
+              className={inputClassName}
+              placeholder={t('products.form.categoryPlaceholder')}
+              disabled={isSubmitting}
+              required
+            />
           </div>
 
           {fieldError ? (

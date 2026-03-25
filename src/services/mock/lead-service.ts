@@ -163,6 +163,10 @@ function resolvePatchInput(existing: Lead, input: LeadPatchInput): LeadMutationI
 
 export const mockLeadService: LeadService = {
   async list(params) {
+    return mockLeadService.listLeads(params);
+  },
+
+  async listLeads(params) {
     const statusFilter = params?.status as LeadStatus | undefined;
     const sourceFilter = params?.source as LeadSource | undefined;
     const assignedOperatorFilter =
@@ -210,10 +214,18 @@ export const mockLeadService: LeadService = {
   },
 
   async getById(id) {
+    return mockLeadService.getLeadById(id);
+  },
+
+  async getLeadById(id) {
     return withMockDelay(findById(mockDataStore.leads, id), 140);
   },
 
   async create(input) {
+    return mockLeadService.createLead(input);
+  },
+
+  async createLead(input) {
     const payload = normalizeMutationInput(input);
     const now = new Date().toISOString();
 
@@ -245,6 +257,10 @@ export const mockLeadService: LeadService = {
   },
 
   async update(id, input) {
+    return mockLeadService.updateLead(id, input);
+  },
+
+  async updateLead(id, input) {
     const index = mockDataStore.leads.findIndex((lead) => lead.id === id);
     if (index < 0) {
       return withMockDelay(null, 140);
@@ -282,6 +298,10 @@ export const mockLeadService: LeadService = {
   },
 
   async patch(id, input) {
+    return mockLeadService.patchLead(id, input);
+  },
+
+  async patchLead(id, input) {
     const existing = mockDataStore.leads.find((lead) => lead.id === id);
     if (!existing) {
       return withMockDelay(null, 140);
@@ -292,6 +312,10 @@ export const mockLeadService: LeadService = {
   },
 
   async delete(id) {
+    return mockLeadService.deleteLead(id);
+  },
+
+  async deleteLead(id) {
     const index = mockDataStore.leads.findIndex((lead) => lead.id === id);
     if (index < 0) {
       return withMockDelay(false, 120);

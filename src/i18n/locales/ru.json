@@ -245,7 +245,20 @@
       "orderCompletionRate": "Buyurtma yakunlanish darajasi",
       "averageOrderValue": "O'rtacha buyurtma qiymati"
     },
-    "noLeads": "Lidlar yo'q"
+    "noLeads": "Lidlar yo'q",
+    "filters": {
+      "intervalLabel": "Interval",
+      "presets": {
+        "7d": "7D",
+        "30d": "30D",
+        "90d": "90D"
+      },
+      "intervals": {
+        "day": "Kunlik",
+        "week": "Haftalik",
+        "month": "Oylik"
+      }
+    }
   },
   "leads": {
     "pipelineEyebrow": "Jarayon",
@@ -257,8 +270,15 @@
     "filters": "filtr",
     "allStatuses": "Barcha holatlar",
     "allChannels": "Barcha kanallar",
+    "allOperators": "Barcha operatorlar",
     "status": "Holat",
     "channel": "Kanal",
+    "assignedOperator": "Biriktirilgan operator",
+    "orderBy": "Saralash",
+    "updatedNewest": "Yangilangan (yangi)",
+    "updatedOldest": "Yangilangan (eski)",
+    "createdNewest": "Yaratilgan (yangi)",
+    "createdOldest": "Yaratilgan (eski)",
     "searchPlaceholder": "Lid, telefon yoki username bo'yicha qidirish...",
     "count": "lid",
     "unknownHandle": "noma'lum",
@@ -605,6 +625,10 @@
       "loadingDescription": "Mahsulot profili va metadata olinmoqda.",
       "errorTitle": "Mahsulot mavjud emas",
       "errorDescription": "Tanlangan mahsulotni yuklab bo'lmadi.",
+      "images": "Rasmlar",
+      "imagesDesc": "Mahsulotga biriktirilgan rasmlar.",
+      "noImages": "Mahsulot uchun rasm yuklanmagan.",
+      "deleteImage": "Rasmni o'chirish",
       "sectionDetails": "Mahsulot ma'lumotlari",
       "sectionDetailsDesc": "Katalog profili va mavjudligi.",
       "sectionLifecycle": "Hayotiy sikl",
@@ -629,16 +653,26 @@
       "name": "Mahsulot nomi",
       "sku": "SKU",
       "description": "Tavsif",
+      "category": "Kategoriya",
+      "categoryPlaceholder": "Masalan: care",
       "price": "Narx",
       "stockQuantity": "Zaxira soni",
       "currency": "Valyuta",
       "activeProduct": "Faol mahsulot",
       "activeProductHint": "Mahsulot operatsiyalarda ko'rinishini yoqing yoki o'chiring.",
+      "currentImages": "Joriy rasmlar",
+      "images": "Rasmlar",
+      "removeImage": "Rasmni olib tashlash",
+      "noImages": "Rasmlar topilmadi.",
+      "metadata": "Metadata (JSON)",
+      "imagesMinError": "Mahsulot yaratishda kamida 1 ta rasm tanlang.",
+      "imagesMaxError": "Mahsulot yaratishda ko'pi bilan 3 ta rasm tanlash mumkin.",
       "createSubmit": "Mahsulot yaratish",
       "editSubmit": "O'zgarishlarni saqlash",
       "creating": "Yaratilmoqda...",
       "saving": "Saqlanmoqda...",
       "requiredError": "Majburiy maydonlarni to'ldiring.",
+      "metadataError": "Metadata faqat JSON obyekt ko'rinishida bo'lishi kerak.",
       "priceError": "Narx musbat yoki nol son bo'lishi kerak.",
       "stockError": "Zaxira soni musbat yoki nol butun son bo'lishi kerak.",
       "saveError": "Mahsulotni saqlab bo'lmadi."

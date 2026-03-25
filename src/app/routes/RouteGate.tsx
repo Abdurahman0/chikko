@@ -3,6 +3,7 @@ import { Navigate, useLocation } from 'react-router-dom';
 import type { AppRouteConfig } from '../../config/routes';
 import { routePaths } from '../../config/routes';
 import { useAuth } from '../../auth';
+import { getAccessToken } from '../../lib/auth-storage';
 
 interface RouteGateProps extends PropsWithChildren {
   route: AppRouteConfig;
@@ -16,6 +17,7 @@ function RouteGate({ route, children }: RouteGateProps) {
     canAccessRoute,
     resolveDefaultLandingPath,
   } = useAuth();
+  const hasAccessToken = Boolean(getAccessToken());
 
   if (isBootstrapping) {
     return (
@@ -33,7 +35,7 @@ function RouteGate({ route, children }: RouteGateProps) {
     return <>{children}</>;
   }
 
-  if (!isAuthenticated) {
+  if (!hasAccessToken || !isAuthenticated) {
     return (
       <Navigate
         replace

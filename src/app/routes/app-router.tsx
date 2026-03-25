@@ -4,6 +4,7 @@ import type { AppRouteConfig, AppRouteId } from '../../config/routes';
 import { fallbackRoutes, moduleRoutes, publicRoutes, routePaths } from '../../config/routes';
 import RouteGate from './RouteGate';
 import { useAuth } from '../../auth';
+import { getAccessToken } from '../../lib/auth-storage';
 import AccessDeniedPage from '../pages/public/AccessDeniedPage';
 import AiSettingsPage from '../pages/protected/AiSettingsPage';
 import ChatPage from '../pages/protected/ChatPage';
@@ -60,6 +61,7 @@ function renderRouteElement(route: AppRouteConfig): JSX.Element {
 function ProtectedShellRoute(): JSX.Element {
   const location = useLocation();
   const { isAuthenticated, isBootstrapping } = useAuth();
+  const hasAccessToken = Boolean(getAccessToken());
 
   if (isBootstrapping) {
     return (
@@ -69,7 +71,7 @@ function ProtectedShellRoute(): JSX.Element {
     );
   }
 
-  if (!isAuthenticated) {
+  if (!hasAccessToken || !isAuthenticated) {
     return (
       <Navigate
         replace

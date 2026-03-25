@@ -20,12 +20,13 @@ function AppShell() {
     }
 
     setIsSidebarOpen(false);
-  }, [isSidebarOpen, location.pathname]);
+  }, [location.pathname]);
 
   const currentRoute = useMemo(
     () => getRouteByPathname(location.pathname),
     [location.pathname],
   );
+  const isChatRoute = currentRoute?.id === 'chat';
 
   return (
     <div className="relative flex h-dvh w-full overflow-hidden bg-background-default">
@@ -63,9 +64,22 @@ function AppShell() {
           showRouteMeta={currentRoute?.id === 'chat'}
         />
 
-        <main className="flex-1 overflow-y-auto overscroll-contain">
-          <div className="px-3 pb-5 pt-3 min-[640px]:px-4 min-[640px]:pb-6 min-[640px]:pt-4 min-[960px]:px-7 min-[960px]:pb-8 min-[960px]:pt-4">
-          <div className="mx-auto w-full max-w-page min-w-0">
+        <main
+          className={[
+            'flex-1 overscroll-contain',
+            isChatRoute
+              ? 'overflow-hidden min-[1024px]:overflow-y-auto'
+              : 'overflow-y-auto',
+          ].join(' ')}
+        >
+          <div
+            className={[
+              isChatRoute
+                ? 'h-full px-0 py-0 min-[960px]:px-7 min-[960px]:pb-8 min-[960px]:pt-4'
+                : 'px-3 pb-5 pt-3 min-[640px]:px-4 min-[640px]:pb-6 min-[640px]:pt-4 min-[960px]:px-7 min-[960px]:pb-8 min-[960px]:pt-4',
+            ].join(' ')}
+          >
+          <div className={['mx-auto w-full max-w-page min-w-0', isChatRoute ? 'h-full' : ''].join(' ')}>
             <Outlet />
           </div>
           </div>

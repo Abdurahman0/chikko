@@ -17,7 +17,9 @@ import { formatCurrencyAmount } from '../../../constants';
 import { services } from '../../../services';
 import type {
   DashboardBreakdownItem,
+  DashboardInterval,
   DashboardOverview,
+  DashboardOverviewParams,
 } from '../../../services';
 import type { AppUser, LeadStatus } from '../../../types/domain';
 import {
@@ -32,11 +34,6 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
-
-interface DashboardData {
-  overview: DashboardOverview;
-  currentUser: AppUser | null;
-}
 
 interface PieSlice extends DashboardBreakdownItem {
   color: string;
@@ -60,6 +57,18 @@ const CHIP_TONE_CLASS_NAMES = {
 } as const;
 
 type ChipTone = keyof typeof CHIP_TONE_CLASS_NAMES;
+type DashboardPreset = '7d' | '30d' | '90d';
+
+interface DashboardFilters {
+  preset: DashboardPreset;
+  interval: DashboardInterval;
+}
+
+const DASHBOARD_PRESET_DAYS: Record<DashboardPreset, number> = {
+  '7d': 7,
+  '30d': 30,
+  '90d': 90,
+};
 
 function asNumber(value: number | string): number {
   const parsed = typeof value === 'number' ? value : Number(value);
@@ -101,6 +110,26 @@ function formatSeriesLabel(value: string, locale: string): string {
     day: '2-digit',
     month: 'short',
   }).format(date);
+}
+
+function toIsoDate(value: Date): string {
+  const year = value.getFullYear();
+  const month = `${value.getMonth() + 1}`.padStart(2, '0');
+  const day = `${value.getDate()}`.padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function buildDashboardQuery(filters: DashboardFilters): DashboardOverviewParams {
+  const days = DASHBOARD_PRESET_DAYS[filters.preset];
+  const dateTo = new Date();
+  const dateFrom = new Date(dateTo);
+  dateFrom.setDate(dateFrom.getDate() - (days - 1));
+
+  return {
+    date_from: toIsoDate(dateFrom),
+    date_to: toIsoDate(dateTo),
+    interval: filters.interval,
+  };
 }
 
 function pickForDisplay(
@@ -169,37 +198,65 @@ function getChannelChipStyle(channelKey: string) {
 function DashboardPage() {
   const { t, i18n } = useTranslation();
   const locale = i18n.language === 'ru' ? 'ru-RU' : 'uz-UZ';
-  const [data, setData] = useState<DashboardData | null>(null);
+  const [currentUser, setCurrentUser] = useState<AppUser | null>(null);
+  const [overview, setOverview] = useState<DashboardOverview | null>(null);
+  const [filters, setFilters] = useState<DashboardFilters>({
+    preset: '30d',
+    interval: 'day',
+  });
   const [loading, setLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
+
+  const query = useMemo(() => buildDashboardQuery(filters), [filters]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadCurrentUser() {
+      try {
+        const profile = await services.profile.getCurrentUser();
+        if (!isMounted) {
+          return;
+        }
+
+        setCurrentUser(profile);
+      } catch {
+        if (!isMounted) {
+          return;
+        }
+
+        setCurrentUser(null);
+      }
+    }
+
+    void loadCurrentUser();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   useEffect(() => {
     let active = true;
 
-    async function load() {
+    async function loadOverview() {
       setLoading(true);
       setHasError(false);
 
       try {
-        const [overview, currentUser] = await Promise.all([
-          services.dashboard.getOverview(),
-          services.profile.getCurrentUser(),
-        ]);
+        const nextOverview = await services.dashboard.getOverview(query);
 
         if (!active) {
           return;
         }
 
-        setData({
-          overview,
-          currentUser,
-        });
+        setOverview(nextOverview);
       } catch {
         if (!active) {
           return;
         }
         setHasError(true);
-        setData(null);
+        setOverview(null);
       } finally {
         if (active) {
           setLoading(false);
@@ -207,11 +264,12 @@ function DashboardPage() {
       }
     }
 
-    void load();
+    void loadOverview();
+
     return () => {
       active = false;
     };
-  }, []);
+  }, [query]);
 
   const trendChartConfig = useMemo(
     () =>
@@ -263,7 +321,7 @@ function DashboardPage() {
     );
   }
 
-  if (hasError || !data) {
+  if (hasError || !overview) {
     return (
       <PageLayout>
         <section className="rounded-xl bg-surface-card p-7 shadow-sm ring-1 ring-border-soft/40">
@@ -278,7 +336,6 @@ function DashboardPage() {
     );
   }
 
-  const { overview } = data;
   const localizedTimeSeries = overview.time_series.map((point) => ({
     ...point,
     localizedLabel: formatSeriesLabel(point.bucket_start, locale),
@@ -389,9 +446,49 @@ function DashboardPage() {
               {rangeLabel} ({overview.date_range.timezone})
             </p>
           </div>
-          <span className="inline-flex h-8 items-center rounded-pill bg-primary/10 px-2.5 text-[11px] font-semibold uppercase tracking-[0.1em] text-primary">
-            {data.currentUser?.fullName ?? t('dashboard.workspaceFallback')}
-          </span>
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            <div className="inline-flex items-center rounded-pill bg-surface-card p-1 ring-1 ring-border-soft/50">
+              {(['7d', '30d', '90d'] as const).map((preset) => (
+                <button
+                  key={preset}
+                  type="button"
+                  onClick={() => setFilters((current) => ({ ...current, preset }))}
+                  className={[
+                    'inline-flex min-w-12 items-center justify-center rounded-pill px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.08em] transition duration-fast',
+                    filters.preset === preset
+                      ? 'bg-primary text-primary-foreground shadow-sm'
+                      : 'text-text-secondary hover:bg-surface-subtle/90',
+                  ].join(' ')}
+                  aria-pressed={filters.preset === preset}
+                >
+                  {t(`dashboard.filters.presets.${preset}`)}
+                </button>
+              ))}
+            </div>
+
+            <label className="sr-only" htmlFor="dashboard-interval">
+              {t('dashboard.filters.intervalLabel')}
+            </label>
+            <select
+              id="dashboard-interval"
+              value={filters.interval}
+              onChange={(event) =>
+                setFilters((current) => ({
+                  ...current,
+                  interval: event.target.value as DashboardInterval,
+                }))
+              }
+              className="h-8 rounded-pill border border-border-soft/60 bg-surface-card px-3 text-[11px] font-semibold uppercase tracking-[0.08em] text-text-secondary focus:outline-none focus:ring-2 focus:ring-primary/25"
+            >
+              <option value="day">{t('dashboard.filters.intervals.day')}</option>
+              <option value="week">{t('dashboard.filters.intervals.week')}</option>
+              <option value="month">{t('dashboard.filters.intervals.month')}</option>
+            </select>
+
+            <span className="inline-flex h-8 items-center rounded-pill bg-primary/10 px-2.5 text-[11px] font-semibold uppercase tracking-[0.1em] text-primary">
+              {currentUser?.fullName ?? t('dashboard.workspaceFallback')}
+            </span>
+          </div>
         </header>
 
         <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">

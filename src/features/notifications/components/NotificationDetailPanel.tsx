@@ -34,6 +34,9 @@ function NotificationDetailPanel({
   const [isMarkingRead, setIsMarkingRead] = useState(false);
 
   const locale = 'uz-UZ';
+  const metadataEntries = notification?.metadata
+    ? Object.entries(notification.metadata)
+    : [];
 
   useEffect(() => {
     let isActive = true;
@@ -227,6 +230,20 @@ function NotificationDetailPanel({
                         {notification.user?.fullName ?? "Mavjud emas"}
                       </p>
                     </div>
+
+                    {metadataEntries.length > 0 ? (
+                      <div className="rounded-lg bg-surface-subtle/80 p-3 sm:col-span-2">
+                        <p className={labelClassName}>Metadata</p>
+                        <ul className="mt-2 grid list-none gap-1.5 p-0">
+                          {metadataEntries.map(([key, value]) => (
+                            <li key={key} className="text-sm text-text-secondary">
+                              <span className="font-semibold text-text-primary">{key}:</span>{' '}
+                              {String(value)}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    ) : null}
                   </div>
                 </div>
               </PageCard>

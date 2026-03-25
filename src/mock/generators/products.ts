@@ -64,6 +64,8 @@ export function generateMockProducts(count: number): Product[] {
       MOCK_PRODUCT_CATEGORIES,
       index,
     )} ${cycleValue(PRODUCT_NAME_SUFFIXES, index)}`;
+    const primaryImageUrl = `/mock/products/product-${(index % 6) + 1}.jpg`;
+    const nowTimestamp = timestampFromIndex(index + 38, { dayStep: 2 });
 
     return {
       id: createMockId('product', index),
@@ -86,8 +88,18 @@ export function generateMockProducts(count: number): Product[] {
         internal_code: `PRD-${String(1200 + index)}`,
       },
       status: resolveProductStatus(isActive, stockQuantity),
-      imageUrl: `/mock/products/product-${(index % 6) + 1}.jpg`,
-      createdAt: timestampFromIndex(index + 38, { dayStep: 2 }),
+      imageUrl: primaryImageUrl,
+      images: [
+        {
+          id: createMockId('product-image', index),
+          sortOrder: 0,
+          image: null,
+          imageUrl: primaryImageUrl,
+          createdAt: nowTimestamp,
+          updatedAt: nowTimestamp,
+        },
+      ],
+      createdAt: nowTimestamp,
       updatedAt: timestampFromIndex(index, {
         dayStep: 1,
         hourOffset: (index % 5) + 1,

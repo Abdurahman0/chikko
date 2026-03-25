@@ -66,10 +66,10 @@ const DEFAULT_PAGINATION_META: PaginationMeta = {
 };
 
 const tablePrimaryTextClassName =
-  'block text-sm font-semibold leading-[1.35] text-text-primary [overflow-wrap:anywhere]';
+  'block max-w-[140px] truncate text-sm font-semibold leading-[1.35] text-text-primary min-[640px]:max-w-[220px]';
 
 const tableSecondaryTextClassName =
-  'block text-[12px] leading-[1.45] text-text-secondary [overflow-wrap:anywhere]';
+  'block max-w-[140px] truncate text-[12px] leading-[1.45] text-text-secondary min-[640px]:max-w-[220px]';
 
 const labelClassName =
   'text-[11px] font-semibold uppercase tracking-[0.12em] text-text-muted';

@@ -32,6 +32,7 @@ import type {
   PaymentMutationInput,
   PaymentUpdateInput,
   Product,
+  ProductPatchInput,
   ProductMutationInput,
   SendMessageInput,
   SessionListParams,
@@ -146,17 +147,31 @@ export interface DashboardOverview {
   time_series: DashboardTimeSeriesPoint[];
 }
 
+export type DashboardInterval = 'day' | 'week' | 'month';
+
+export interface DashboardOverviewParams {
+  date_from?: string;
+  date_to?: string;
+  interval?: DashboardInterval;
+}
+
 export interface DashboardService {
-  getOverview(): Promise<DashboardOverview>;
+  getOverview(params?: DashboardOverviewParams): Promise<DashboardOverview>;
 }
 
 export interface LeadService {
   list(params?: TableQueryParams): Promise<PaginatedResult<Lead>>;
   getById(id: EntityId): Promise<Lead | null>;
+  listLeads(params?: TableQueryParams): Promise<PaginatedResult<Lead>>;
+  getLeadById(id: EntityId): Promise<Lead | null>;
   create(input: LeadMutationInput): Promise<Lead>;
+  createLead(input: LeadMutationInput): Promise<Lead>;
   update(id: EntityId, input: LeadMutationInput): Promise<Lead | null>;
+  updateLead(id: EntityId, input: LeadMutationInput): Promise<Lead | null>;
   patch(id: EntityId, input: LeadPatchInput): Promise<Lead | null>;
+  patchLead(id: EntityId, input: LeadPatchInput): Promise<Lead | null>;
   delete(id: EntityId): Promise<boolean>;
+  deleteLead(id: EntityId): Promise<boolean>;
 }
 
 export interface CustomerService {
@@ -176,9 +191,18 @@ export interface CustomerService {
 export interface ProductService {
   list(params?: TableQueryParams): Promise<PaginatedResult<Product>>;
   getById(id: EntityId): Promise<Product | null>;
+  listProducts(params?: TableQueryParams): Promise<PaginatedResult<Product>>;
+  getProductById(id: EntityId): Promise<Product | null>;
   create(input: ProductMutationInput): Promise<Product>;
+  createProduct(input: ProductMutationInput): Promise<Product>;
   update(id: EntityId, input: ProductMutationInput): Promise<Product | null>;
+  updateProduct(id: EntityId, input: ProductMutationInput): Promise<Product | null>;
+  patch(id: EntityId, input: ProductPatchInput): Promise<Product | null>;
+  patchProduct(id: EntityId, input: ProductPatchInput): Promise<Product | null>;
   delete(id: EntityId): Promise<boolean>;
+  deleteProduct(id: EntityId): Promise<boolean>;
+  uploadProductImages(productId: EntityId, payload: FormData | File[]): Promise<Product | null>;
+  deleteProductImage(productId: EntityId, imageId: EntityId): Promise<boolean>;
 }
 
 export interface OrderService {
@@ -207,12 +231,15 @@ export interface PaymentService {
 export interface ConversationService {
   list(params?: SessionListParams): Promise<PaginatedResult<Conversation>>;
   getById(id: EntityId): Promise<Conversation | null>;
+  getSessions(params?: SessionListParams): Promise<PaginatedResult<Conversation>>;
   listSessions(params?: SessionListParams): Promise<PaginatedResult<Conversation>>;
   getSessionById(id: EntityId): Promise<Conversation | null>;
+  getMessages(params?: MessageListParams): Promise<PaginatedResult<ChatMessage>>;
   listMessages(params?: MessageListParams): Promise<PaginatedResult<ChatMessage>>;
   getMessageById(id: EntityId): Promise<ChatMessage | null>;
+  deleteSession(sessionId: EntityId): Promise<boolean>;
   sendMessage(sessionId: EntityId, payload: SendMessageInput): Promise<ChatMessage>;
-  markSessionRead(sessionId: EntityId): Promise<void>;
+  markSessionRead(sessionId: EntityId): Promise<Conversation | null>;
 }
 
 export interface NotificationService {

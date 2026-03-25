@@ -58,11 +58,21 @@ function formatSessionTime(value: string | null): string {
 }
 
 function getSessionTitle(session: Conversation): string {
+  const stateRecord =
+    session.state_data && typeof session.state_data === 'object' && !Array.isArray(session.state_data)
+      ? (session.state_data as Record<string, unknown>)
+      : null;
+  const stateCustomerName =
+    typeof stateRecord?.customer_name === 'string'
+      ? stateRecord.customer_name.trim()
+      : '';
+
   return (
-    session.customer?.fullName ??
-    session.lead?.fullName ??
-    session.external_id ??
-    session.id
+    stateCustomerName ||
+    (session.customer?.fullName ??
+      session.lead?.fullName ??
+      session.external_id ??
+      "Noma'lum chat")
   );
 }
 
@@ -120,7 +130,7 @@ function ChatSessionList({
     return (
       <EmptyState
         title="Suhbatlarni yuklab bo'lmadi"
-        description="Mock service'dan suhbatlar olinmadi."
+        description="Chat sessiyalarini qayta yuklab urinib ko'ring."
       />
     );
   }

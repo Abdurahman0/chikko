@@ -4,18 +4,18 @@ import { FilterSelect, SearchInput } from '../../../components/shared/data';
 import type { ChatChannel, SelectOption } from '../../../types/domain';
 
 type ChannelFilterValue = ChatChannel | 'all';
-type ReadFilterValue = 'all' | 'read' | 'unread';
+type OperatorFilterValue = 'all' | 'active' | 'inactive';
 
 interface ChatSessionFiltersProps {
   search: string;
   channelFilter: ChannelFilterValue;
-  readFilter: ReadFilterValue;
+  operatorFilter: OperatorFilterValue;
   ordering: string;
   orderingOptions: SelectOption[];
   disabled: boolean;
   onSearchChange: (value: string) => void;
   onChannelChange: (value: ChannelFilterValue) => void;
-  onReadFilterChange: (value: ReadFilterValue) => void;
+  onOperatorFilterChange: (value: OperatorFilterValue) => void;
   onOrderingChange: (value: string) => void;
 }
 
@@ -31,9 +31,9 @@ const channelOptions: ChannelOption[] = [
   { value: 'instagram', label: 'Instagram', shortLabel: 'IG' },
 ];
 
-const readOptions: Array<{ value: Exclude<ReadFilterValue, 'all'>; label: string }> = [
-  { value: 'read', label: "O'qilgan" },
-  { value: 'unread', label: "O'qilmagan" },
+const operatorOptions: Array<{ value: Exclude<OperatorFilterValue, 'all'>; label: string }> = [
+  { value: 'active', label: 'Faol operator' },
+  { value: 'inactive', label: 'Nofaol operator' },
 ];
 
 function ChannelFilterIcon({ value }: { value: ChannelFilterValue }) {
@@ -51,13 +51,13 @@ function ChannelFilterIcon({ value }: { value: ChannelFilterValue }) {
 function ChatSessionFilters({
   search,
   channelFilter,
-  readFilter,
+  operatorFilter,
   ordering,
   orderingOptions,
   disabled,
   onSearchChange,
   onChannelChange,
-  onReadFilterChange,
+  onOperatorFilterChange,
   onOrderingChange,
 }: ChatSessionFiltersProps) {
   return (
@@ -108,8 +108,8 @@ function ChatSessionFilters({
           Operator
         </p>
         <div className="grid grid-cols-2 gap-2">
-          {readOptions.map((option) => {
-            const isActive = readFilter === option.value;
+          {operatorOptions.map((option) => {
+            const isActive = operatorFilter === option.value;
 
             return (
               <button
@@ -123,7 +123,7 @@ function ChatSessionFilters({
                     : 'bg-surface-subtle/90 text-text-secondary ring-border-soft/45 hover:bg-surface-card hover:text-text-primary',
                 ].join(' ')}
                 onClick={() =>
-                  onReadFilterChange(isActive ? 'all' : option.value)
+                  onOperatorFilterChange(isActive ? 'all' : option.value)
                 }
                 disabled={disabled}
               >

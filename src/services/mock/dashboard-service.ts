@@ -1,9 +1,9 @@
-import type { DashboardService } from '../core/contracts';
+import type { DashboardOverviewParams, DashboardService } from '../core/contracts';
 import { getMockDashboardOverview } from './dataset';
 import { withMockDelay } from './helpers';
 
 export const mockDashboardService: DashboardService = {
-  async getOverview() {
+  async getOverview(_params?: DashboardOverviewParams) {
     return withMockDelay(getMockDashboardOverview(), 140);
   },
 };

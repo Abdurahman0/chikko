@@ -141,6 +141,10 @@ export const mockConversationService: ConversationService = {
     return mockConversationService.getSessionById(id);
   },
 
+  async getSessions(params) {
+    return mockConversationService.listSessions(params);
+  },
+
   async listSessions(params) {
     const { field, direction } = resolveSessionOrdering(params);
     const search = params?.search?.trim().toLowerCase();
@@ -184,11 +188,22 @@ export const mockConversationService: ConversationService = {
       return direction === 'asc' ? compared : -compared;
     });
 
-    return withMockDelay(paginateItems(sorted, params), 210);
+    return withMockDelay(
+      paginateItems(sorted, {
+        ...params,
+        page: params?.page ?? 1,
+        pageSize: params?.pageSize ?? 50,
+      }),
+      210,
+    );
   },
 
   async getSessionById(id) {
     return withMockDelay(findSessionById(id), 140);
+  },
+
+  async getMessages(params) {
+    return mockConversationService.listMessages(params);
   },
 
   async listMessages(params) {
@@ -222,7 +237,14 @@ export const mockConversationService: ConversationService = {
       return direction === 'asc' ? compared : -compared;
     });
 
-    return withMockDelay(paginateItems(sorted, params), 180);
+    return withMockDelay(
+      paginateItems(sorted, {
+        ...params,
+        page: params?.page ?? 1,
+        pageSize: params?.pageSize ?? 50,
+      }),
+      180,
+    );
   },
 
   async getMessageById(id) {
@@ -230,6 +252,19 @@ export const mockConversationService: ConversationService = {
       getAllMessages().find((message) => message.id === id) ?? null,
       140,
     );
+  },
+
+  async deleteSession(sessionId) {
+    const hasSession = mockDataStore.conversations.some((session) => session.id === sessionId);
+    if (!hasSession) {
+      return withMockDelay(false, 80);
+    }
+
+    mockDataStore.conversations = mockDataStore.conversations.filter(
+      (session) => session.id !== sessionId,
+    );
+    mockDataStore.messagesByConversationId.delete(sessionId);
+    return withMockDelay(true, 100);
   },
 
   async sendMessage(sessionId, payload) {
@@ -277,7 +312,7 @@ export const mockConversationService: ConversationService = {
   async markSessionRead(sessionId) {
     const messages = mockDataStore.messagesByConversationId.get(sessionId);
     if (!messages) {
-      return withMockDelay(undefined, 80);
+      return withMockDelay(findSessionById(sessionId), 80);
     }
 
     let isUpdated = false;
@@ -306,6 +341,6 @@ export const mockConversationService: ConversationService = {
       }
     }
 
-    return withMockDelay(undefined, 100);
+    return withMockDelay(findSessionById(sessionId), 100);
   },
 };

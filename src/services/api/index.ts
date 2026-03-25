@@ -1,6 +1,7 @@
 export * from './conversation-service';
 export * from './customer-service';
 export * from './dashboard-service';
+export * from './auth.service';
 export * from './lead-service';
 export * from './not-implemented';
 export * from './notification-service';

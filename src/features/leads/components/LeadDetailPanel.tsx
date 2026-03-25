@@ -12,6 +12,7 @@ interface LeadDetailPanelProps {
   leadId: EntityId;
   refreshToken?: number;
   canManageLeads: boolean;
+  resolveOperatorName?: (operatorId: EntityId, fallbackName?: string) => string | undefined;
   onClose: () => void;
   onEdit: (lead: Lead) => void;
   onDelete: (lead: Lead) => void;
@@ -23,6 +24,25 @@ const labelClassName =
 
 const valueClassName =
   'text-sm font-semibold text-text-primary [overflow-wrap:anywhere]';
+
+function getLeadStatusTone(status: LeadStatus): 'info' | 'warning' | 'accent' | 'success' | 'danger' {
+  switch (status) {
+    case 'new':
+      return 'info';
+    case 'contacted':
+      return 'warning';
+    case 'qualified':
+      return 'accent';
+    case 'negotiating':
+      return 'warning';
+    case 'converted':
+      return 'success';
+    case 'lost':
+      return 'danger';
+    default:
+      return 'info';
+  }
+}
 
 function formatDateTime(
   timestamp: string | undefined,
@@ -43,6 +63,7 @@ function LeadDetailPanel({
   leadId,
   refreshToken = 0,
   canManageLeads,
+  resolveOperatorName,
   onClose,
   onEdit,
   onDelete,
@@ -141,6 +162,12 @@ function LeadDetailPanel({
     }
   }
 
+  const resolvedOperatorName =
+    lead?.assignedOperator?.id
+      ? resolveOperatorName?.(lead.assignedOperator.id, lead.assignedOperator.fullName) ??
+        lead.assignedOperator.fullName
+      : lead?.assignedOperator?.fullName;
+
   return (
     <div
       className="fixed inset-0 z-40 flex justify-end bg-background-overlay/72 backdrop-blur-[3px]"
@@ -183,6 +210,7 @@ function LeadDetailPanel({
               <StatusBadge
                 status={lead.status}
                 label={getLeadStatusLabel(t, lead.status)}
+                tone={getLeadStatusTone(lead.status)}
               />
               <span className="inline-flex min-h-7 items-center gap-1.5 rounded-pill bg-info-bg px-2.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-info">
                 <AppIcon name="chat" className="h-3.5 w-3.5" aria-hidden="true" />
@@ -254,7 +282,7 @@ function LeadDetailPanel({
                     <div className="rounded-lg bg-surface-subtle/80 p-3">
                       <p className={labelClassName}>{t('leads.detail.owner')}</p>
                       <p className={`mt-1 ${valueClassName}`}>
-                        {lead.assignedOperator?.fullName ?? t('common.unassigned')}
+                        {resolvedOperatorName ?? t('common.unassigned')}
                       </p>
                     </div>
                   </div>

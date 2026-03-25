@@ -5,7 +5,7 @@ import AppIcon from '../components/shared/icons/AppIcon';
 import { useAuth } from '../auth';
 import { services } from '../services';
 import { routePaths } from '../config/routes';
-import { SUPPORTED_LANGUAGES } from '../i18n';
+import LanguageDropdown from './LanguageDropdown';
 
 interface AppTopbarProps {
   title: string;
@@ -57,7 +57,7 @@ function AppTopbar({
 }: AppTopbarProps) {
   const navigate = useNavigate();
   const location = useLocation();
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const [isDarkTheme, setIsDarkTheme] = useState(getInitialIsDarkTheme);
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const [chatSessionCount, setChatSessionCount] = useState<number | null>(null);
@@ -166,7 +166,7 @@ function AppTopbar({
         </button>
 
         {showRouteMeta ? (
-          <div className="min-w-0">
+          <div className="min-w-0 max-[959px]:hidden">
             <h1 className="m-0 truncate text-[1.02rem] font-semibold leading-tight text-text-primary">
               {title}
             </h1>
@@ -181,7 +181,7 @@ function AppTopbar({
 
       <div className="flex shrink-0 items-center gap-2 text-text-muted max-[640px]:ml-auto">
         {showRouteMeta && chatSessionCount !== null ? (
-          <span className="inline-flex min-h-8 items-center gap-2 rounded-pill bg-primary/12 px-3 text-[12px] font-semibold text-text-accent">
+          <span className="hidden min-h-8 items-center gap-2 rounded-pill bg-primary/12 px-3 text-[12px] font-semibold text-text-accent min-[960px]:inline-flex">
             <AppIcon name="chat" className="h-3.5 w-3.5" aria-hidden="true" />
             {chatSessionCount} ta sessiya
           </span>
@@ -209,13 +209,15 @@ function AppTopbar({
           <AppIcon name="bell" className="h-5 w-5" aria-hidden="true" />
         </button>
 
+        <LanguageDropdown />
+
         <div
           ref={profileMenuRef}
           className={['relative', isProfileMenuOpen ? 'z-[120]' : 'z-20'].join(' ')}
         >
           <button
             type="button"
-            className="inline-flex h-10 items-center gap-2 rounded-pill bg-surface-card px-2.5 text-text-secondary shadow-sm ring-1 ring-border-soft/40 transition duration-fast hover:bg-primary/10 hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/25 min-[960px]:h-11 min-[960px]:gap-3 min-[960px]:px-3.5"
+            className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-transparent px-0 text-text-secondary transition duration-fast hover:bg-primary/10 hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/25 min-[960px]:h-11 min-[960px]:w-auto min-[960px]:justify-start min-[960px]:gap-3 min-[960px]:rounded-pill min-[960px]:bg-surface-card min-[960px]:px-3.5 min-[960px]:shadow-sm min-[960px]:ring-1 min-[960px]:ring-border-soft/40"
             aria-haspopup="menu"
             aria-expanded={isProfileMenuOpen}
             aria-label={t('topbar.profileMenu')}
@@ -277,35 +279,6 @@ function AppTopbar({
                   <AppIcon name="log-out" className="h-4 w-4" aria-hidden="true" />
                   {t('topbar.logout')}
                 </button>
-              </div>
-
-              <div className="mt-1 border-t border-border-soft/60 pt-1">
-                <p className="px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-text-muted">
-                  {t('common.language')}
-                </p>
-                <div className="grid gap-1">
-                  {SUPPORTED_LANGUAGES.map((lang) => (
-                    <button
-                      key={lang}
-                      type="button"
-                      className={[
-                        'inline-flex min-h-9 w-full items-center justify-between rounded-lg px-3 text-left text-sm font-medium transition duration-fast',
-                        i18n.language === lang
-                          ? 'bg-primary/12 text-text-primary'
-                          : 'text-text-secondary hover:bg-surface-subtle hover:text-text-primary',
-                      ].join(' ')}
-                      onClick={() => {
-                        void i18n.changeLanguage(lang);
-                        setIsProfileMenuOpen(false);
-                      }}
-                    >
-                      <span>{t(`common.languages.${lang}`)}</span>
-                      {i18n.language === lang ? (
-                        <span className="inline-flex h-2 w-2 rounded-full bg-primary" />
-                      ) : null}
-                    </button>
-                  ))}
-                </div>
               </div>
             </div>
           ) : null}

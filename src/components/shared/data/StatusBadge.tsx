@@ -1,4 +1,4 @@
-type StatusBadgeTone = 'success' | 'warning' | 'danger' | 'info' | 'neutral';
+type StatusBadgeTone = 'success' | 'warning' | 'danger' | 'info' | 'neutral' | 'accent';
 
 interface StatusBadgeProps {
   status: string;
@@ -17,6 +17,7 @@ const BADGE_TONE_CLASS_NAMES: Record<StatusBadgeTone, string> = {
   danger: 'status-badge--danger bg-danger-bg text-danger',
   info: 'status-badge--info bg-info-bg text-info',
   neutral: 'status-badge--neutral bg-neutral-bg text-neutral',
+  accent: 'status-badge--accent bg-primary/14 text-text-accent',
 };
 
 const SUCCESS_STATUSES = new Set([

@@ -29,7 +29,10 @@ export interface Conversation {
   is_operator_active: boolean;
   last_message_at: TimestampString | null;
   state: ConversationState;
+  state_data?: Record<string, unknown> | null;
   last_message: string | null;
+  last_message_payload?: ChatMessage | null;
+  unread_count?: number;
   created_at: TimestampString;
   updated_at: TimestampString;
 }
@@ -49,8 +52,8 @@ export interface ChatMessage {
 }
 
 export interface SessionListParams {
-  page: number;
-  pageSize: number;
+  page?: number;
+  pageSize?: number;
   search?: string;
   channel?: ChatChannel;
   assigned_operator?: EntityId;
@@ -61,8 +64,8 @@ export interface SessionListParams {
 }
 
 export interface MessageListParams {
-  page: number;
-  pageSize: number;
+  page?: number;
+  pageSize?: number;
   session?: EntityId;
   sender_type?: MessageSenderType;
   direction?: MessageDirection;

@@ -9,7 +9,14 @@ export interface ServiceDataSourceConfig {
 
 export const SERVICE_DATA_SOURCE_CONFIG: ServiceDataSourceConfig = {
   defaultMode: 'mock',
-  overrides: {},
+  overrides: {
+    dashboard: 'api',
+    leads: 'api',
+    customers: 'api',
+    products: 'api',
+    conversations: 'api',
+    notifications: 'api',
+  },
 };
 
 export function resolveDataSourceMode(module: ServiceModuleKey): DataSourceMode {

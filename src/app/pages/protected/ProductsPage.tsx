@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { FiEdit2, FiTrash2 } from 'react-icons/fi';
+import { FiEdit2, FiImage, FiTrash2 } from 'react-icons/fi';
 import { useTranslation } from 'react-i18next';
 import { DEFAULT_CURRENCY_CODE, formatCurrencyAmount } from '../../../constants';
 import {
@@ -54,10 +54,10 @@ const DEFAULT_PAGINATION_META: PaginationMeta = {
 };
 
 const tablePrimaryTextClassName =
-  'block text-sm font-semibold leading-[1.35] text-text-primary [overflow-wrap:anywhere]';
+  'block max-w-[140px] truncate text-sm font-semibold leading-[1.35] text-text-primary min-[640px]:max-w-[220px]';
 
 const tableSecondaryTextClassName =
-  'block text-[12px] leading-[1.45] text-text-secondary [overflow-wrap:anywhere]';
+  'block max-w-[140px] truncate text-[12px] leading-[1.45] text-text-secondary min-[640px]:max-w-[220px]';
 
 const labelClassName =
   'text-[11px] font-semibold uppercase tracking-[0.12em] text-text-muted';
@@ -259,21 +259,50 @@ function ProductsPage() {
     setProductToDelete(product);
   }
 
-  async function handleSaveProduct(payload: ProductMutationInput) {
+  async function handleSaveProduct(
+    payload: ProductMutationInput,
+    options: {
+      newImages: File[];
+      deletedImageIds: string[];
+    },
+  ) {
     setIsSaving(true);
     setFormErrorMessage(null);
 
     try {
+      let targetProductId: string;
+
       if (formMode === 'create') {
-        await services.products.create(payload);
+        const created = await services.products.createProduct(payload);
+        targetProductId = created.id;
       } else {
         const editId = editingProduct?.id;
         if (!editId) {
           throw new Error(t('products.form.saveError'));
         }
 
-        const updated = await services.products.update(editId, payload);
+        const updated = await services.products.updateProduct(editId, payload);
         if (!updated) {
+          throw new Error(t('products.form.saveError'));
+        }
+
+        targetProductId = editId;
+
+        if (options.deletedImageIds.length) {
+          await Promise.all(
+            options.deletedImageIds.map((imageId) =>
+              services.products.deleteProductImage(editId, imageId),
+            ),
+          );
+        }
+      }
+
+      if (options.newImages.length) {
+        const uploaded = await services.products.uploadProductImages(
+          targetProductId,
+          options.newImages,
+        );
+        if (!uploaded) {
           throw new Error(t('products.form.saveError'));
         }
       }
@@ -322,11 +351,25 @@ function ProductsPage() {
         key: 'product',
         label: t('products.columns.product'),
         render: (product) => (
-          <div className="grid gap-0.5">
-            <span className={tablePrimaryTextClassName}>{product.name}</span>
-            <span className={tableSecondaryTextClassName}>
-              {product.description || t('products.noDescription')}
-            </span>
+          <div className="flex items-center gap-2.5">
+            {product.images[0]?.imageUrl || product.imageUrl ? (
+              <img
+                src={product.images[0]?.imageUrl ?? product.imageUrl}
+                alt={product.name}
+                className="h-10 w-10 shrink-0 rounded-md object-cover ring-1 ring-border-soft/45"
+                loading="lazy"
+              />
+            ) : (
+              <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-surface-subtle text-text-muted ring-1 ring-border-soft/45">
+                <FiImage className="h-4 w-4" />
+              </span>
+            )}
+            <div className="grid gap-0.5">
+              <span className={tablePrimaryTextClassName}>{product.name}</span>
+              <span className={tableSecondaryTextClassName}>
+                {product.description || t('products.noDescription')}
+              </span>
+            </div>
           </div>
         ),
       },
@@ -586,6 +629,7 @@ function ProductsPage() {
         <ProductDetailPanel
           productId={selectedProductId}
           onClose={() => setSelectedProductId(null)}
+          onProductChanged={() => setReloadCursor((current) => current + 1)}
           onEdit={(product) => {
             openEditForm(product);
             setSelectedProductId(null);
@@ -611,7 +655,9 @@ function ProductsPage() {
               setFormErrorMessage(null);
             }
           }}
-          onSubmit={handleSaveProduct}
+          onSubmit={(payload, options) => {
+            void handleSaveProduct(payload, options);
+          }}
         />
       ) : null}
 

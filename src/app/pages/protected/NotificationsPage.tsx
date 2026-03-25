@@ -22,7 +22,6 @@ import type {
   AppNotification,
   EntityId,
   NotificationChannel,
-  NotificationListParams,
   PaginationMeta,
   SelectOption,
 } from '../../../types/domain';
@@ -54,16 +53,6 @@ function toBooleanReadFilter(value: ReadFilter): boolean | undefined {
   }
 
   return undefined;
-}
-
-function parseOrdering(ordering: NotificationOrdering): Pick<
-  NotificationListParams,
-  'sortBy' | 'sortDirection'
-> {
-  return {
-    sortBy: ordering.replace('-', ''),
-    sortDirection: ordering.startsWith('-') ? 'desc' : 'asc',
-  };
 }
 
 function NotificationsPage() {
@@ -105,7 +94,6 @@ function NotificationsPage() {
           channel: channelFilter === 'all' ? undefined : channelFilter,
           is_read: toBooleanReadFilter(readFilter),
           ordering,
-          ...parseOrdering(ordering),
         });
 
         if (!isActive) {
