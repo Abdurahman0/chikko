@@ -210,7 +210,7 @@ function UserDetailPanel({
               </h2>
               {!isLoading && user ? (
                 <p className="mt-1 text-sm text-text-secondary [overflow-wrap:anywhere]">
-                  {user.email}
+                  {user.email || t('common.na')}
                 </p>
               ) : null}
             </div>

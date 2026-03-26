@@ -254,7 +254,7 @@ function AppTopbar({
                   {currentUser?.fullName ?? t('common.notAvailable')}
                 </p>
                 <p className="m-0 mt-0.5 text-[12px] text-text-muted">
-                  {currentUser?.email ?? t('topbar.noEmail')}
+                  {currentUser?.role ?? t('topbar.noRole')}
                 </p>
               </div>
 

@@ -328,7 +328,7 @@ function UsersPage() {
         render: (user) => (
           <div className="grid gap-0.5">
             <span className={tablePrimaryTextClassName}>{user.full_name}</span>
-            <span className={tableSecondaryTextClassName}>{user.email}</span>
+            <span className={tableSecondaryTextClassName}>{user.email || t('common.na')}</span>
           </div>
         ),
       },
