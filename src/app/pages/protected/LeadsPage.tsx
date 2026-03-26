@@ -20,6 +20,7 @@ import {
 import LeadDeleteDialog from '../../../features/leads/components/LeadDeleteDialog';
 import LeadDetailPanel from '../../../features/leads/components/LeadDetailPanel';
 import LeadFormPanel from '../../../features/leads/components/LeadFormPanel';
+import { formatLocalizedDate } from '../../../i18n/date-format';
 import { getChannelLabel, getLeadStatusLabel } from '../../../i18n/labels';
 import { services } from '../../../services';
 import { useAuth } from '../../../auth';
@@ -54,8 +55,6 @@ const SOURCE_VALUES: readonly LeadSource[] = [
   'telegram',
   'instagram',
   'manual',
-  'website',
-  'web',
 ];
 
 const DEFAULT_PAGINATION_META: PaginationMeta = {
@@ -94,13 +93,20 @@ function formatDate(
   locale: string,
   fallback: string,
 ): string {
-  if (!timestamp) {
-    return fallback;
+  return formatLocalizedDate(timestamp, locale, {
+    locale,
+    withYear: true,
+    shortMonth: true,
+    fallback,
+  });
+}
+
+function normalizeLeadSource(source: LeadSource): LeadSource {
+  if (source === 'website' || source === 'web') {
+    return 'manual';
   }
 
-  return new Intl.DateTimeFormat(locale, {
-    dateStyle: 'medium',
-  }).format(new Date(timestamp));
+  return source;
 }
 
 function formatRelativeTime(
@@ -135,17 +141,13 @@ function formatRelativeTime(
 }
 
 function channelAbbreviation(source: LeadSource): string {
-  switch (source) {
+  switch (normalizeLeadSource(source)) {
     case 'instagram':
       return 'IG';
     case 'telegram':
       return 'TG';
     case 'manual':
       return 'MN';
-    case 'website':
-      return 'WEB';
-    case 'web':
-      return 'WB';
     default:
       return 'OTR';
   }
@@ -274,7 +276,6 @@ function LeadsPage() {
         services.users.listUsers({
           page: 1,
           pageSize: SERVICE_FETCH_SIZE,
-          role: 'operator',
           ordering: 'full_name',
         }),
         services.leads.listLeads({
@@ -393,6 +394,58 @@ function LeadsPage() {
 
         setLeads(result.items);
         setPaginationMeta(result.meta);
+
+        const unresolvedOperatorIds = Array.from(
+          new Set(
+            result.items
+              .map((lead) => lead.assignedOperator)
+              .filter(
+                (assignedOperator): assignedOperator is NonNullable<Lead['assignedOperator']> =>
+                  Boolean(
+                    assignedOperator?.id &&
+                      (!assignedOperator.fullName || isUuidLike(assignedOperator.fullName)),
+                  ),
+              )
+              .map((assignedOperator) => assignedOperator.id),
+          ),
+        );
+
+        if (unresolvedOperatorIds.length > 0) {
+          void (async () => {
+            const resolvedEntries = await Promise.all(
+              unresolvedOperatorIds.map(async (operatorId) => {
+                try {
+                  const user = await services.users.getUserById(operatorId);
+                  return [operatorId, user?.full_name ?? null] as const;
+                } catch {
+                  return [operatorId, null] as const;
+                }
+              }),
+            );
+
+            if (!isActive) {
+              return;
+            }
+
+            setOperatorNameById((current) => {
+              const next = new Map(current);
+              let changed = false;
+
+              for (const [operatorId, operatorName] of resolvedEntries) {
+                if (!operatorName || isUuidLike(operatorName)) {
+                  continue;
+                }
+
+                if (next.get(operatorId) !== operatorName) {
+                  next.set(operatorId, operatorName);
+                  changed = true;
+                }
+              }
+
+              return changed ? next : current;
+            });
+          })();
+        }
       } catch {
         if (!isActive) {
           return;
@@ -564,28 +617,29 @@ function LeadsPage() {
             <span className={tablePrimaryTextClassName}>
               {lead.contact.phone ?? t('leads.noPhone')}
             </span>
-            <span className={tableSecondaryTextClassName}>
-              {lead.contact.email ?? t('leads.noEmail')}
-            </span>
           </div>
         ),
       },
       {
         key: 'source',
         label: t('leads.source'),
-        render: (lead) => (
-          <div className="grid gap-0.5">
-            <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-text-primary">
-              <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-md bg-info-bg px-1 text-[10px] font-semibold text-info">
-                {channelAbbreviation(lead.source)}
+        render: (lead) => {
+          const normalizedSource = normalizeLeadSource(lead.source);
+
+          return (
+            <div className="grid gap-0.5">
+              <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-text-primary">
+                <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-md bg-info-bg px-1 text-[10px] font-semibold text-info">
+                  {channelAbbreviation(normalizedSource)}
+                </span>
+                {getChannelLabel(t, normalizedSource)}
               </span>
-              {getChannelLabel(t, lead.source)}
-            </span>
-            <span className={tableSecondaryTextClassName}>
-              {lead.dmSent ? t('leads.dmSent') : t('leads.awaitingOutreach')}
-            </span>
-          </div>
-        ),
+              <span className={tableSecondaryTextClassName}>
+                {lead.dmSent ? t('leads.dmSent') : t('leads.awaitingOutreach')}
+              </span>
+            </div>
+          );
+        },
       },
       {
         key: 'status',

@@ -3,6 +3,7 @@ import type { Payment } from '../../../types/domain';
 
 interface PaymentDeleteDialogProps {
   payment: Payment;
+  paymentLabel?: string;
   isDeleting: boolean;
   onCancel: () => void;
   onConfirm: () => void;
@@ -10,6 +11,7 @@ interface PaymentDeleteDialogProps {
 
 function PaymentDeleteDialog({
   payment,
+  paymentLabel,
   isDeleting,
   onCancel,
   onConfirm,
@@ -36,7 +38,9 @@ function PaymentDeleteDialog({
             {t('payments.deleteDialog.eyebrow')}
           </p>
           <h2 className="m-0 font-display text-[1.24rem] font-extrabold leading-[1.1] tracking-[-0.02em] text-text-primary">
-            {t('payments.deleteDialog.title', { id: payment.id })}
+            {t('payments.deleteDialog.title', {
+              id: paymentLabel ?? payment.submitted_by_name ?? t('payments.title'),
+            })}
           </h2>
           <p className="m-0 text-sm leading-6 text-text-secondary">
             {t('payments.deleteDialog.description')}

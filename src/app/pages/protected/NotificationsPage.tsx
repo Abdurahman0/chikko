@@ -151,8 +151,8 @@ function NotificationsPage() {
 
   const orderingOptions = useMemo<SelectOption[]>(
     () => [
-      { value: '-created_at', label: 'Yaratilgan sana (yangi)' },
-      { value: 'created_at', label: 'Yaratilgan sana (eski)' },
+      { value: '-created_at', label: "Qo'shilgan sana (yangi)" },
+      { value: 'created_at', label: "Qo'shilgan sana (eski)" },
       { value: '-updated_at', label: 'Yangilangan sana (yangi)' },
       { value: 'updated_at', label: 'Yangilangan sana (eski)' },
     ],

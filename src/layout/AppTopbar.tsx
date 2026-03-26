@@ -150,7 +150,6 @@ function AppTopbar({
   function handleLogout() {
     setIsProfileMenuOpen(false);
     logout();
-    navigate(routePaths.login, { replace: true });
   }
 
   return (

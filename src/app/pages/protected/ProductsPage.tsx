@@ -23,6 +23,7 @@ import {
 import ProductDeleteDialog from '../../../features/products/components/ProductDeleteDialog';
 import ProductDetailPanel from '../../../features/products/components/ProductDetailPanel';
 import ProductFormPanel from '../../../features/products/components/ProductFormPanel';
+import { formatLocalizedDate } from '../../../i18n/date-format';
 import { services } from '../../../services';
 import type {
   PaginationMeta,
@@ -420,9 +421,12 @@ function ProductsPage() {
         render: (product) => (
           <span className={tablePrimaryTextClassName}>
             {product.updatedAt
-              ? new Intl.DateTimeFormat(locale, { dateStyle: 'medium' }).format(
-                  new Date(product.updatedAt),
-                )
+              ? formatLocalizedDate(product.updatedAt, i18n.language, {
+                  locale,
+                  withYear: true,
+                  shortMonth: true,
+                  fallback: t('common.na'),
+                })
               : t('common.na')}
           </span>
         ),
@@ -459,7 +463,7 @@ function ProductsPage() {
         ),
       },
     ];
-  }, [locale, t]);
+  }, [i18n.language, locale, t]);
 
   const activeFilterCount =
     Number(currencyFilter !== ALL_CURRENCIES_VALUE) +

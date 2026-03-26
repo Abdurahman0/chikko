@@ -1,7 +1,14 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
-import { FiSend, FiTrash2, FiUser } from 'react-icons/fi';
+import { FiPause, FiPlay, FiSend, FiTrash2, FiUser } from 'react-icons/fi';
+import { useTranslation } from 'react-i18next';
+import { ru, uz } from 'date-fns/locale';
 import chatBackground from '../../../assets/chat-background.svg';
+import { FilterSelect } from '../../../components/shared/data';
+import AppIcon from '../../../components/shared/icons/AppIcon';
 import { EmptyState, LoadingState } from '../../../components/shared/page';
+import { Calendar } from '../../../components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '../../../components/ui/popover';
+import { formatLocalizedDate, formatUzMonthYear } from '../../../i18n/date-format';
 import ChatUserProfilePanel from './ChatUserProfilePanel';
 import type { ChatMessage, Conversation } from '../../../types/domain';
 
@@ -11,8 +18,11 @@ interface ChatWorkspacePanelProps {
   isLoading: boolean;
   isSending: boolean;
   isDeletingSession?: boolean;
+  isUpdatingAIState?: boolean;
   onSendMessage: (content: string) => Promise<void>;
   onRequestDeleteSession?: (session: Conversation) => void;
+  onPauseAI?: (session: Conversation, pausedUntilIso: string) => void;
+  onResumeAI?: (session: Conversation) => void;
 }
 
 const senderLabelByValue: Record<ChatMessage['sender_type'], string> = {
@@ -21,6 +31,16 @@ const senderLabelByValue: Record<ChatMessage['sender_type'], string> = {
   operator: 'Operator',
   system: 'Tizim',
 };
+
+const PAUSE_HOUR_OPTIONS = Array.from({ length: 24 }, (_, index) => {
+  const value = String(index).padStart(2, '0');
+  return { value, label: value };
+});
+
+const PAUSE_MINUTE_OPTIONS = Array.from({ length: 60 }, (_, index) => {
+  const value = String(index).padStart(2, '0');
+  return { value, label: value };
+});
 
 function formatDateTime(value: string | null): string {
   if (!value) {
@@ -116,17 +136,87 @@ function getSessionPersonType(session: Conversation): string {
   return 'Kontakt';
 }
 
+function isAIPaused(session: Conversation): boolean {
+  if (!session.ai_paused_until) {
+    return false;
+  }
+
+  return new Date(session.ai_paused_until).getTime() > Date.now();
+}
+
+function toTimeInputValue(value: Date): string {
+  const hours = String(value.getHours()).padStart(2, '0');
+  const minutes = String(value.getMinutes()).padStart(2, '0');
+  return `${hours}:${minutes}`;
+}
+
+function createPauseDefaults(): { date: Date; time: string } {
+  const target = new Date(Date.now() + 30 * 60 * 1000);
+  return {
+    date: target,
+    time: toTimeInputValue(target),
+  };
+}
+
+function toPauseIsoOrNull(date: Date | undefined, timeValue: string): string | null {
+  if (!date || !timeValue) {
+    return null;
+  }
+
+  const timeMatch = /^([01]\d|2[0-3]):([0-5]\d)$/.exec(timeValue);
+  if (!timeMatch) {
+    return null;
+  }
+
+  const hours = Number(timeMatch[1]);
+  const minutes = Number(timeMatch[2]);
+  if (!Number.isFinite(hours) || !Number.isFinite(minutes)) {
+    return null;
+  }
+
+  const parsed = new Date(date);
+  parsed.setHours(hours, minutes, 0, 0);
+  if (Number.isNaN(parsed.getTime())) {
+    return null;
+  }
+
+  return parsed.toISOString();
+}
+
+function splitTimeValue(value: string): { hour: string; minute: string } {
+  const match = /^([01]\d|2[0-3]):([0-5]\d)$/.exec(value);
+  if (!match) {
+    return { hour: '00', minute: '00' };
+  }
+
+  return {
+    hour: match[1],
+    minute: match[2],
+  };
+}
+
 function ChatWorkspacePanel({
   session,
   messages,
   isLoading,
   isSending,
   isDeletingSession = false,
+  isUpdatingAIState = false,
   onSendMessage,
   onRequestDeleteSession,
+  onPauseAI,
+  onResumeAI,
 }: ChatWorkspacePanelProps) {
+  const { i18n } = useTranslation();
+  const locale = i18n.language === 'ru' ? 'ru-RU' : 'uz-UZ';
+  const calendarLocale = i18n.language === 'ru' ? ru : uz;
   const [draftMessage, setDraftMessage] = useState('');
   const [isProfilePanelOpen, setIsProfilePanelOpen] = useState(false);
+  const [isPauseEditorOpen, setIsPauseEditorOpen] = useState(false);
+  const [isPauseCalendarOpen, setIsPauseCalendarOpen] = useState(false);
+  const [pauseDate, setPauseDate] = useState<Date | undefined>(undefined);
+  const [pauseTimeInput, setPauseTimeInput] = useState('');
+  const [pauseInputError, setPauseInputError] = useState<string | null>(null);
   const messagesContainerRef = useRef<HTMLDivElement | null>(null);
   const lastScrollSignatureRef = useRef('');
 
@@ -136,7 +226,13 @@ function ChatWorkspacePanel({
   );
 
   useEffect(() => {
+    const defaults = createPauseDefaults();
     setIsProfilePanelOpen(false);
+    setIsPauseEditorOpen(false);
+    setIsPauseCalendarOpen(false);
+    setPauseInputError(null);
+    setPauseDate(defaults.date);
+    setPauseTimeInput(defaults.time);
     lastScrollSignatureRef.current = '';
   }, [session?.id]);
 
@@ -188,42 +284,243 @@ function ChatWorkspacePanel({
     );
   }
 
-  const sessionTitle = getSessionTitle(session);
+  const activeSession = session;
+  const sessionTitle = getSessionTitle(activeSession);
+  const aiPaused = isAIPaused(activeSession);
+  const pauseDateLabel = pauseDate
+    ? formatLocalizedDate(pauseDate, i18n.language, {
+        locale,
+        withYear: true,
+        shortMonth: true,
+        fallback: '',
+      })
+    : "Sana tanlang";
+  const pauseTimeParts = splitTimeValue(pauseTimeInput);
+
+  function handleQuickPause(minutes: number) {
+    const target = new Date(Date.now() + minutes * 60 * 1000);
+    setPauseDate(target);
+    setPauseTimeInput(toTimeInputValue(target));
+    setPauseInputError(null);
+  }
+
+  function handlePauseSubmit() {
+    if (!onPauseAI) {
+      return;
+    }
+
+    const pauseIso = toPauseIsoOrNull(pauseDate, pauseTimeInput);
+    if (!pauseIso) {
+      setPauseInputError("To'g'ri vaqt kiriting.");
+      return;
+    }
+
+    if (new Date(pauseIso).getTime() <= Date.now()) {
+      setPauseInputError("Vaqt hozirgi vaqtdan keyin bo'lishi kerak.");
+      return;
+    }
+
+    setPauseInputError(null);
+    onPauseAI(activeSession, pauseIso);
+    setIsPauseEditorOpen(false);
+  }
+
   return (
-    <div className="flex h-full min-h-0 flex-col gap-3 bg-white">
-      <div className="flex w-full items-start justify-between gap-3 rounded-xl bg-background-subtle/80 p-3.5 text-left ring-1 ring-border-soft/50">
-        <button
-          type="button"
-          className="flex min-w-0 flex-1 items-center gap-3 rounded-lg border-0 bg-transparent p-0 text-left outline-none transition duration-fast cursor-pointer hover:opacity-95 focus-visible:ring-2 focus-visible:ring-primary/35"
-          onClick={() => setIsProfilePanelOpen(true)}
-          title="Mijoz profilini ochish"
-        >
-            <span className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-blue-700 text-[16px] font-bold text-white shadow-[0_12px_28px_-20px_rgba(59,130,246,0.85)]">
-              {getInitial(sessionTitle)}
-            </span>
-            <div className="min-w-0">
-              <h3 className="m-0 truncate text-[1rem] font-semibold text-text-primary">
-                {sessionTitle}
-              </h3>
-              <p className="m-0 mt-0.5 text-sm font-medium text-text-secondary">
-                {getSessionPersonType(session)}
-              </p>
-            </div>
-        </button>
-        {onRequestDeleteSession ? (
+    <div className="flex h-full min-h-0 flex-col gap-3 bg-background-default text-text-primary">
+      <div className="w-full rounded-xl bg-background-subtle/80 p-3.5 text-left ring-1 ring-border-soft/50">
+        <div className="flex items-start justify-between gap-3">
           <button
             type="button"
-            className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-danger-bg text-danger transition duration-fast hover:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-danger/35 disabled:cursor-not-allowed disabled:opacity-60"
-            onClick={(event) => {
-              event.stopPropagation();
-              onRequestDeleteSession(session);
-            }}
-            disabled={isDeletingSession}
-            aria-label="Sessiyani o'chirish"
-            title="Sessiyani o'chirish"
+            className="flex min-w-0 flex-1 items-center gap-3 rounded-lg border-0 bg-transparent p-0 text-left outline-none transition duration-fast cursor-pointer hover:opacity-95 focus-visible:ring-2 focus-visible:ring-primary/35"
+            onClick={() => setIsProfilePanelOpen(true)}
+            title="Mijoz profilini ochish"
           >
-            <FiTrash2 className="h-4 w-4" />
+              <span className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-blue-700 text-[16px] font-bold text-white shadow-[0_12px_28px_-20px_rgba(59,130,246,0.85)]">
+                {getInitial(sessionTitle)}
+              </span>
+              <div className="min-w-0">
+                <h3 className="m-0 truncate text-[1rem] font-semibold text-text-primary">
+                  {sessionTitle}
+                </h3>
+                <p className="m-0 mt-0.5 text-sm font-medium text-text-secondary">
+                  {getSessionPersonType(session)}
+                </p>
+              </div>
           </button>
+          <div className="flex shrink-0 items-center gap-2">
+            {aiPaused ? (
+              <button
+                type="button"
+                className="inline-flex h-10 items-center gap-1.5 rounded-full bg-success-bg px-3 text-success transition duration-fast hover:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-success/30 disabled:cursor-not-allowed disabled:opacity-60"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onResumeAI?.(activeSession);
+                }}
+                disabled={isUpdatingAIState}
+                aria-label="AI ni davom ettirish"
+                title="AI ni davom ettirish"
+              >
+                <FiPlay className="h-4 w-4" />
+                <span className="text-xs font-semibold uppercase tracking-[0.08em]">
+                  {isUpdatingAIState ? "..." : "AI On"}
+                </span>
+              </button>
+            ) : (
+              <button
+                type="button"
+                className="inline-flex h-10 items-center gap-1.5 rounded-full bg-primary/15 px-3 text-primary transition duration-fast hover:bg-primary/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 disabled:cursor-not-allowed disabled:opacity-60"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  setIsPauseEditorOpen((current) => !current);
+                }}
+                disabled={isUpdatingAIState}
+                aria-label="AI ni to'xtatish vaqtini tanlash"
+                title="AI ni to'xtatish vaqtini tanlash"
+              >
+                <FiPause className="h-4 w-4" />
+                <span className="text-xs font-semibold uppercase tracking-[0.08em]">
+                  {isUpdatingAIState ? "..." : "AI Off"}
+                </span>
+              </button>
+            )}
+
+          {onRequestDeleteSession ? (
+            <button
+              type="button"
+              className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-danger-bg text-danger transition duration-fast hover:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-danger/35 disabled:cursor-not-allowed disabled:opacity-60"
+              onClick={(event) => {
+                event.stopPropagation();
+                onRequestDeleteSession(activeSession);
+              }}
+              disabled={isDeletingSession}
+              aria-label="Sessiyani o'chirish"
+              title="Sessiyani o'chirish"
+            >
+              <FiTrash2 className="h-4 w-4" />
+            </button>
+          ) : null}
+          </div>
+        </div>
+
+        {aiPaused && session.ai_paused_until ? (
+          <p className="m-0 mt-2 text-[12px] font-medium text-warning">
+            AI to'xtatilgan: {formatDateTime(activeSession.ai_paused_until)}
+          </p>
+        ) : null}
+
+        {!aiPaused && isPauseEditorOpen ? (
+          <div className="mt-2 grid gap-2 rounded-xl bg-surface-card/90 p-3 ring-1 ring-border-soft/55">
+            <p className="m-0 text-[11px] font-semibold uppercase tracking-[0.1em] text-text-muted">
+              AI ni qachongacha to'xtatish
+            </p>
+            <div className="grid gap-2 min-[520px]:grid-cols-[minmax(0,1fr)_196px]">
+              <Popover open={isPauseCalendarOpen} onOpenChange={setIsPauseCalendarOpen}>
+                <PopoverTrigger asChild>
+                  <button
+                    type="button"
+                    className="inline-flex h-10 w-full items-center justify-between gap-2 rounded-pill border border-border-soft/70 bg-gradient-to-b from-surface-card to-surface-subtle/80 px-3.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-text-secondary shadow-[0_15px_26px_-22px_rgba(37,99,235,0.6)] transition duration-fast hover:border-primary/45 hover:text-text-primary"
+                    aria-label="Sana tanlash"
+                  >
+                    <span className="inline-flex items-center gap-2 truncate">
+                      <AppIcon
+                        name="calendar"
+                        className="h-3.5 w-3.5 text-primary"
+                        aria-hidden="true"
+                      />
+                      <span className="truncate">{pauseDateLabel}</span>
+                    </span>
+                    <AppIcon
+                      name="chevron-down"
+                      className={[
+                        'h-3.5 w-3.5 shrink-0 transition duration-fast',
+                        isPauseCalendarOpen ? 'rotate-180 text-primary' : 'text-text-muted',
+                      ].join(' ')}
+                      aria-hidden="true"
+                    />
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-3" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={pauseDate}
+                    defaultMonth={pauseDate ?? new Date()}
+                    locale={calendarLocale}
+                    formatters={
+                      i18n.language === 'uz'
+                        ? {
+                            formatCaption: (date) => formatUzMonthYear(date, false),
+                          }
+                        : undefined
+                    }
+                    onSelect={(value) => {
+                      setPauseDate(value ?? undefined);
+                      setPauseInputError(null);
+                      setIsPauseCalendarOpen(false);
+                    }}
+                  />
+                </PopoverContent>
+              </Popover>
+
+              <div className="grid grid-cols-2 gap-2 rounded-pill bg-surface-subtle/70 p-1 ring-1 ring-border-soft/45">
+                <FilterSelect
+                  value={pauseTimeParts.hour}
+                  options={PAUSE_HOUR_OPTIONS}
+                  onChange={(nextHour) => {
+                    setPauseTimeInput(`${nextHour}:${pauseTimeParts.minute}`);
+                    setPauseInputError(null);
+                  }}
+                  disabled={isUpdatingAIState}
+                  size="compact"
+                />
+                <FilterSelect
+                  value={pauseTimeParts.minute}
+                  options={PAUSE_MINUTE_OPTIONS}
+                  onChange={(nextMinute) => {
+                    setPauseTimeInput(`${pauseTimeParts.hour}:${nextMinute}`);
+                    setPauseInputError(null);
+                  }}
+                  disabled={isUpdatingAIState}
+                  size="compact"
+                />
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {[15, 30, 60, 120].map((minutes) => (
+                <button
+                  key={minutes}
+                  type="button"
+                  className="inline-flex min-h-7 items-center rounded-pill bg-surface-subtle px-2.5 text-[11px] font-semibold text-text-secondary ring-1 ring-border-soft/45 transition duration-fast hover:bg-surface-muted hover:text-text-primary"
+                  onClick={() => handleQuickPause(minutes)}
+                >
+                  {minutes} min
+                </button>
+              ))}
+            </div>
+            {pauseInputError ? (
+              <p className="m-0 text-[12px] font-medium text-danger">{pauseInputError}</p>
+            ) : null}
+            <div className="flex items-center justify-end gap-2">
+              <button
+                type="button"
+                className="inline-flex min-h-9 items-center rounded-lg bg-surface-subtle px-3 text-xs font-semibold text-text-secondary transition duration-fast hover:bg-surface-muted"
+                onClick={() => {
+                  setIsPauseEditorOpen(false);
+                  setIsPauseCalendarOpen(false);
+                  setPauseInputError(null);
+                }}
+              >
+                Bekor qilish
+              </button>
+              <button
+                type="button"
+                className="inline-flex min-h-9 items-center rounded-lg bg-primary px-3 text-xs font-semibold text-primary-foreground transition duration-fast hover:bg-primary-accent disabled:cursor-not-allowed disabled:opacity-60"
+                onClick={handlePauseSubmit}
+                disabled={isUpdatingAIState}
+              >
+                {isUpdatingAIState ? "Saqlanmoqda..." : "AI ni to'xtatish"}
+              </button>
+            </div>
+          </div>
         ) : null}
       </div>
 
@@ -237,7 +534,10 @@ function ChatWorkspacePanel({
           backgroundRepeat: 'no-repeat',
         }}
       >
-        <div className="absolute inset-0 bg-background-default/42" aria-hidden="true" />
+        <div
+          className="absolute inset-0 bg-background-default/56 dark:bg-background-default/78"
+          aria-hidden="true"
+        />
         <div className="relative grid gap-3 p-3">
           {isLoading ? (
             <LoadingState
@@ -258,7 +558,7 @@ function ChatWorkspacePanel({
                     ].join(' ')}
                   >
                     {!outgoing ? (
-                      <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-surface-card/90 text-text-secondary ring-1 ring-border-soft/55">
+                      <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-surface-card/92 text-text-secondary ring-1 ring-border-soft/55 dark:bg-surface-subtle/92">
                         <FiUser className="h-4 w-4" />
                       </span>
                     ) : null}
@@ -268,7 +568,7 @@ function ChatWorkspacePanel({
                         'max-w-[82%] rounded-2xl px-4 py-3 shadow-sm ring-1',
                         outgoing
                           ? 'bg-[linear-gradient(160deg,rgb(79_70_229),rgb(37_99_235))] text-white ring-primary/35 shadow-[0_20px_40px_-28px_rgba(37,99,235,0.95)]'
-                          : 'bg-surface-card/94 text-text-primary ring-border-soft/60',
+                          : 'bg-surface-card/95 text-text-primary ring-border-soft/60 dark:bg-surface-subtle/92',
                       ].join(' ')}
                     >
                       <p className="m-0 text-[11px] font-semibold uppercase tracking-[0.08em] opacity-80">
@@ -299,7 +599,7 @@ function ChatWorkspacePanel({
         </div>
       </div>
 
-      <div className="rounded-xl bg-background-subtle/80 p-3 ring-1 ring-border-soft/55">
+      <div className="rounded-xl bg-background-subtle/80 p-3 ring-1 ring-border-soft/55 dark:bg-surface-card/92">
         <label className="sr-only" htmlFor="chat-message-input">
           Xabar matni
         </label>
@@ -309,7 +609,7 @@ function ChatWorkspacePanel({
             value={draftMessage}
             onChange={(event) => setDraftMessage(event.target.value)}
             onKeyDown={handleComposerKeyDown}
-            className="min-h-[56px] max-h-[132px] w-full flex-1 resize-y rounded-xl border-0 bg-surface-card/85 px-3 py-3 text-sm text-text-primary outline-none transition duration-fast placeholder:text-text-muted focus-visible:ring-2 focus-visible:ring-primary/35"
+            className="min-h-[56px] max-h-[132px] w-full flex-1 resize-y rounded-xl border-0 bg-surface-card/85 px-3 py-3 text-sm text-text-primary outline-none transition duration-fast placeholder:text-text-muted focus-visible:ring-2 focus-visible:ring-primary/35 dark:bg-background-subtle/85"
             placeholder="Xabar yozing..."
             disabled={isSending}
           />
@@ -327,8 +627,8 @@ function ChatWorkspacePanel({
         </div>
       </div>
 
-      <ChatUserProfilePanel
-        session={session}
+        <ChatUserProfilePanel
+        session={activeSession}
         isOpen={isProfilePanelOpen}
         onClose={() => setIsProfilePanelOpen(false)}
       />

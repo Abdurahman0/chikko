@@ -22,6 +22,7 @@ import CustomerDeleteDialog from '../../../features/customers/components/Custome
 import CustomerDetailPanel from '../../../features/customers/components/CustomerDetailPanel';
 import CustomerFormPanel from '../../../features/customers/components/CustomerFormPanel';
 import { useAuth } from '../../../auth';
+import { formatLocalizedDate } from '../../../i18n/date-format';
 import { services } from '../../../services';
 import type {
   Customer,
@@ -121,6 +122,9 @@ function CustomersPage() {
   const [operatorNameById, setOperatorNameById] = useState<Map<string, string>>(
     () => new Map(),
   );
+  const [leadNameById, setLeadNameById] = useState<Map<string, string>>(
+    () => new Map(),
+  );
   const [leadOptions, setLeadOptions] = useState<SelectOption[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
@@ -149,7 +153,6 @@ function CustomersPage() {
         services.users.listUsers({
           page: 1,
           pageSize: SERVICE_FETCH_SIZE,
-          role: 'operator',
           ordering: 'full_name',
         }),
         services.customers.listCustomers({
@@ -178,6 +181,8 @@ function CustomersPage() {
         });
       }
 
+      const leadsById = new Map<string, string>();
+
       if (customerResult.status === 'fulfilled') {
         customerResult.value.items.forEach((customer) => {
           if (!customer.assignedOperator?.id) {
@@ -203,6 +208,12 @@ function CustomersPage() {
       ];
 
       const leadItems = leadsResult.status === 'fulfilled' ? leadsResult.value.items : [];
+      leadItems.forEach((lead: Lead) => {
+        if (lead.fullName && !isUuidLike(lead.fullName)) {
+          leadsById.set(lead.id, lead.fullName);
+        }
+      });
+
       const nextLeadOptions: SelectOption[] = [
         { value: EMPTY_OPTION_VALUE, label: t('customers.form.noLead') },
         ...[...leadItems]
@@ -214,6 +225,7 @@ function CustomersPage() {
       ];
 
       setOperatorNameById(new Map(operatorsById));
+      setLeadNameById(leadsById);
       setOperatorOptions(nextOperatorOptions);
       setLeadOptions(nextLeadOptions);
     }
@@ -225,31 +237,55 @@ function CustomersPage() {
     };
   }, [allOperatorsOption, currentUser, reloadCursor, t]);
 
-  const customersWithOperatorNames = useMemo<Customer[]>(() => {
-    if (operatorNameById.size === 0) {
+  const customersWithResolvedNames = useMemo<Customer[]>(() => {
+    if (operatorNameById.size === 0 && leadNameById.size === 0) {
       return customers;
     }
 
     return customers.map((customer) => {
       const assignedOperator = customer.assignedOperator;
-      if (!assignedOperator?.id) {
-        return customer;
+      const lead = customer.lead;
+
+      let nextAssignedOperator = assignedOperator;
+      let nextLead = lead;
+      let changed = false;
+
+      if (assignedOperator?.id) {
+        const resolvedOperatorName = operatorNameById.get(assignedOperator.id);
+        if (
+          resolvedOperatorName &&
+          resolvedOperatorName !== assignedOperator.fullName
+        ) {
+          nextAssignedOperator = {
+            ...assignedOperator,
+            fullName: resolvedOperatorName,
+          };
+          changed = true;
+        }
       }
 
-      const resolvedName = operatorNameById.get(assignedOperator.id);
-      if (!resolvedName || resolvedName === assignedOperator.fullName) {
+      if (lead?.id) {
+        const resolvedLeadName = leadNameById.get(lead.id);
+        if (resolvedLeadName && resolvedLeadName !== lead.fullName) {
+          nextLead = {
+            ...lead,
+            fullName: resolvedLeadName,
+          };
+          changed = true;
+        }
+      }
+
+      if (!changed) {
         return customer;
       }
 
       return {
         ...customer,
-        assignedOperator: {
-          ...assignedOperator,
-          fullName: resolvedName,
-        },
+        assignedOperator: nextAssignedOperator,
+        lead: nextLead,
       };
     });
-  }, [customers, operatorNameById]);
+  }, [customers, leadNameById, operatorNameById]);
 
   useEffect(() => {
     let isActive = true;
@@ -283,6 +319,110 @@ function CustomersPage() {
 
         setCustomers(result.items);
         setPaginationMeta(result.meta);
+
+        const unresolvedOperatorIds = Array.from(
+          new Set(
+            result.items
+              .map((customer) => customer.assignedOperator)
+              .filter(
+                (
+                  assignedOperator,
+                ): assignedOperator is NonNullable<Customer['assignedOperator']> =>
+                  Boolean(
+                    assignedOperator?.id &&
+                      (!assignedOperator.fullName ||
+                        isUuidLike(assignedOperator.fullName)),
+                  ),
+              )
+              .map((assignedOperator) => assignedOperator.id),
+          ),
+        );
+
+        if (unresolvedOperatorIds.length > 0) {
+          void (async () => {
+            const resolvedEntries = await Promise.all(
+              unresolvedOperatorIds.map(async (operatorId) => {
+                try {
+                  const user = await services.users.getUserById(operatorId);
+                  return [operatorId, user?.full_name ?? null] as const;
+                } catch {
+                  return [operatorId, null] as const;
+                }
+              }),
+            );
+
+            if (!isActive) {
+              return;
+            }
+
+            setOperatorNameById((current) => {
+              const next = new Map(current);
+              let changed = false;
+
+              for (const [operatorId, operatorName] of resolvedEntries) {
+                if (!operatorName || isUuidLike(operatorName)) {
+                  continue;
+                }
+
+                if (next.get(operatorId) !== operatorName) {
+                  next.set(operatorId, operatorName);
+                  changed = true;
+                }
+              }
+
+              return changed ? next : current;
+            });
+          })();
+        }
+
+        const unresolvedLeadIds = Array.from(
+          new Set(
+            result.items
+              .map((customer) => customer.lead)
+              .filter(
+                (lead): lead is NonNullable<Customer['lead']> =>
+                  Boolean(lead?.id && (!lead.fullName || isUuidLike(lead.fullName))),
+              )
+              .map((lead) => lead.id),
+          ),
+        );
+
+        if (unresolvedLeadIds.length > 0) {
+          void (async () => {
+            const resolvedEntries = await Promise.all(
+              unresolvedLeadIds.map(async (leadId) => {
+                try {
+                  const lead = await services.leads.getById(leadId);
+                  return [leadId, lead?.fullName ?? null] as const;
+                } catch {
+                  return [leadId, null] as const;
+                }
+              }),
+            );
+
+            if (!isActive) {
+              return;
+            }
+
+            setLeadNameById((current) => {
+              const next = new Map(current);
+              let changed = false;
+
+              for (const [leadId, leadName] of resolvedEntries) {
+                if (!leadName || isUuidLike(leadName)) {
+                  continue;
+                }
+
+                if (next.get(leadId) !== leadName) {
+                  next.set(leadId, leadName);
+                  changed = true;
+                }
+              }
+
+              return changed ? next : current;
+            });
+          })();
+        }
       } catch {
         if (!isActive) {
           return;
@@ -311,13 +451,13 @@ function CustomersPage() {
       return;
     }
 
-    const isSelectedCustomerVisible = customersWithOperatorNames.some(
+    const isSelectedCustomerVisible = customersWithResolvedNames.some(
       (customer) => customer.id === selectedCustomerId,
     );
     if (!isSelectedCustomerVisible) {
       setSelectedCustomerId(null);
     }
-  }, [customersWithOperatorNames, selectedCustomerId]);
+  }, [customersWithResolvedNames, selectedCustomerId]);
 
   function openCreateForm() {
     setFormMode('create');
@@ -398,7 +538,6 @@ function CustomersPage() {
   }
 
   const columns = useMemo<DataTableColumn<Customer>[]>(() => {
-    const locale = i18n.language === 'ru' ? 'ru-RU' : 'uz-UZ';
     const baseColumns: DataTableColumn<Customer>[] = [
       {
         key: 'customer',
@@ -410,7 +549,11 @@ function CustomersPage() {
             </span>
             <span className={TABLE_SECONDARY_TEXT_CLASS_NAME}>
               {customer.lead
-                ? `${t('customers.leadPrefix')}: ${customer.lead.fullName}`
+                ? `${t('customers.leadPrefix')}: ${
+                    isUuidLike(customer.lead.fullName)
+                      ? t('customers.noLeadLink')
+                      : customer.lead.fullName
+                  }`
                 : t('customers.noLeadLink')}
             </span>
           </div>
@@ -422,15 +565,6 @@ function CustomersPage() {
         render: (customer) => (
           <span className={TABLE_PRIMARY_TEXT_CLASS_NAME}>
             {customer.contact.phone ?? t('customers.noPhone')}
-          </span>
-        ),
-      },
-      {
-        key: 'email',
-        label: t('customers.columns.email'),
-        render: (customer) => (
-          <span className={TABLE_PRIMARY_TEXT_CLASS_NAME}>
-            {customer.contact.email ?? t('customers.noEmail')}
           </span>
         ),
       },
@@ -450,7 +584,10 @@ function CustomersPage() {
         label: t('customers.columns.operator'),
         render: (customer) => (
           <span className={TABLE_PRIMARY_TEXT_CLASS_NAME}>
-            {customer.assignedOperator?.fullName ?? t('common.unassigned')}
+            {customer.assignedOperator?.fullName &&
+            !isUuidLike(customer.assignedOperator.fullName)
+              ? customer.assignedOperator.fullName
+              : t('common.unassigned')}
           </span>
         ),
       },
@@ -459,9 +596,12 @@ function CustomersPage() {
         label: t('customers.columns.updated'),
         render: (customer) => (
           <span className={TABLE_PRIMARY_TEXT_CLASS_NAME}>
-            {new Intl.DateTimeFormat(locale, { dateStyle: 'medium' }).format(
-              new Date(customer.updatedAt),
-            )}
+            {formatLocalizedDate(customer.updatedAt, i18n.language, {
+              locale: i18n.language === 'ru' ? 'ru-RU' : 'uz-UZ',
+              withYear: true,
+              shortMonth: true,
+              fallback: t('common.na'),
+            })}
           </span>
         ),
       },
@@ -649,7 +789,7 @@ function CustomersPage() {
             </div>
 
             <DataTable
-              data={customersWithOperatorNames}
+              data={customersWithResolvedNames}
               columns={columns}
               rowKey="id"
               selectedRowKey={selectedCustomerId}

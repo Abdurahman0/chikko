@@ -8,6 +8,7 @@ interface FilterSelectProps {
   options: SelectOption[];
   onChange: (value: string) => void;
   disabled?: boolean;
+  size?: 'default' | 'compact';
 }
 
 function FilterSelect({
@@ -15,6 +16,7 @@ function FilterSelect({
   options,
   onChange,
   disabled = false,
+  size = 'default',
 }: FilterSelectProps) {
   const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
@@ -86,7 +88,8 @@ function FilterSelect({
       <button
         type="button"
         className={[
-          'inline-flex min-h-[44px] w-full items-center justify-between gap-3 rounded-lg border-0 bg-surface-card px-4 text-left',
+          'inline-flex w-full items-center justify-between gap-3 rounded-lg border-0 bg-surface-card px-4 text-left',
+          size === 'compact' ? 'h-10 min-h-10' : 'min-h-[44px]',
           'text-sm font-medium text-text-primary shadow-sm outline-none transition duration-fast',
           'hover:bg-surface-subtle/90 focus-visible:ring-2 focus-visible:ring-primary/20',
           'disabled:cursor-not-allowed disabled:opacity-60',

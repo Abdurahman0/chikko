@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { FiEdit2, FiTrash2 } from 'react-icons/fi';
 import { FaInstagram, FaTelegramPlane } from 'react-icons/fa';
 import { useTranslation } from 'react-i18next';
@@ -9,6 +9,7 @@ import {
   Pagination,
   SearchInput,
   StatusBadge,
+  Switch,
   type DataTableColumn,
 } from '../../../components/shared/data';
 import AppIcon from '../../../components/shared/icons/AppIcon';
@@ -25,6 +26,7 @@ import IntegrationConfigDeleteDialog from '../../../features/integrations/compon
 import IntegrationConfigDetailPanel from '../../../features/integrations/components/IntegrationConfigDetailPanel';
 import IntegrationConfigFormPanel from '../../../features/integrations/components/IntegrationConfigFormPanel';
 import IntegrationEventDetailPanel from '../../../features/integrations/components/IntegrationEventDetailPanel';
+import { formatLocalizedDate } from '../../../i18n/date-format';
 import {
   getIntegrationPlatformClassName,
   getIntegrationPlatformLabel,
@@ -91,6 +93,25 @@ const labelClassName =
 
 const actionButtonClassName =
   'inline-flex h-8 w-8 items-center justify-center rounded-md bg-surface-card text-text-secondary shadow-sm ring-1 ring-border-soft/40 transition duration-fast hover:bg-surface-subtle hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-60';
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+function shouldEnforceSingleActive(provider: IntegrationProvider): boolean {
+  return provider !== 'openai';
+}
+
+function resolveHumanLabel(value: string | null | undefined): string | null {
+  if (!value) {
+    return null;
+  }
+
+  const trimmed = value.trim();
+  if (!trimmed || UUID_PATTERN.test(trimmed)) {
+    return null;
+  }
+
+  return trimmed;
+}
 
 function ProviderIcon({ provider }: { provider: IntegrationProvider }) {
   if (provider === 'telegram') {
@@ -189,6 +210,7 @@ function IntegrationsPage() {
   const [configFormError, setConfigFormError] = useState<string | null>(null);
   const [configToDelete, setConfigToDelete] = useState<IntegrationConfig | null>(null);
   const [isDeletingConfig, setIsDeletingConfig] = useState(false);
+  const [togglingConfigId, setTogglingConfigId] = useState<EntityId | null>(null);
 
   const [eventSearch, setEventSearch] = useState('');
   const [platformFilter, setPlatformFilter] = useState<PlatformFilter>('all');
@@ -447,6 +469,53 @@ function IntegrationsPage() {
     }
   }
 
+  const handleToggleConfigActive = useCallback(async (config: IntegrationConfig) => {
+    if (!canManageIntegrations || togglingConfigId) {
+      return;
+    }
+
+    setTogglingConfigId(config.id);
+    const nextIsActive = !config.is_active;
+
+    try {
+      const updated = await services.integrations.patchIntegrationConfig(config.id, {
+        is_active: nextIsActive,
+      });
+      if (!updated) {
+        return;
+      }
+
+      setConfigs((current) =>
+        current.map((entry) => {
+          if (entry.id === updated.id) {
+            return updated;
+          }
+
+          if (
+            nextIsActive &&
+            shouldEnforceSingleActive(updated.provider) &&
+            entry.provider === updated.provider &&
+            entry.is_active
+          ) {
+            return {
+              ...entry,
+              is_active: false,
+              updated_at: updated.updated_at,
+              updated_by: updated.updated_by,
+              updated_by_name: updated.updated_by_name,
+            };
+          }
+
+          return entry;
+        }),
+      );
+      setConfigDetailRefreshToken((current) => current + 1);
+      setConfigReloadCursor((current) => current + 1);
+    } finally {
+      setTogglingConfigId(null);
+    }
+  }, [canManageIntegrations, togglingConfigId]);
+
   const configColumns = useMemo<DataTableColumn<IntegrationConfig>[]>(() => {
     const baseColumns: DataTableColumn<IntegrationConfig>[] = [
       {
@@ -498,11 +567,22 @@ function IntegrationsPage() {
         key: 'active',
         label: t('integrations.configColumns.active'),
         render: (config) => (
-          <StatusBadge
-            status={config.is_active ? 'active' : 'inactive'}
-            tone={config.is_active ? 'success' : 'neutral'}
-            label={config.is_active ? t('common.active') : t('common.inactive')}
-          />
+          canManageIntegrations ? (
+            <Switch
+              checked={config.is_active}
+              onChange={() => {
+                void handleToggleConfigActive(config);
+              }}
+              disabled={togglingConfigId === config.id}
+              stopPropagation
+            />
+          ) : (
+            <StatusBadge
+              status={config.is_active ? 'active' : 'inactive'}
+              tone={config.is_active ? 'success' : 'neutral'}
+              label={config.is_active ? t('common.active') : t('common.inactive')}
+            />
+          )
         ),
       },
       {
@@ -510,9 +590,12 @@ function IntegrationsPage() {
         label: t('integrations.configColumns.updatedAt'),
         render: (config) => (
           <span className={tablePrimaryTextClassName}>
-            {new Intl.DateTimeFormat(locale, { dateStyle: 'medium' }).format(
-              new Date(config.updated_at),
-            )}
+            {formatLocalizedDate(config.updated_at, i18n.language, {
+              locale,
+              withYear: true,
+              shortMonth: true,
+              fallback: t('common.na'),
+            })}
           </span>
         ),
       },
@@ -554,7 +637,14 @@ function IntegrationsPage() {
         ),
       },
     ];
-  }, [canManageIntegrations, locale, t]);
+  }, [
+    canManageIntegrations,
+    handleToggleConfigActive,
+    i18n.language,
+    locale,
+    t,
+    togglingConfigId,
+  ]);
 
   const eventColumns = useMemo<DataTableColumn<IntegrationEvent>[]>(() => {
     return [
@@ -579,7 +669,9 @@ function IntegrationsPage() {
         render: (event) => (
           <div className="grid gap-0.5">
             <span className={tablePrimaryTextClassName}>{event.event_type}</span>
-            <span className={tableSecondaryTextClassName}>{event.event_key}</span>
+            <span className={tableSecondaryTextClassName}>
+              {resolveHumanLabel(event.event_key) ?? t('common.na')}
+            </span>
           </div>
         ),
       },
@@ -587,7 +679,9 @@ function IntegrationsPage() {
         key: 'externalId',
         label: t('integrations.eventColumns.externalId'),
         render: (event) => (
-          <span className={tablePrimaryTextClassName}>{event.external_id}</span>
+          <span className={tablePrimaryTextClassName}>
+            {resolveHumanLabel(event.external_id) ?? t('common.na')}
+          </span>
         ),
       },
       {
@@ -611,14 +705,17 @@ function IntegrationsPage() {
         label: t('integrations.eventColumns.createdAt'),
         render: (event) => (
           <span className={tablePrimaryTextClassName}>
-            {new Intl.DateTimeFormat(locale, { dateStyle: 'medium' }).format(
-              new Date(event.created_at),
-            )}
+            {formatLocalizedDate(event.created_at, i18n.language, {
+              locale,
+              withYear: true,
+              shortMonth: true,
+              fallback: t('common.na'),
+            })}
           </span>
         ),
       },
     ];
-  }, [locale, t]);
+  }, [i18n.language, locale, t]);
 
   const header = (
     <PageHeader
@@ -662,7 +759,14 @@ function IntegrationsPage() {
             ].join(' ')}
             onClick={() => setView('configs')}
           >
-            <FaTelegramPlane className="h-3.5 w-3.5 text-[rgb(46_169_240)]" />
+            <span
+              className={[
+                'inline-flex h-5 w-5 items-center justify-center rounded-full transition duration-fast',
+                view === 'configs' ? 'dark:bg-white' : '',
+              ].join(' ')}
+            >
+              <FaTelegramPlane className="h-3.5 w-3.5 text-[rgb(46_169_240)]" />
+            </span>
             <FaInstagram className="h-3.5 w-3.5 text-[rgb(224_76_141)]" />
             {t('integrations.views.configs')}
           </button>

@@ -3,6 +3,7 @@ import { FiEdit2, FiTrash2 } from 'react-icons/fi';
 import { useTranslation } from 'react-i18next';
 import AppIcon from '../../../components/shared/icons/AppIcon';
 import { EmptyState, LoadingState, PageCard } from '../../../components/shared/page';
+import { formatLocalizedDate } from '../../../i18n/date-format';
 import { services } from '../../../services';
 import type { Customer, EntityId } from '../../../types/domain';
 
@@ -34,17 +35,17 @@ function isUuidLike(value: string | undefined): boolean {
 
 function formatDateTime(
   timestamp: string | undefined,
+  language: string,
   locale: string,
   fallback: string,
 ): string {
-  if (!timestamp) {
-    return fallback;
-  }
-
-  return new Intl.DateTimeFormat(locale, {
-    dateStyle: 'medium',
-    timeStyle: 'short',
-  }).format(new Date(timestamp));
+  return formatLocalizedDate(timestamp, language, {
+    locale,
+    withYear: true,
+    withTime: true,
+    shortMonth: true,
+    fallback,
+  });
 }
 
 function formatAddress(customer: Customer, fallback: string): string {
@@ -73,6 +74,10 @@ function CustomerDetailPanel({
   const { t, i18n } = useTranslation();
   const locale = i18n.language === 'ru' ? 'ru-RU' : 'uz-UZ';
   const [customer, setCustomer] = useState<Customer | null>(null);
+  const [resolvedOperatorName, setResolvedOperatorName] = useState<string | null>(
+    null,
+  );
+  const [resolvedLeadName, setResolvedLeadName] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
 
@@ -97,6 +102,8 @@ function CustomerDetailPanel({
 
         setHasError(true);
         setCustomer(null);
+        setResolvedOperatorName(null);
+        setResolvedLeadName(null);
       } finally {
         if (isActive) {
           setIsLoading(false);
@@ -124,13 +131,70 @@ function CustomerDetailPanel({
     };
   }, [onClose]);
 
-  const resolvedOperatorName =
-    customer?.assignedOperator?.id
-      ? resolveOperatorName?.(
-          customer.assignedOperator.id,
-          customer.assignedOperator.fullName,
-        ) ?? customer.assignedOperator.fullName
-      : customer?.assignedOperator?.fullName;
+  useEffect(() => {
+    let isActive = true;
+
+    async function resolveNames() {
+      const assignedOperator = customer?.assignedOperator;
+      const linkedLead = customer?.lead;
+
+      if (!assignedOperator?.id) {
+        setResolvedOperatorName(null);
+      } else {
+        const resolvedFromParent =
+          resolveOperatorName?.(assignedOperator.id, assignedOperator.fullName) ??
+          assignedOperator.fullName;
+
+        if (resolvedFromParent && !isUuidLike(resolvedFromParent)) {
+          setResolvedOperatorName(resolvedFromParent);
+        } else {
+          try {
+            const operator = await services.users.getUserById(assignedOperator.id);
+            if (!isActive) {
+              return;
+            }
+
+            setResolvedOperatorName(operator?.full_name ?? null);
+          } catch {
+            if (isActive) {
+              setResolvedOperatorName(null);
+            }
+          }
+        }
+      }
+
+      if (!linkedLead?.id) {
+        setResolvedLeadName(null);
+      } else if (linkedLead.fullName && !isUuidLike(linkedLead.fullName)) {
+        setResolvedLeadName(linkedLead.fullName);
+      } else {
+        try {
+          const lead = await services.leads.getById(linkedLead.id);
+          if (!isActive) {
+            return;
+          }
+
+          setResolvedLeadName(lead?.fullName ?? null);
+        } catch {
+          if (isActive) {
+            setResolvedLeadName(null);
+          }
+        }
+      }
+    }
+
+    void resolveNames();
+
+    return () => {
+      isActive = false;
+    };
+  }, [
+    customer?.assignedOperator?.fullName,
+    customer?.assignedOperator?.id,
+    customer?.lead?.fullName,
+    customer?.lead?.id,
+    resolveOperatorName,
+  ]);
 
   return (
     <div
@@ -205,12 +269,6 @@ function CustomerDetailPanel({
                         {customer.contact.phone ?? t('common.na')}
                       </p>
                     </div>
-                    <div className="rounded-lg bg-surface-subtle/80 p-3">
-                      <p className={labelClassName}>{t('customers.detail.email')}</p>
-                      <p className={`mt-1 ${valueClassName}`}>
-                        {customer.contact.email ?? t('common.na')}
-                      </p>
-                    </div>
                     <div className="rounded-lg bg-surface-subtle/80 p-3 sm:col-span-2">
                       <p className={labelClassName}>{t('customers.detail.address')}</p>
                       <p className={`mt-1 ${valueClassName}`}>
@@ -219,28 +277,14 @@ function CustomerDetailPanel({
                     </div>
                     <div className="rounded-lg bg-surface-subtle/80 p-3">
                       <p className={labelClassName}>{t('customers.detail.operator')}</p>
-                      <p
-                        className={[
-                          'mt-1',
-                          isUuidLike(resolvedOperatorName)
-                            ? 'text-sm font-medium text-text-secondary [overflow-wrap:anywhere]'
-                            : valueClassName,
-                        ].join(' ')}
-                      >
+                      <p className={`mt-1 ${valueClassName}`}>
                         {resolvedOperatorName ?? t('common.unassigned')}
                       </p>
                     </div>
                     <div className="rounded-lg bg-surface-subtle/80 p-3">
                       <p className={labelClassName}>{t('customers.detail.linkedLead')}</p>
-                      <p
-                        className={[
-                          'mt-1',
-                          isUuidLike(customer.lead?.fullName)
-                            ? 'text-sm font-medium text-text-secondary [overflow-wrap:anywhere]'
-                            : valueClassName,
-                        ].join(' ')}
-                      >
-                        {customer.lead?.fullName ?? t('customers.noLeadLink')}
+                      <p className={`mt-1 ${valueClassName}`}>
+                        {resolvedLeadName ?? t('customers.noLeadLink')}
                       </p>
                     </div>
                   </div>
@@ -266,13 +310,23 @@ function CustomerDetailPanel({
                     <div className="flex items-center justify-between gap-3 rounded-lg bg-surface-subtle/80 px-3 py-2.5">
                       <dt className={labelClassName}>{t('customers.detail.created')}</dt>
                       <dd className={`m-0 ${valueClassName}`}>
-                        {formatDateTime(customer.createdAt, locale, t('common.na'))}
+                        {formatDateTime(
+                          customer.createdAt,
+                          i18n.language,
+                          locale,
+                          t('common.na'),
+                        )}
                       </dd>
                     </div>
                     <div className="flex items-center justify-between gap-3 rounded-lg bg-surface-subtle/80 px-3 py-2.5">
                       <dt className={labelClassName}>{t('customers.detail.updated')}</dt>
                       <dd className={`m-0 ${valueClassName}`}>
-                        {formatDateTime(customer.updatedAt, locale, t('common.na'))}
+                        {formatDateTime(
+                          customer.updatedAt,
+                          i18n.language,
+                          locale,
+                          t('common.na'),
+                        )}
                       </dd>
                     </div>
                   </dl>

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   DataTable,
   FilterBar,
@@ -19,8 +20,16 @@ import {
 } from '../../../components/shared/page';
 import LogDetailPanel from '../../../features/logs/components/LogDetailPanel';
 import { getLogTypeLabel, getLogTypeTone } from '../../../features/logs/utils/log-format';
+import { formatLocalizedDate } from '../../../i18n/date-format';
 import { services } from '../../../services';
-import type { AppLog, LogListParams, LogType, PaginationMeta, SelectOption } from '../../../types/domain';
+import type {
+  AppLog,
+  LogListParams,
+  LogType,
+  PaginationMeta,
+  SelectOption,
+  SystemHealth,
+} from '../../../types/domain';
 
 type LogTypeFilter = 'all' | LogType;
 type LogOrdering = '-created_at' | 'created_at';
@@ -43,6 +52,8 @@ const tableSecondaryTextClassName =
 
 const labelClassName =
   'text-[11px] font-semibold uppercase tracking-[0.12em] text-text-muted';
+const healthCardClassName =
+  'grid gap-2 rounded-lg bg-surface-subtle/80 p-3';
 
 function parseOrdering(ordering: LogOrdering): Pick<LogListParams, 'sortBy' | 'sortDirection'> {
   return {
@@ -51,7 +62,42 @@ function parseOrdering(ordering: LogOrdering): Pick<LogListParams, 'sortBy' | 's
   };
 }
 
+function getHealthTone(status: string): 'success' | 'warning' | 'danger' {
+  if (status === 'ok') {
+    return 'success';
+  }
+
+  if (status === 'error') {
+    return 'danger';
+  }
+
+  return 'warning';
+}
+
+function getHealthLabel(status: string): string {
+  if (status === 'ok') {
+    return 'OK';
+  }
+
+  if (status === 'error') {
+    return 'DOWN';
+  }
+
+  return 'DEGRADED';
+}
+
+function shortenMessage(message: string): string {
+  const normalized = message.trim();
+  if (normalized.length <= 140) {
+    return normalized;
+  }
+
+  return `${normalized.slice(0, 137)}...`;
+}
+
 function LogsPage() {
+  const { i18n } = useTranslation();
+  const locale = i18n.language === 'ru' ? 'ru-RU' : 'uz-UZ';
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState<LogTypeFilter>('all');
   const [ordering, setOrdering] = useState<LogOrdering>(DEFAULT_ORDERING);
@@ -61,6 +107,8 @@ function LogsPage() {
     DEFAULT_PAGINATION_META,
   );
   const [selectedLogId, setSelectedLogId] = useState<string | null>(null);
+  const [health, setHealth] = useState<SystemHealth | null>(null);
+  const [isHealthLoading, setIsHealthLoading] = useState(true);
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
   const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
@@ -69,6 +117,39 @@ function LogsPage() {
   useEffect(() => {
     setCurrentPage(1);
   }, [search, typeFilter, ordering]);
+
+  useEffect(() => {
+    let isActive = true;
+
+    async function loadHealth() {
+      setIsHealthLoading(true);
+
+      try {
+        const result = await services.logs.getHealth();
+        if (!isActive) {
+          return;
+        }
+
+        setHealth(result);
+      } catch {
+        if (!isActive) {
+          return;
+        }
+
+        setHealth(null);
+      } finally {
+        if (isActive) {
+          setIsHealthLoading(false);
+        }
+      }
+    }
+
+    void loadHealth();
+
+    return () => {
+      isActive = false;
+    };
+  }, [reloadCursor]);
 
   useEffect(() => {
     let isActive = true;
@@ -135,8 +216,8 @@ function LogsPage() {
 
   const orderingOptions = useMemo<SelectOption[]>(
     () => [
-      { value: '-created_at', label: 'Yaratilgan (yangi)' },
-      { value: 'created_at', label: 'Yaratilgan (eski)' },
+      { value: '-created_at', label: "Qo'shilgan (yangi)" },
+      { value: 'created_at', label: "Qo'shilgan (eski)" },
     ],
     [],
   );
@@ -158,26 +239,26 @@ function LogsPage() {
         key: 'message',
         label: 'Xabar',
         render: (log) => (
-          <div className="grid gap-0.5">
-            <span className={tablePrimaryTextClassName}>{log.message}</span>
-            <span className={tableSecondaryTextClassName}>{log.id}</span>
-          </div>
+          <span className={tablePrimaryTextClassName}>{shortenMessage(log.message)}</span>
         ),
       },
       {
         key: 'createdAt',
-        label: 'Yaratilgan',
+        label: "Qo'shilgan",
         render: (log) => (
           <span className={tablePrimaryTextClassName}>
-            {new Intl.DateTimeFormat('uz-UZ', {
-              dateStyle: 'medium',
-              timeStyle: 'short',
-            }).format(new Date(log.created_at))}
+            {formatLocalizedDate(log.created_at, i18n.language, {
+              locale,
+              withYear: true,
+              shortMonth: true,
+              withTime: true,
+              fallback: '-',
+            })}
           </span>
         ),
       },
     ];
-  }, []);
+  }, [i18n.language, locale]);
 
   const activeFilterCount =
     Number(search.trim().length > 0) +
@@ -272,6 +353,47 @@ function LogsPage() {
         </FilterBar>
 
         <PageCard>
+          <div className="grid gap-3 px-1 pb-3 min-[820px]:grid-cols-3">
+            <div className={healthCardClassName}>
+              <span className={labelClassName}>API status</span>
+              {isHealthLoading ? (
+                <span className={tableSecondaryTextClassName}>Yuklanmoqda...</span>
+              ) : (
+                <StatusBadge
+                  status={health?.status ?? 'warning'}
+                  tone={getHealthTone(health?.status ?? 'warning')}
+                  label={getHealthLabel(health?.status ?? 'warning')}
+                />
+              )}
+            </div>
+            <div className={healthCardClassName}>
+              <span className={labelClassName}>Database</span>
+              {isHealthLoading ? (
+                <span className={tableSecondaryTextClassName}>Yuklanmoqda...</span>
+              ) : (
+                <StatusBadge
+                  status={health?.database ?? 'warning'}
+                  tone={getHealthTone(health?.database ?? 'warning')}
+                  label={getHealthLabel(health?.database ?? 'warning')}
+                />
+              )}
+            </div>
+            <div className={healthCardClassName}>
+              <span className={labelClassName}>Redis</span>
+              {isHealthLoading ? (
+                <span className={tableSecondaryTextClassName}>Yuklanmoqda...</span>
+              ) : (
+                <StatusBadge
+                  status={health?.redis ?? 'warning'}
+                  tone={getHealthTone(health?.redis ?? 'warning')}
+                  label={getHealthLabel(health?.redis ?? 'warning')}
+                />
+              )}
+            </div>
+          </div>
+        </PageCard>
+
+        <PageCard>
           <DataTable
             data={logs}
             columns={columns}
@@ -279,7 +401,7 @@ function LogsPage() {
             selectedRowKey={selectedLogId}
             loading={isLoading}
             onRowClick={(log) => setSelectedLogId(log.id)}
-            emptyTitle="Jurnal topilmadi"
+            emptyTitle="Loglar topilmadi"
             emptyDescription="Qidiruv yoki filterlarni o'zgartirib qayta urinib ko'ring."
           />
         </PageCard>

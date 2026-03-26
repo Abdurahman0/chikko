@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { StatusBadge } from '../../../components/shared/data';
 import AppIcon from '../../../components/shared/icons/AppIcon';
 import { EmptyState, LoadingState, PageCard } from '../../../components/shared/page';
+import { formatLocalizedDate } from '../../../i18n/date-format';
 import { services } from '../../../services';
 import type { AISetting, EntityId } from '../../../types/domain';
 
@@ -23,15 +24,30 @@ const labelClassName =
 const valueClassName =
   'text-sm font-semibold text-text-primary [overflow-wrap:anywhere]';
 
-function formatDateTime(timestamp: string | undefined, locale: string, fallback: string): string {
-  if (!timestamp) {
-    return fallback;
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+function isUuidLike(value: string | null | undefined): boolean {
+  if (!value) {
+    return false;
   }
 
-  return new Intl.DateTimeFormat(locale, {
-    dateStyle: 'medium',
-    timeStyle: 'short',
-  }).format(new Date(timestamp));
+  return UUID_PATTERN.test(value);
+}
+
+function formatDateTime(
+  timestamp: string | undefined,
+  language: string,
+  locale: string,
+  fallback: string,
+): string {
+  return formatLocalizedDate(timestamp, language, {
+    locale,
+    withYear: true,
+    withTime: true,
+    shortMonth: true,
+    fallback,
+  });
 }
 
 function AISettingDetailPanel({
@@ -50,6 +66,7 @@ function AISettingDetailPanel({
   const [hasError, setHasError] = useState(false);
   const [isActivating, setIsActivating] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [resolvedUpdatedBy, setResolvedUpdatedBy] = useState<string | null>(null);
 
   useEffect(() => {
     let isActive = true;
@@ -73,6 +90,7 @@ function AISettingDetailPanel({
 
         setHasError(true);
         setSetting(null);
+        setResolvedUpdatedBy(null);
       } finally {
         if (isActive) {
           setIsLoading(false);
@@ -99,6 +117,49 @@ function AISettingDetailPanel({
       window.removeEventListener('keydown', handleKeyDown);
     };
   }, [onClose]);
+
+  useEffect(() => {
+    let isActive = true;
+
+    async function resolveUpdatedByName() {
+      const updatedByName = setting?.updated_by_name ?? null;
+      if (updatedByName && !isUuidLike(updatedByName)) {
+        setResolvedUpdatedBy(updatedByName);
+        return;
+      }
+
+      const updatedById = setting?.updated_by ?? null;
+      if (!updatedById) {
+        setResolvedUpdatedBy(null);
+        return;
+      }
+
+      if (!isUuidLike(updatedById)) {
+        setResolvedUpdatedBy(updatedById);
+        return;
+      }
+
+      try {
+        const user = await services.users.getUserById(updatedById);
+        if (!isActive) {
+          return;
+        }
+
+        const fullName = user?.full_name ?? null;
+        setResolvedUpdatedBy(fullName && !isUuidLike(fullName) ? fullName : null);
+      } catch {
+        if (isActive) {
+          setResolvedUpdatedBy(null);
+        }
+      }
+    }
+
+    void resolveUpdatedByName();
+
+    return () => {
+      isActive = false;
+    };
+  }, [setting?.updated_by, setting?.updated_by_name]);
 
   async function handleSetActive() {
     if (!setting || setting.is_active || isActivating) {
@@ -231,7 +292,7 @@ function AISettingDetailPanel({
                     <div className="rounded-lg bg-surface-subtle/80 p-3 sm:col-span-2">
                       <p className={labelClassName}>{t('aiSettings.detail.updatedBy')}</p>
                       <p className={`mt-1 ${valueClassName}`}>
-                        {setting.updated_by ?? t('common.na')}
+                        {resolvedUpdatedBy ?? t('common.na')}
                       </p>
                     </div>
                   </div>
@@ -256,13 +317,23 @@ function AISettingDetailPanel({
                   <div className="flex items-center justify-between gap-3 rounded-lg bg-surface-subtle/80 px-3 py-2.5">
                     <dt className={labelClassName}>{t('aiSettings.detail.createdAt')}</dt>
                     <dd className={`m-0 ${valueClassName}`}>
-                      {formatDateTime(setting.created_at, locale, t('common.na'))}
+                      {formatDateTime(
+                        setting.created_at,
+                        i18n.language,
+                        locale,
+                        t('common.na'),
+                      )}
                     </dd>
                   </div>
                   <div className="flex items-center justify-between gap-3 rounded-lg bg-surface-subtle/80 px-3 py-2.5">
                     <dt className={labelClassName}>{t('aiSettings.detail.updatedAt')}</dt>
                     <dd className={`m-0 ${valueClassName}`}>
-                      {formatDateTime(setting.updated_at, locale, t('common.na'))}
+                      {formatDateTime(
+                        setting.updated_at,
+                        i18n.language,
+                        locale,
+                        t('common.na'),
+                      )}
                     </dd>
                   </div>
                 </dl>

@@ -213,7 +213,7 @@ function NotificationDetailPanel({
                       </p>
                     </div>
                     <div className="rounded-lg bg-surface-subtle/80 p-3">
-                      <p className={labelClassName}>Yaratilgan</p>
+                      <p className={labelClassName}>Qo'shilgan</p>
                       <p className={`mt-1 ${valueClassName}`}>
                         {formatNotificationDateTime(notification.created_at, locale)}
                       </p>

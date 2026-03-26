@@ -13,6 +13,7 @@ export interface AISetting {
   resume_after_operator_minutes: number;
   is_active: boolean;
   updated_by: EntityId | null;
+  updated_by_name?: string | null;
 }
 
 export interface AISettingsListParams {

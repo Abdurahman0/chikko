@@ -20,6 +20,7 @@ import {
   PageSection,
 } from '../../../components/shared/page';
 import { useAuth } from '../../../auth';
+import { formatLocalizedDate } from '../../../i18n/date-format';
 import AISettingDeleteDialog from '../../../features/ai-settings/components/AISettingDeleteDialog';
 import AISettingDetailPanel from '../../../features/ai-settings/components/AISettingDetailPanel';
 import AISettingFormPanel from '../../../features/ai-settings/components/AISettingFormPanel';
@@ -133,14 +134,17 @@ function AiSettingsPage() {
       setHasError(false);
 
       try {
-        const result = await services.aiSettings.listAISettings({
-          page: currentPage,
-          pageSize: PAGE_SIZE,
-          search: search.trim() || undefined,
-          is_active: toBooleanActiveFilter(activeFilter),
-          ordering,
-          ...parseOrdering(ordering),
-        });
+        const [result, activeSetting] = await Promise.all([
+          services.aiSettings.listAISettings({
+            page: currentPage,
+            pageSize: PAGE_SIZE,
+            search: search.trim() || undefined,
+            is_active: toBooleanActiveFilter(activeFilter),
+            ordering,
+            ...parseOrdering(ordering),
+          }),
+          services.aiSettings.getActiveAISetting().catch(() => null),
+        ]);
 
         if (!isActive) {
           return;
@@ -151,7 +155,15 @@ function AiSettingsPage() {
           return;
         }
 
-        setSettings(result.items);
+        const resolvedActiveId = activeSetting?.id ?? null;
+        setSettings(
+          resolvedActiveId
+            ? result.items.map((setting) => ({
+                ...setting,
+                is_active: setting.id === resolvedActiveId,
+              }))
+            : result.items,
+        );
         setPaginationMeta(result.meta);
       } catch {
         if (!isActive) {
@@ -206,7 +218,14 @@ function AiSettingsPage() {
         label: t('aiSettings.columns.name'),
         render: (setting) => (
           <div className="grid gap-0.5">
-            <span className={tablePrimaryTextClassName}>{setting.name}</span>
+            <div className="flex items-center gap-2">
+              <span className={tablePrimaryTextClassName}>{setting.name}</span>
+              {setting.is_active ? (
+                <span className="inline-flex min-h-5 items-center rounded-pill bg-success-bg px-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-success">
+                  {t('common.active')}
+                </span>
+              ) : null}
+            </div>
             <span className={tableSecondaryTextClassName}>{setting.model_name}</span>
           </div>
         ),
@@ -258,9 +277,12 @@ function AiSettingsPage() {
         label: t('aiSettings.columns.updatedAt'),
         render: (setting) => (
           <span className={tablePrimaryTextClassName}>
-            {new Intl.DateTimeFormat(locale, { dateStyle: 'medium' }).format(
-              new Date(setting.updated_at),
-            )}
+            {formatLocalizedDate(setting.updated_at, i18n.language, {
+              locale,
+              withYear: true,
+              shortMonth: true,
+              fallback: t('common.na'),
+            })}
           </span>
         ),
       },
@@ -317,7 +339,7 @@ function AiSettingsPage() {
         ),
       },
     ];
-  }, [canManageAISettings, locale, t]);
+  }, [canManageAISettings, i18n.language, locale, t]);
 
   function openCreateForm() {
     if (!canManageAISettings) {

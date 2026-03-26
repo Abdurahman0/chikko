@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FilterSelect } from '../../../components/shared/data';
+import { FilterSelect, Switch } from '../../../components/shared/data';
 import AppIcon from '../../../components/shared/icons/AppIcon';
 import type {
   IntegrationConfig,
@@ -257,27 +257,13 @@ function IntegrationConfigFormPanel({
                   {t('integrations.configForm.secretHint')}
                 </p>
               </div>
-              <button
-                type="button"
-                role="switch"
-                aria-checked={form.isSecret}
-                className={[
-                  'relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full p-0.5 transition-colors duration-200 ease-in-out',
-                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30',
-                  form.isSecret ? 'bg-primary' : 'bg-border-soft/80',
-                ].join(' ')}
-                onClick={() =>
-                  setForm((current) => ({ ...current, isSecret: !current.isSecret }))
+              <Switch
+                checked={form.isSecret}
+                onChange={(nextValue) =>
+                  setForm((current) => ({ ...current, isSecret: nextValue }))
                 }
                 disabled={isSubmitting}
-              >
-                <span
-                  className={[
-                    'pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow-md transition-transform duration-200 ease-in-out',
-                    form.isSecret ? 'translate-x-5' : 'translate-x-0',
-                  ].join(' ')}
-                />
-              </button>
+              />
             </div>
 
             <div className="flex items-center justify-between gap-4 rounded-xl bg-surface-card px-4 py-4 ring-1 ring-border-soft/35">
@@ -289,27 +275,13 @@ function IntegrationConfigFormPanel({
                   {t('integrations.configForm.activeHint')}
                 </p>
               </div>
-              <button
-                type="button"
-                role="switch"
-                aria-checked={form.isActive}
-                className={[
-                  'relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full p-0.5 transition-colors duration-200 ease-in-out',
-                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30',
-                  form.isActive ? 'bg-primary' : 'bg-border-soft/80',
-                ].join(' ')}
-                onClick={() =>
-                  setForm((current) => ({ ...current, isActive: !current.isActive }))
+              <Switch
+                checked={form.isActive}
+                onChange={(nextValue) =>
+                  setForm((current) => ({ ...current, isActive: nextValue }))
                 }
                 disabled={isSubmitting}
-              >
-                <span
-                  className={[
-                    'pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow-md transition-transform duration-200 ease-in-out',
-                    form.isActive ? 'translate-x-5' : 'translate-x-0',
-                  ].join(' ')}
-                />
-              </button>
+              />
             </div>
           </div>
 

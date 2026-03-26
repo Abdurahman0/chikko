@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { FiTrash2 } from 'react-icons/fi';
 import { useTranslation } from 'react-i18next';
-import { FilterSelect } from '../../../components/shared/data';
+import { FilterSelect, Switch } from '../../../components/shared/data';
 import AppIcon from '../../../components/shared/icons/AppIcon';
 import {
   DEFAULT_CURRENCY_CODE,
@@ -10,6 +10,7 @@ import {
 import type {
   CurrencyCode,
   Customer,
+  EntityId,
   Lead,
   Order,
   OrderMutationInput,
@@ -31,6 +32,10 @@ interface OrderFormPanelProps {
   errorMessage?: string | null;
   onClose: () => void;
   onSubmit: (payload: OrderMutationInput) => void;
+  onRecalculate?: (
+    orderId: EntityId,
+    payload: OrderMutationInput,
+  ) => Promise<Order | null>;
 }
 
 interface OrderItemFormState {
@@ -161,6 +166,7 @@ function OrderFormPanel({
   errorMessage,
   onClose,
   onSubmit,
+  onRecalculate,
 }: OrderFormPanelProps) {
   const { t, i18n } = useTranslation();
   const locale = i18n.language === 'ru' ? 'ru-RU' : 'uz-UZ';
@@ -168,10 +174,20 @@ function OrderFormPanel({
     createInitialState(mode, order, products),
   );
   const [fieldError, setFieldError] = useState<string | null>(null);
+  const [isRecalculating, setIsRecalculating] = useState(false);
+  const [recalculateError, setRecalculateError] = useState<string | null>(null);
+  const [recalculatedTotalAmount, setRecalculatedTotalAmount] = useState<number | null>(
+    null,
+  );
+  const didAutoRecalculateRef = useRef(false);
 
   useEffect(() => {
     setForm(createInitialState(mode, order, products));
     setFieldError(null);
+    setRecalculateError(null);
+    setRecalculatedTotalAmount(null);
+    setIsRecalculating(false);
+    didAutoRecalculateRef.current = false;
   }, [mode, order, products]);
 
   useEffect(() => {
@@ -246,6 +262,19 @@ function OrderFormPanel({
         itemRows.reduce((sum, item) => sum + item.lineTotal, 0).toFixed(2),
       ),
     [itemRows],
+  );
+  const displayedTotalAmount = recalculatedTotalAmount ?? totalAmount;
+  const itemRecalculateFingerprint = useMemo(
+    () =>
+      form.items
+        .map((item) => {
+          const productId = item.productId.trim();
+          const quantity = parsePositiveInteger(item.quantity);
+          const unitPrice = parseNonNegativeNumber(item.unitPrice);
+          return `${productId}:${quantity}:${unitPrice}`;
+        })
+        .join('|'),
+    [form.items],
   );
 
   const canSubmit = useMemo(() => {
@@ -343,11 +372,97 @@ function OrderFormPanel({
       items: normalizedItems,
       currency,
       metadata: {
-        source: 'mock',
+        source: 'api',
         saved_via: 'orders-form',
       },
     });
   }
+
+  useEffect(() => {
+    if (mode !== 'edit' || !order?.id || !onRecalculate) {
+      return;
+    }
+    if (isSubmitting) {
+      return;
+    }
+
+    if (!didAutoRecalculateRef.current) {
+      didAutoRecalculateRef.current = true;
+      return;
+    }
+
+    const normalizedItems = form.items.map((item) => ({
+      productId: item.productId.trim(),
+      quantity: parsePositiveInteger(item.quantity),
+      unitPrice: parseNonNegativeNumber(item.unitPrice),
+    }));
+    const hasValidItems =
+      normalizedItems.length > 0 &&
+      normalizedItems.every((item) => item.productId.length > 0);
+
+    if (!hasValidItems) {
+      setRecalculatedTotalAmount(null);
+      setRecalculateError(null);
+      return;
+    }
+
+    const payload: OrderMutationInput = {
+      customerId: form.customerId || undefined,
+      leadId: form.leadId || undefined,
+      status: form.status,
+      source: form.source,
+      contactName: form.contactName.trim(),
+      contactPhone: form.contactPhone.trim(),
+      shippingAddress: form.shippingAddress.trim(),
+      notes: form.notes.trim(),
+      aiGenerated: form.aiGenerated,
+      items: normalizedItems,
+      currency: resolveCurrency(form.items, products),
+      metadata: {
+        source: 'api',
+        saved_via: 'orders-form',
+      },
+    };
+
+    let isActive = true;
+    const timeoutId = window.setTimeout(async () => {
+      setIsRecalculating(true);
+      setRecalculateError(null);
+
+      try {
+        const recalculated = await onRecalculate(order.id, payload);
+        if (!isActive) {
+          return;
+        }
+
+        setRecalculatedTotalAmount(recalculated?.totalAmount ?? null);
+      } catch {
+        if (!isActive) {
+          return;
+        }
+
+        setRecalculateError(t('orders.detail.recalculateError'));
+        setRecalculatedTotalAmount(null);
+      } finally {
+        if (isActive) {
+          setIsRecalculating(false);
+        }
+      }
+    }, 360);
+
+    return () => {
+      isActive = false;
+      window.clearTimeout(timeoutId);
+    };
+  }, [
+    itemRecalculateFingerprint,
+    isSubmitting,
+    mode,
+    onRecalculate,
+    order?.id,
+    products,
+    t,
+  ]);
 
   return (
     <div
@@ -545,30 +660,16 @@ function OrderFormPanel({
                 {t('orders.form.aiGeneratedHint')}
               </p>
             </div>
-            <button
-              type="button"
-              role="switch"
-              aria-checked={form.aiGenerated}
-              className={[
-                'relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full p-0.5 transition-colors duration-200 ease-in-out',
-                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30',
-                form.aiGenerated ? 'bg-primary' : 'bg-border-soft/80',
-              ].join(' ')}
-              onClick={() =>
+            <Switch
+              checked={form.aiGenerated}
+              onChange={(nextValue) =>
                 setForm((current) => ({
                   ...current,
-                  aiGenerated: !current.aiGenerated,
+                  aiGenerated: nextValue,
                 }))
               }
               disabled={isSubmitting}
-            >
-              <span
-                className={[
-                  'pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow-md transition-transform duration-200 ease-in-out',
-                  form.aiGenerated ? 'translate-x-5' : 'translate-x-0',
-                ].join(' ')}
-              />
-            </button>
+            />
           </div>
 
           <section className="grid gap-3 rounded-xl bg-surface-card p-3.5 shadow-sm ring-1 ring-border-soft/35">
@@ -704,9 +805,21 @@ function OrderFormPanel({
                 {t('orders.form.totalAmount')}
               </span>
               <span className="text-base font-extrabold text-text-accent">
-                {formatCurrencyAmount(totalAmount, locale)}
+                {formatCurrencyAmount(displayedTotalAmount, locale)}
               </span>
             </div>
+
+            {mode === 'edit' && isRecalculating ? (
+              <p className="m-0 text-[12px] font-medium text-text-secondary">
+                {t('orders.actions.recalculating')}
+              </p>
+            ) : null}
+
+            {mode === 'edit' && recalculateError ? (
+              <p className="m-0 rounded-lg bg-danger-bg px-3 py-2 text-sm font-medium text-danger">
+                {recalculateError}
+              </p>
+            ) : null}
           </section>
 
           {fieldError ? (

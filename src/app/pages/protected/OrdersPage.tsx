@@ -24,6 +24,7 @@ import { ORDER_STATUSES } from '../../../constants';
 import OrderDeleteDialog from '../../../features/orders/components/OrderDeleteDialog';
 import OrderDetailPanel from '../../../features/orders/components/OrderDetailPanel';
 import OrderFormPanel from '../../../features/orders/components/OrderFormPanel';
+import { formatLocalizedDate } from '../../../i18n/date-format';
 import { getChannelLabel, getOrderStatusLabel } from '../../../i18n/labels';
 import { services } from '../../../services';
 import type {
@@ -99,7 +100,28 @@ function resolveAiGeneratedFilter(value: AiFilter): boolean | undefined {
 }
 
 function formatOrderLabel(order: Order): string {
-  return order.orderNumber ?? order.id;
+  const firstItemProductName = order.items[0]?.product?.name?.trim() ?? '';
+  if (firstItemProductName) {
+    return firstItemProductName;
+  }
+
+  const normalizedOrderNumber = order.orderNumber?.trim() ?? '';
+  if (
+    normalizedOrderNumber &&
+    !/^#?[0-9a-f]{6,}$/i.test(normalizedOrderNumber) &&
+    !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+      normalizedOrderNumber,
+    )
+  ) {
+    return normalizedOrderNumber;
+  }
+
+  return (
+    order.contactName?.trim() ||
+    order.customer?.fullName?.trim() ||
+    order.lead?.fullName?.trim() ||
+    'Buyurtma'
+  );
 }
 
 function getSourceBadgeClassName(source: OrderSource): string {
@@ -300,18 +322,31 @@ function OrdersPage() {
     setFormErrorMessage(null);
 
     try {
+      let savedOrder: Order | null = null;
+
       if (formMode === 'create') {
-        await services.orders.create(payload);
+        savedOrder = await services.orders.create(payload);
       } else {
         const editId = editingOrder?.id;
         if (!editId) {
           throw new Error(t('orders.form.saveError'));
         }
 
-        const updated = await services.orders.update(editId, payload);
+        const updated = await services.orders.patch(editId, payload);
         if (!updated) {
           throw new Error(t('orders.form.saveError'));
         }
+
+        savedOrder = updated;
+      }
+
+      if (savedOrder && formMode === 'edit') {
+        const nextSavedOrder = savedOrder;
+        setOrders((current) =>
+          current.map((entry) =>
+            entry.id === nextSavedOrder.id ? nextSavedOrder : entry,
+          ),
+        );
       }
 
       setIsFormOpen(false);
@@ -353,19 +388,34 @@ function OrdersPage() {
     }
   }
 
-  async function handleRecalculate(orderId: EntityId) {
-    setRecalculatingOrderId(orderId);
+  async function handleRecalculate(
+    orderId: EntityId,
+    payload?: OrderMutationInput,
+  ): Promise<Order | null> {
+    if (!payload) {
+      setRecalculatingOrderId(orderId);
+    }
 
     try {
-      const updated = await services.orders.recalculate(orderId);
+      const updated = await services.orders.recalculate(orderId, payload);
       if (!updated) {
         throw new Error('Order not found');
       }
 
-      setReloadCursor((current) => current + 1);
-      setDetailRefreshToken((current) => current + 1);
+      setOrders((current) =>
+        current.map((entry) => (entry.id === updated.id ? updated : entry)),
+      );
+
+      if (!payload) {
+        setReloadCursor((current) => current + 1);
+        setDetailRefreshToken((current) => current + 1);
+      }
+
+      return updated;
     } finally {
-      setRecalculatingOrderId(null);
+      if (!payload) {
+        setRecalculatingOrderId(null);
+      }
     }
   }
 
@@ -491,9 +541,12 @@ function OrdersPage() {
         label: t('orders.columns.updated'),
         render: (order) => (
           <span className={tablePrimaryTextClassName}>
-            {new Intl.DateTimeFormat(locale, { dateStyle: 'medium' }).format(
-              new Date(order.updatedAt),
-            )}
+            {formatLocalizedDate(order.updatedAt, i18n.language, {
+              locale,
+              withYear: true,
+              shortMonth: true,
+              fallback: t('common.na'),
+            })}
           </span>
         ),
       },
@@ -529,7 +582,7 @@ function OrdersPage() {
         ),
       },
     ];
-  }, [locale, t]);
+  }, [i18n.language, locale, t]);
 
   const activeFilterCount =
     Number(statusFilter !== ALL_STATUS_VALUE) +
@@ -743,6 +796,7 @@ function OrdersPage() {
             }
           }}
           onSubmit={handleSaveOrder}
+          onRecalculate={handleRecalculate}
         />
       ) : null}
 

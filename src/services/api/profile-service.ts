@@ -1,8 +1,8 @@
 import type { ProfileService } from '../core/contracts';
-import { createNotImplementedError } from './not-implemented';
+import { authService } from './auth.service';
 
 export const apiProfileService: ProfileService = {
   async getCurrentUser() {
-    throw createNotImplementedError('ProfileService', 'getCurrentUser');
+    return authService.getMe();
   },
 };

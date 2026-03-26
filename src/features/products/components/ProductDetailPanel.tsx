@@ -5,6 +5,7 @@ import { StatusBadge } from '../../../components/shared/data';
 import AppIcon from '../../../components/shared/icons/AppIcon';
 import { EmptyState, LoadingState, PageCard } from '../../../components/shared/page';
 import { formatCurrencyAmount } from '../../../constants';
+import { formatLocalizedDate } from '../../../i18n/date-format';
 import { services } from '../../../services';
 import type { EntityId, Product } from '../../../types/domain';
 
@@ -22,15 +23,18 @@ const labelClassName =
 const valueClassName =
   'text-sm font-semibold text-text-primary [overflow-wrap:anywhere]';
 
-function formatDateTime(timestamp: string | undefined, locale: string): string {
-  if (!timestamp) {
-    return '';
-  }
-
-  return new Intl.DateTimeFormat(locale, {
-    dateStyle: 'medium',
-    timeStyle: 'short',
-  }).format(new Date(timestamp));
+function formatDateTime(
+  timestamp: string | undefined,
+  language: string,
+  locale: string,
+): string {
+  return formatLocalizedDate(timestamp, language, {
+    locale,
+    withYear: true,
+    withTime: true,
+    shortMonth: true,
+    fallback: '',
+  });
 }
 
 function ProductDetailPanel({
@@ -301,7 +305,8 @@ function ProductDetailPanel({
                         {t('products.detail.created')}
                       </dt>
                       <dd className={`m-0 ${valueClassName}`}>
-                        {formatDateTime(product.createdAt, locale) || t('common.na')}
+                        {formatDateTime(product.createdAt, i18n.language, locale) ||
+                          t('common.na')}
                       </dd>
                     </div>
                     <div className="flex items-center justify-between gap-3 rounded-lg bg-surface-subtle/80 px-3 py-2.5">
@@ -309,7 +314,8 @@ function ProductDetailPanel({
                         {t('products.detail.updated')}
                       </dt>
                       <dd className={`m-0 ${valueClassName}`}>
-                        {formatDateTime(product.updatedAt, locale) || t('common.na')}
+                        {formatDateTime(product.updatedAt, i18n.language, locale) ||
+                          t('common.na')}
                       </dd>
                     </div>
                   </dl>

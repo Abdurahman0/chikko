@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import FilterSelect from '../../../components/shared/data/FilterSelect';
+import { FilterSelect, Switch } from '../../../components/shared/data';
 import AppIcon from '../../../components/shared/icons/AppIcon';
 import {
   EmptyState,
@@ -10,7 +10,11 @@ import {
   PageLayout,
   PageSection,
 } from '../../../components/shared/page';
-import { getUserRoleLabel, getUserStatusLabel } from '../../../i18n/labels';
+import {
+  getUserPermissionLabel,
+  getUserRoleLabel,
+  getUserStatusLabel,
+} from '../../../i18n/labels';
 import { services } from '../../../services';
 import type { AppUser, SelectOption } from '../../../types/domain';
 import type { UserRole } from '../../../types/user';
@@ -54,17 +58,6 @@ const btnSecondaryClassName = [
   'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/25',
 ].join(' ');
 
-const toggleClassName = (active: boolean) => [
-  'relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full p-0.5 transition-colors duration-200 ease-in-out',
-  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-2',
-  active ? 'bg-primary' : 'bg-border-soft/80',
-].join(' ');
-
-const toggleDotClassName = (active: boolean) => [
-  'pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow-md transition-transform duration-200 ease-in-out',
-  active ? 'translate-x-5' : 'translate-x-0',
-].join(' ');
-
 function getInitials(name: string): string {
   return name
     .split(' ')
@@ -73,6 +66,10 @@ function getInitials(name: string): string {
     .slice(0, 2)
     .join('')
     .toUpperCase();
+}
+
+function isUuidLike(value: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 }
 
 function formatDate(
@@ -114,6 +111,7 @@ function ProfilePage() {
   const [hasError, setHasError] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [saveErrorMessage, setSaveErrorMessage] = useState<string | null>(null);
   const [showPasswordSection, setShowPasswordSection] = useState(false);
   const [form, setForm] = useState<ProfileFormData>({
     fullName: '',
@@ -182,47 +180,73 @@ function ProfilePage() {
       });
       setShowPasswordSection(false);
     }
+    setSaveErrorMessage(null);
     setIsEditing(true);
   }
 
   function handleCancel() {
     setIsEditing(false);
     setShowPasswordSection(false);
+    setSaveErrorMessage(null);
   }
 
-  function handleSave() {
-    if (form.password && form.password !== form.confirmPassword) {
+  async function handleSave() {
+    if (!user || (form.password && form.password !== form.confirmPassword)) {
       return;
     }
 
     setIsSaving(true);
-    const payload: Record<string, unknown> = {
-      email: form.email,
-      full_name: form.fullName,
-      phone: form.phone,
-      role: form.role,
-      is_active: form.isActive,
-    };
-    if (form.password) {
-      payload.password = form.password;
-    }
-    console.log('[ProfilePage] Save payload:', payload);
+    setSaveErrorMessage(null);
 
-    setTimeout(() => {
-      if (user) {
-        setUser({
-          ...user,
-          fullName: form.fullName,
-          email: form.email,
-          phone: form.phone,
-          role: form.role,
-          status: form.isActive ? 'active' : 'inactive',
-        });
-      }
+    try {
+      const updated = await services.users.patchUser(user.id, {
+        email: form.email.trim(),
+        full_name: form.fullName.trim(),
+        phone: form.phone.trim() || null,
+        role: form.role,
+        is_active: form.isActive,
+        ...(form.password ? { password: form.password } : {}),
+      });
+
+      const nextUser: AppUser = updated
+        ? {
+            ...user,
+            email: updated.email,
+            fullName: updated.full_name,
+            phone: updated.phone ?? undefined,
+            role: updated.role,
+            status: updated.is_active ? 'active' : 'inactive',
+            createdAt: updated.created_at || user.createdAt,
+            updatedAt: updated.updated_at || user.updatedAt,
+          }
+        : {
+            ...user,
+            email: form.email.trim(),
+            fullName: form.fullName.trim(),
+            phone: form.phone.trim() || undefined,
+            role: form.role,
+            status: form.isActive ? 'active' : 'inactive',
+          };
+
+      setUser(nextUser);
+      setForm({
+        fullName: nextUser.fullName,
+        email: nextUser.email,
+        phone: nextUser.phone ?? '',
+        role: nextUser.role,
+        isActive: nextUser.status !== 'inactive',
+        password: '',
+        confirmPassword: '',
+      });
       setIsSaving(false);
       setIsEditing(false);
       setShowPasswordSection(false);
-    }, 400);
+    } catch (error) {
+      setSaveErrorMessage(
+        error instanceof Error ? error.message : t('profile.errorDescription'),
+      );
+      setIsSaving(false);
+    }
   }
 
   const passwordMismatch = form.password.length > 0 && form.password !== form.confirmPassword;
@@ -265,7 +289,9 @@ function ProfilePage() {
     );
   }
 
-  const permissions = user.permissionKeys ?? [];
+  const permissions = (user.permissionKeys ?? []).map((permissionCode) =>
+    getUserPermissionLabel(t, permissionCode, permissionCode),
+  );
 
   return (
     <PageLayout header={header}>
@@ -282,7 +308,6 @@ function ProfilePage() {
                 <h2 className="m-0 font-display text-[1.4rem] font-extrabold leading-tight tracking-[-0.02em] text-text-primary">
                   {user.fullName}
                 </h2>
-                <p className="mt-1 text-sm text-text-secondary">{user.email}</p>
                 <div className="mt-3 flex flex-wrap justify-center gap-2 sm:justify-start">
                   <RoleBadge role={user.role} />
                   <span className={`inline-flex min-h-7 items-center rounded-pill px-3 text-[11px] font-semibold uppercase tracking-[0.08em] ${user.status === 'inactive' ? 'bg-danger-bg text-danger' : 'bg-success-bg text-success'}`}>
@@ -313,19 +338,6 @@ function ProfilePage() {
                         setForm((prev) => ({ ...prev, fullName: event.target.value }))
                       }
                       placeholder={t('profile.placeholders.fullName')}
-                    />
-                  </label>
-
-                  <label className="grid gap-1.5">
-                    <span className={labelClassName}>{t('profile.fields.email')}</span>
-                    <input
-                      type="email"
-                      className={inputClassName}
-                      value={form.email}
-                      onChange={(event) =>
-                        setForm((prev) => ({ ...prev, email: event.target.value }))
-                      }
-                      placeholder={t('profile.placeholders.email')}
                     />
                   </label>
 
@@ -369,15 +381,13 @@ function ProfilePage() {
                         </p>
                       </div>
                     </div>
-                    <button
-                      type="button"
-                      role="switch"
-                      aria-checked={form.isActive}
-                      className={toggleClassName(form.isActive)}
-                      onClick={() => setForm((prev) => ({ ...prev, isActive: !prev.isActive }))}
-                    >
-                      <span className={toggleDotClassName(form.isActive)} />
-                    </button>
+                    <Switch
+                      checked={form.isActive}
+                      onChange={(nextValue) =>
+                        setForm((prev) => ({ ...prev, isActive: nextValue }))
+                      }
+                      ariaLabel={t('profile.accountStatus.title')}
+                    />
                   </div>
 
                   {!showPasswordSection ? (
@@ -449,16 +459,17 @@ function ProfilePage() {
                       {t('common.cancel')}
                     </button>
                   </div>
+                  {saveErrorMessage ? (
+                    <p className="m-0 text-[12px] font-medium text-danger">
+                      {saveErrorMessage}
+                    </p>
+                  ) : null}
                 </div>
               ) : (
                 <div className="grid gap-2">
                   <div className={fieldRowClassName}>
                     <span className={labelClassName}>{t('profile.fields.fullName')}</span>
                     <span className={valueClassName}>{user.fullName}</span>
-                  </div>
-                  <div className={fieldRowClassName}>
-                    <span className={labelClassName}>{t('profile.fields.email')}</span>
-                    <span className={valueClassName}>{user.email}</span>
                   </div>
                   <div className={fieldRowClassName}>
                     <span className={labelClassName}>{t('profile.fields.phone')}</span>
@@ -486,7 +497,9 @@ function ProfilePage() {
               <div className="grid gap-2">
                 <div className={fieldRowClassName}>
                   <span className={labelClassName}>{t('profile.fields.userId')}</span>
-                  <span className="font-mono text-[12px] text-text-muted">{user.id}</span>
+                  <span className="text-[12px] text-text-muted">
+                    {isUuidLike(user.id) ? t('common.notAvailable') : user.id}
+                  </span>
                 </div>
                 <div className={fieldRowClassName}>
                   <span className={labelClassName}>{t('profile.fields.role')}</span>

@@ -5,6 +5,7 @@ import { StatusBadge } from '../../../components/shared/data';
 import AppIcon from '../../../components/shared/icons/AppIcon';
 import { EmptyState, LoadingState, PageCard } from '../../../components/shared/page';
 import { formatCurrencyAmount } from '../../../constants';
+import { formatLocalizedDate } from '../../../i18n/date-format';
 import { getChannelLabel, getOrderStatusLabel } from '../../../i18n/labels';
 import { services } from '../../../services';
 import type { EntityId, Order } from '../../../types/domain';
@@ -16,7 +17,7 @@ interface OrderDetailPanelProps {
   onClose: () => void;
   onEdit: (order: Order) => void;
   onDelete: (order: Order) => void;
-  onRecalculate: (orderId: EntityId) => Promise<void>;
+  onRecalculate: (orderId: EntityId) => Promise<Order | null>;
 }
 
 const labelClassName =
@@ -27,17 +28,46 @@ const valueClassName =
 
 function formatDateTime(
   timestamp: string | undefined,
+  language: string,
   locale: string,
   fallback: string,
 ): string {
-  if (!timestamp) {
+  return formatLocalizedDate(timestamp, language, {
+    locale,
+    withYear: true,
+    withTime: true,
+    shortMonth: true,
+    fallback,
+  });
+}
+
+function isLikelyUuid(value: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+    value.trim(),
+  );
+}
+
+function resolveOrderTitle(order: Order | null | undefined, fallback: string): string {
+  if (!order) {
     return fallback;
   }
 
-  return new Intl.DateTimeFormat(locale, {
-    dateStyle: 'medium',
-    timeStyle: 'short',
-  }).format(new Date(timestamp));
+  const firstItemProductName = order.items[0]?.product?.name?.trim() ?? '';
+  if (firstItemProductName) {
+    return firstItemProductName;
+  }
+
+  const orderNumber = order.orderNumber?.trim() ?? '';
+  if (orderNumber && !/^#?[0-9a-f]{6,}$/i.test(orderNumber) && !isLikelyUuid(orderNumber)) {
+    return orderNumber;
+  }
+
+  return (
+    order.contactName?.trim() ||
+    order.customer?.fullName?.trim() ||
+    order.lead?.fullName?.trim() ||
+    fallback
+  );
 }
 
 function OrderDetailPanel({
@@ -50,8 +80,10 @@ function OrderDetailPanel({
   onRecalculate,
 }: OrderDetailPanelProps) {
   const { t, i18n } = useTranslation();
+  const language = i18n.language;
   const locale = i18n.language === 'ru' ? 'ru-RU' : 'uz-UZ';
   const [order, setOrder] = useState<Order | null>(null);
+  const [resolvedLeadName, setResolvedLeadName] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -79,6 +111,7 @@ function OrderDetailPanel({
 
         setHasError(true);
         setOrder(null);
+        setResolvedLeadName(null);
       } finally {
         if (isActive) {
           setIsLoading(false);
@@ -92,6 +125,44 @@ function OrderDetailPanel({
       isActive = false;
     };
   }, [orderId, refreshToken]);
+
+  useEffect(() => {
+    let isActive = true;
+
+    async function resolveLeadName() {
+      const lead = order?.lead;
+      if (!lead?.id) {
+        setResolvedLeadName(null);
+        return;
+      }
+
+      const leadFullName = lead.fullName?.trim() ?? '';
+      if (leadFullName && !isLikelyUuid(leadFullName)) {
+        setResolvedLeadName(leadFullName);
+        return;
+      }
+
+      try {
+        const leadDetails = await services.leads.getById(lead.id);
+        if (!isActive) {
+          return;
+        }
+
+        const nextLeadName = leadDetails?.fullName?.trim() ?? '';
+        setResolvedLeadName(nextLeadName || null);
+      } catch {
+        if (isActive) {
+          setResolvedLeadName(null);
+        }
+      }
+    }
+
+    void resolveLeadName();
+
+    return () => {
+      isActive = false;
+    };
+  }, [order?.lead?.fullName, order?.lead?.id]);
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
@@ -124,7 +195,7 @@ function OrderDetailPanel({
                 {t('orders.detail.eyebrow')}
               </p>
               <h2 className="mt-1 font-display text-[1.45rem] font-extrabold leading-[1.08] tracking-[-0.03em] text-text-primary [overflow-wrap:anywhere]">
-                {order?.orderNumber ?? order?.id ?? t('orders.detail.titleFallback')}
+                {resolveOrderTitle(order, t('orders.detail.titleFallback'))}
               </h2>
               {!isLoading && order ? (
                 <p className="mt-1 text-sm text-text-secondary [overflow-wrap:anywhere]">
@@ -216,7 +287,7 @@ function OrderDetailPanel({
                     <div className="rounded-lg bg-surface-subtle/80 p-3">
                       <p className={labelClassName}>{t('orders.detail.lead')}</p>
                       <p className={`mt-1 ${valueClassName}`}>
-                        {order.lead?.fullName ?? t('orders.detail.noLead')}
+                        {resolvedLeadName ?? t('orders.detail.noLead')}
                       </p>
                     </div>
                   </div>
@@ -291,17 +362,17 @@ function OrderDetailPanel({
                       </dd>
                     </div>
                     <div className="flex items-center justify-between gap-3 rounded-lg bg-surface-subtle/80 px-3 py-2.5">
-                      <dt className={labelClassName}>{t('orders.detail.createdAt')}</dt>
-                      <dd className={`m-0 ${valueClassName}`}>
-                        {formatDateTime(order.createdAt, locale, t('common.na'))}
-                      </dd>
-                    </div>
-                    <div className="flex items-center justify-between gap-3 rounded-lg bg-surface-subtle/80 px-3 py-2.5">
-                      <dt className={labelClassName}>{t('orders.detail.updatedAt')}</dt>
-                      <dd className={`m-0 ${valueClassName}`}>
-                        {formatDateTime(order.updatedAt, locale, t('common.na'))}
-                      </dd>
-                    </div>
+                    <dt className={labelClassName}>{t('orders.detail.createdAt')}</dt>
+                    <dd className={`m-0 ${valueClassName}`}>
+                      {formatDateTime(order.createdAt, language, locale, t('common.na'))}
+                    </dd>
+                  </div>
+                  <div className="flex items-center justify-between gap-3 rounded-lg bg-surface-subtle/80 px-3 py-2.5">
+                    <dt className={labelClassName}>{t('orders.detail.updatedAt')}</dt>
+                    <dd className={`m-0 ${valueClassName}`}>
+                      {formatDateTime(order.updatedAt, language, locale, t('common.na'))}
+                    </dd>
+                  </div>
                   </dl>
                 </div>
               </PageCard>

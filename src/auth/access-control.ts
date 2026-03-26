@@ -3,7 +3,7 @@ import type { AppRouteId } from '../config/routes';
 import type { AppRole } from '../types/architecture';
 import type { AuthenticatedUser, PermissionCode } from './types';
 
-const OPERATOR_ROUTE_PERMISSIONS: Partial<Record<AppRouteId, PermissionCode>> = {
+const ROUTE_REQUIRED_PERMISSIONS: Partial<Record<AppRouteId, PermissionCode>> = {
   dashboard: 'can_view_dashboard',
   leads: 'can_view_leads',
   customers: 'can_view_customers',
@@ -14,20 +14,17 @@ const OPERATOR_ROUTE_PERMISSIONS: Partial<Record<AppRouteId, PermissionCode>> = 
   notifications: 'can_view_notifications',
   users: 'can_manage_users',
   integrations: 'can_manage_integrations',
+  'ai-settings': 'can_manage_ai_settings',
+  logs: 'can_view_logs',
 };
 
-const ADMIN_ALLOWED_ROUTES = new Set<AppRouteId>([
-  'dashboard',
-  'leads',
-  'customers',
-  'products',
-  'orders',
-  'payments',
-  'chat',
-  'notifications',
-  'profile',
-  'users',
-]);
+const IMPLIED_PERMISSIONS: Partial<Record<PermissionCode, PermissionCode[]>> = {
+  can_view_leads: ['can_manage_leads'],
+  can_view_customers: ['can_manage_customers'],
+  can_view_products: ['can_manage_products'],
+  can_view_orders: ['can_update_orders'],
+  can_view_payments: ['can_manage_payments'],
+};
 
 const PUBLIC_ROUTE_IDS = new Set<AppRouteId>([
   'home',
@@ -79,7 +76,13 @@ export function hasPermission(
     return true;
   }
 
-  return user.permissionKeys.includes(permission);
+  const hasDirectPermission = user.permissionKeys.includes(permission);
+  if (hasDirectPermission) {
+    return true;
+  }
+
+  const impliedBy = IMPLIED_PERMISSIONS[permission] ?? [];
+  return impliedBy.some((candidate) => user.permissionKeys.includes(candidate));
 }
 
 export function canAccessRouteForUser(
@@ -102,11 +105,12 @@ export function canAccessRouteForUser(
     return true;
   }
 
-  if (user.role === 'admin') {
-    return ADMIN_ALLOWED_ROUTES.has(routeId);
+  // Business rule: Integrations module is developer-only.
+  if (routeId === 'integrations') {
+    return false;
   }
 
-  const requiredPermission = OPERATOR_ROUTE_PERMISSIONS[routeId];
+  const requiredPermission = ROUTE_REQUIRED_PERMISSIONS[routeId];
   if (!requiredPermission) {
     return false;
   }
@@ -121,7 +125,7 @@ export function resolveDefaultLandingPathForUser(
     return routePaths.login;
   }
 
-  if (user.role === 'developer' || user.role === 'admin') {
+  if (user.role === 'developer') {
     return routePaths.dashboard;
   }
 

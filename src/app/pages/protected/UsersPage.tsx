@@ -23,6 +23,7 @@ import { useAuth } from '../../../auth';
 import UserDeleteDialog from '../../../features/users/components/UserDeleteDialog';
 import UserDetailPanel from '../../../features/users/components/UserDetailPanel';
 import UserFormPanel from '../../../features/users/components/UserFormPanel';
+import { formatLocalizedDate } from '../../../i18n/date-format';
 import { getUserRoleLabel } from '../../../i18n/labels';
 import { services } from '../../../services';
 import type {
@@ -66,7 +67,7 @@ function UsersPage() {
 
   const canManageUsers = hasPermission('can_manage_users');
   const canManageDeveloperRole = hasRole('developer');
-  const currentManagedUserId = currentUser ? `managed-${currentUser.id}` : null;
+  const currentManagedUserId = currentUser?.id ?? null;
   const locale = i18n.language === 'ru' ? 'ru-RU' : 'uz-UZ';
 
   const [search, setSearch] = useState('');
@@ -376,9 +377,12 @@ function UsersPage() {
         label: t('users.columns.created'),
         render: (user) => (
           <span className={tablePrimaryTextClassName}>
-            {new Intl.DateTimeFormat(locale, { dateStyle: 'medium' }).format(
-              new Date(user.created_at),
-            )}
+            {formatLocalizedDate(user.created_at, i18n.language, {
+              locale,
+              withYear: true,
+              shortMonth: true,
+              fallback: t('common.na'),
+            })}
           </span>
         ),
       },
@@ -387,9 +391,12 @@ function UsersPage() {
         label: t('users.columns.updated'),
         render: (user) => (
           <span className={tablePrimaryTextClassName}>
-            {new Intl.DateTimeFormat(locale, { dateStyle: 'medium' }).format(
-              new Date(user.updated_at),
-            )}
+            {formatLocalizedDate(user.updated_at, i18n.language, {
+              locale,
+              withYear: true,
+              shortMonth: true,
+              fallback: t('common.na'),
+            })}
           </span>
         ),
       },
@@ -427,7 +434,9 @@ function UsersPage() {
                 requestDelete(user);
               }}
               disabled={
-                currentManagedUserId === user.id ||
+                (currentManagedUserId !== null &&
+                  (user.id === currentManagedUserId ||
+                    user.id === `managed-${currentManagedUserId}`)) ||
                 user.role === 'developer'
               }
               aria-label={`${t('users.actions.delete')} ${user.full_name}`}
@@ -442,6 +451,7 @@ function UsersPage() {
     canManageDeveloperRole,
     canManageUsers,
     currentManagedUserId,
+    i18n.language,
     locale,
     t,
   ]);

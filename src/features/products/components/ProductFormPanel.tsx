@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from 'react';
 import { FiImage, FiTrash2 } from 'react-icons/fi';
 import AppIcon from '../../../components/shared/icons/AppIcon';
-import { FilterSelect } from '../../../components/shared/data';
+import { FilterSelect, Switch } from '../../../components/shared/data';
 import { DEFAULT_CURRENCY_CODE } from '../../../constants';
 import type { Product, ProductMutationInput, SelectOption } from '../../../types/domain';
 import { useTranslation } from 'react-i18next';
@@ -409,27 +409,13 @@ function ProductFormPanel({
                 {t('products.form.activeProductHint')}
               </p>
             </div>
-            <button
-              type="button"
-              role="switch"
-              aria-checked={form.isActive}
-              className={[
-                'relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full p-0.5 transition-colors duration-200 ease-in-out',
-                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30',
-                form.isActive ? 'bg-primary' : 'bg-border-soft/80',
-              ].join(' ')}
-              onClick={() =>
-                setForm((current) => ({ ...current, isActive: !current.isActive }))
+            <Switch
+              checked={form.isActive}
+              onChange={(nextValue) =>
+                setForm((current) => ({ ...current, isActive: nextValue }))
               }
               disabled={isSubmitting}
-            >
-              <span
-                className={[
-                  'pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow-md transition-transform duration-200 ease-in-out',
-                  form.isActive ? 'translate-x-5' : 'translate-x-0',
-                ].join(' ')}
-              />
-            </button>
+            />
           </div>
 
           {mode === 'edit' && product ? (

@@ -19,20 +19,20 @@ function RouteGate({ route, children }: RouteGateProps) {
   } = useAuth();
   const hasAccessToken = Boolean(getAccessToken());
 
+  if (route.access === 'public') {
+    if (route.id === 'login' && isAuthenticated && hasAccessToken) {
+      return <Navigate replace to={resolveDefaultLandingPath()} />;
+    }
+
+    return <>{children}</>;
+  }
+
   if (isBootstrapping) {
     return (
       <main className="grid min-h-screen place-items-center bg-background-default p-6">
         <p className="text-sm font-semibold text-text-secondary">Loading session...</p>
       </main>
     );
-  }
-
-  if (route.access === 'public') {
-    if (route.id === 'login' && isAuthenticated) {
-      return <Navigate replace to={resolveDefaultLandingPath()} />;
-    }
-
-    return <>{children}</>;
   }
 
   if (!hasAccessToken || !isAuthenticated) {

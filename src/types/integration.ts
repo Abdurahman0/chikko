@@ -29,6 +29,7 @@ export interface IntegrationConfig {
   is_secret: boolean;
   is_active: boolean;
   updated_by: EntityId | null;
+  updated_by_name?: string | null;
 }
 
 export interface IntegrationEventListParams {

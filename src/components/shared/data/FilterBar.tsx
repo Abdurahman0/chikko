@@ -12,7 +12,7 @@ function FilterBar({ children, actions }: FilterBarProps) {
         'bg-surface-card p-4 shadow-sm ring-1 ring-border-soft/25 backdrop-blur-[12px]',
       ].join(' ')}
     >
-      <div className="filter-bar__filters flex min-w-0 flex-1 flex-wrap items-end gap-2">
+      <div className="filter-bar__filters flex min-w-0 flex-1 flex-wrap items-end gap-3">
         {children}
       </div>
       {actions ? (

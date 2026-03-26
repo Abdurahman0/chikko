@@ -39,6 +39,7 @@ import type {
   TableQueryParams,
   ManagedUser,
   LogListParams,
+  SystemHealth,
   UserListParams,
   UserMutationInput,
   UserPatchInput,
@@ -212,7 +213,10 @@ export interface OrderService {
   update(id: EntityId, input: OrderMutationInput): Promise<Order | null>;
   patch(id: EntityId, input: OrderPatchInput): Promise<Order | null>;
   delete(id: EntityId): Promise<boolean>;
-  recalculate(id: EntityId): Promise<Order | null>;
+  recalculate(
+    id: EntityId,
+    input?: OrderMutationInput | OrderPatchInput,
+  ): Promise<Order | null>;
 }
 
 export interface PaymentService {
@@ -222,6 +226,7 @@ export interface PaymentService {
   getPaymentById(id: EntityId): Promise<Payment | null>;
   createPayment(input: PaymentMutationInput): Promise<Payment>;
   updatePayment(id: EntityId, input: PaymentUpdateInput): Promise<Payment | null>;
+  patchPayment(id: EntityId, input: PaymentUpdateInput): Promise<Payment | null>;
   deletePayment(id: EntityId): Promise<boolean>;
   approvePayment(id: EntityId): Promise<Payment | null>;
   rejectPayment(id: EntityId): Promise<Payment | null>;
@@ -240,6 +245,11 @@ export interface ConversationService {
   deleteSession(sessionId: EntityId): Promise<boolean>;
   sendMessage(sessionId: EntityId, payload: SendMessageInput): Promise<ChatMessage>;
   markSessionRead(sessionId: EntityId): Promise<Conversation | null>;
+  pauseSessionAI(
+    sessionId: EntityId,
+    pausedUntilIso?: string,
+  ): Promise<Conversation | null>;
+  resumeSessionAI(sessionId: EntityId): Promise<Conversation | null>;
 }
 
 export interface NotificationService {
@@ -298,6 +308,7 @@ export interface IntegrationsService {
 }
 
 export interface LogsService {
+  getHealth(): Promise<SystemHealth>;
   listLogs(params?: LogListParams): Promise<PaginatedResult<AppLog>>;
   getLogById(id: EntityId): Promise<AppLog | null>;
 }

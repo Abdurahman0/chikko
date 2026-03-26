@@ -89,6 +89,7 @@ function ChatPage() {
   const [isMessagesLoading, setIsMessagesLoading] = useState(false);
   const [isSendingMessage, setIsSendingMessage] = useState(false);
   const [isDeletingSession, setIsDeletingSession] = useState(false);
+  const [isUpdatingAIState, setIsUpdatingAIState] = useState(false);
   const [deleteSessionTarget, setDeleteSessionTarget] = useState<Conversation | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
 
@@ -107,8 +108,8 @@ function ChatPage() {
     () => [
       { value: '-last_message_at', label: "Oxirgi xabar (yangi)" },
       { value: 'last_message_at', label: "Oxirgi xabar (eski)" },
-      { value: '-created_at', label: 'Yaratilgan (yangi)' },
-      { value: 'created_at', label: 'Yaratilgan (eski)' },
+      { value: '-created_at', label: "Qo'shilgan (yangi)" },
+      { value: 'created_at', label: "Qo'shilgan (eski)" },
     ],
     [],
   );
@@ -470,6 +471,64 @@ function ChatPage() {
     }
   }
 
+  async function handlePauseAI(
+    session: Conversation,
+    pausedUntilIso: string,
+  ) {
+    if (isUpdatingAIState) {
+      return;
+    }
+
+    setActionError(null);
+    setIsUpdatingAIState(true);
+
+    try {
+      const updatedSession = await services.conversations.pauseSessionAI(
+        session.id,
+        pausedUntilIso,
+      );
+      if (!updatedSession) {
+        throw new Error();
+      }
+
+      sessionCacheRef.current[updatedSession.id] = updatedSession;
+      setSessions((current) => applySessionUpdate(current, updatedSession));
+      if (activeSessionIdRef.current === updatedSession.id) {
+        setActiveSession(updatedSession);
+      }
+    } catch {
+      setActionError("AI ni tanlangan vaqtga to'xtatib bo'lmadi.");
+    } finally {
+      setIsUpdatingAIState(false);
+    }
+  }
+
+  async function handleResumeAI(session: Conversation) {
+    if (isUpdatingAIState) {
+      return;
+    }
+
+    setActionError(null);
+    setIsUpdatingAIState(true);
+
+    try {
+      const updatedSession = await services.conversations.resumeSessionAI(session.id);
+      if (!updatedSession) {
+        throw new Error();
+      }
+
+      sessionCacheRef.current[updatedSession.id] = updatedSession;
+      setSessions((current) => applySessionUpdate(current, updatedSession));
+      if (activeSessionIdRef.current === updatedSession.id) {
+        setActiveSession(updatedSession);
+      }
+    } catch {
+      setActionError("AI ni davom ettirib bo'lmadi.");
+    } finally {
+      setIsUpdatingAIState(false);
+    }
+  }
+
   const unreadBySessionId = useMemo(
     () =>
       Object.fromEntries(
@@ -538,8 +597,11 @@ function ChatPage() {
               isLoading={isMessagesLoading || isSessionLoading}
               isSending={isSendingMessage}
               isDeletingSession={isDeletingSession}
+              isUpdatingAIState={isUpdatingAIState}
               onSendMessage={handleSendMessage}
               onRequestDeleteSession={setDeleteSessionTarget}
+              onPauseAI={handlePauseAI}
+              onResumeAI={handleResumeAI}
             />
           </div>
         </section>
@@ -562,8 +624,11 @@ function ChatPage() {
               isLoading={isMessagesLoading || isSessionLoading}
               isSending={isSendingMessage}
               isDeletingSession={isDeletingSession}
+              isUpdatingAIState={isUpdatingAIState}
               onSendMessage={handleSendMessage}
               onRequestDeleteSession={setDeleteSessionTarget}
+              onPauseAI={handlePauseAI}
+              onResumeAI={handleResumeAI}
             />
           </div>
         </div>

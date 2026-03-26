@@ -1,48 +1,40 @@
-import type { ComponentType, JSX } from 'react';
+import { lazy, Suspense, type ComponentType, type JSX } from 'react';
 import { Navigate, Outlet, createBrowserRouter, useLocation } from 'react-router-dom';
 import type { AppRouteConfig, AppRouteId } from '../../config/routes';
 import { fallbackRoutes, moduleRoutes, publicRoutes, routePaths } from '../../config/routes';
 import RouteGate from './RouteGate';
 import { useAuth } from '../../auth';
 import { getAccessToken } from '../../lib/auth-storage';
-import AccessDeniedPage from '../pages/public/AccessDeniedPage';
-import AiSettingsPage from '../pages/protected/AiSettingsPage';
-import ChatPage from '../pages/protected/ChatPage';
-import CustomersPage from '../pages/protected/CustomersPage';
-import DashboardPage from '../pages/protected/DashboardPage';
-import LeadsPage from '../pages/protected/LeadsPage';
-import LoginPage from '../pages/public/LoginPage';
-import LogsPage from '../pages/protected/LogsPage';
-import NotFoundPage from '../pages/public/NotFoundPage';
-import NotificationsPage from '../pages/protected/NotificationsPage';
-import OrdersPage from '../pages/protected/OrdersPage';
-import PaymentsPage from '../pages/protected/PaymentsPage';
-import ProductsPage from '../pages/protected/ProductsPage';
-import ProfilePage from '../pages/protected/ProfilePage';
-import UsersPage from '../pages/protected/UsersPage';
-import IntegrationsPage from '../pages/protected/IntegrationsPage';
 import AppShell from '../../layout/AppShell';
 
 type RoutedPageId = Exclude<AppRouteId, 'home'>;
 
 const pageRegistry: Record<RoutedPageId, ComponentType> = {
-  'access-denied': AccessDeniedPage,
-  'ai-settings': AiSettingsPage,
-  chat: ChatPage,
-  customers: CustomersPage,
-  dashboard: DashboardPage,
-  integrations: IntegrationsPage,
-  leads: LeadsPage,
-  login: LoginPage,
-  logs: LogsPage,
-  'not-found': NotFoundPage,
-  notifications: NotificationsPage,
-  orders: OrdersPage,
-  payments: PaymentsPage,
-  products: ProductsPage,
-  profile: ProfilePage,
-  users: UsersPage,
+  'access-denied': lazy(() => import('../pages/public/AccessDeniedPage')),
+  'ai-settings': lazy(() => import('../pages/protected/AiSettingsPage')),
+  chat: lazy(() => import('../pages/protected/ChatPage')),
+  customers: lazy(() => import('../pages/protected/CustomersPage')),
+  dashboard: lazy(() => import('../pages/protected/DashboardPage')),
+  integrations: lazy(() => import('../pages/protected/IntegrationsPage')),
+  leads: lazy(() => import('../pages/protected/LeadsPage')),
+  login: lazy(() => import('../pages/public/LoginPage')),
+  logs: lazy(() => import('../pages/protected/LogsPage')),
+  'not-found': lazy(() => import('../pages/public/NotFoundPage')),
+  notifications: lazy(() => import('../pages/protected/NotificationsPage')),
+  orders: lazy(() => import('../pages/protected/OrdersPage')),
+  payments: lazy(() => import('../pages/protected/PaymentsPage')),
+  products: lazy(() => import('../pages/protected/ProductsPage')),
+  profile: lazy(() => import('../pages/protected/ProfilePage')),
+  users: lazy(() => import('../pages/protected/UsersPage')),
 };
+
+function RouteLoadingFallback(): JSX.Element {
+  return (
+    <main className="grid min-h-screen place-items-center bg-background-default p-6">
+      <p className="text-sm font-semibold text-text-secondary">Loading...</p>
+    </main>
+  );
+}
 
 function renderRouteElement(route: AppRouteConfig): JSX.Element {
   if (route.id === 'home') {
@@ -53,7 +45,9 @@ function renderRouteElement(route: AppRouteConfig): JSX.Element {
 
   return (
     <RouteGate route={route}>
-      <PageComponent />
+      <Suspense fallback={<RouteLoadingFallback />}>
+        <PageComponent />
+      </Suspense>
     </RouteGate>
   );
 }

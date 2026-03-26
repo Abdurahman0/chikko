@@ -5,9 +5,10 @@ import { StatusBadge } from '../../../components/shared/data';
 import AppIcon from '../../../components/shared/icons/AppIcon';
 import { EmptyState, LoadingState, PageCard } from '../../../components/shared/page';
 import { formatCurrencyAmount } from '../../../constants';
+import { formatLocalizedDate } from '../../../i18n/date-format';
 import { getPaymentMethodLabel, getPaymentStatusLabel } from '../../../i18n/labels';
 import { services } from '../../../services';
-import type { EntityId, Payment } from '../../../types/domain';
+import type { EntityId, Order, Payment } from '../../../types/domain';
 
 interface PaymentDetailPanelProps {
   paymentId: EntityId;
@@ -29,23 +30,70 @@ const valueClassName =
 const actionButtonClassName =
   'inline-flex min-h-10 items-center gap-2 rounded-lg px-4 text-sm font-semibold transition duration-fast focus-visible:outline-none focus-visible:ring-2 disabled:cursor-not-allowed disabled:opacity-60';
 
+type PaymentStatusBadgeTone = 'success' | 'warning' | 'danger' | 'info' | 'neutral';
+
 function formatDateTime(
   timestamp: string | null | undefined,
+  language: string,
   locale: string,
   fallback: string,
 ): string {
-  if (!timestamp) {
-    return fallback;
-  }
-
-  return new Intl.DateTimeFormat(locale, {
-    dateStyle: 'medium',
-    timeStyle: 'short',
-  }).format(new Date(timestamp));
+  return formatLocalizedDate(timestamp, language, {
+    locale,
+    withYear: true,
+    withTime: true,
+    shortMonth: true,
+    fallback,
+  });
 }
 
 function formatAmount(value: number, locale: string): string {
   return formatCurrencyAmount(value, locale);
+}
+
+function getPaymentStatusTone(status: Payment['status']): PaymentStatusBadgeTone {
+  switch (status) {
+    case 'pending':
+      return 'warning';
+    case 'approved':
+      return 'success';
+    case 'rejected':
+      return 'danger';
+    case 'verified':
+      return 'info';
+    case 'failed':
+    default:
+      return 'neutral';
+  }
+}
+
+function isLikelyUuid(value: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+    value.trim(),
+  );
+}
+
+function resolveOrderLabel(order: Order | null): string | null {
+  if (!order) {
+    return null;
+  }
+
+  const label =
+    order.orderNumber ||
+    order.customer?.fullName ||
+    order.contactName ||
+    null;
+
+  return label && label.trim().length > 0 ? label : null;
+}
+
+function getPaymentDisplayLabel(payment: Payment): string {
+  const candidate =
+    payment.submitted_by_name.trim() ||
+    (payment.verification_reference ?? '').trim() ||
+    '';
+
+  return candidate || 'Payment';
 }
 
 function PaymentDetailPanel({
@@ -65,6 +113,8 @@ function PaymentDetailPanel({
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [orderLabel, setOrderLabel] = useState<string | null>(null);
+  const [reviewedByLabel, setReviewedByLabel] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<
     'approve' | 'reject' | 'verify' | null
   >(null);
@@ -106,6 +156,66 @@ function PaymentDetailPanel({
   }, [paymentId, refreshToken]);
 
   useEffect(() => {
+    let isActive = true;
+
+    async function loadRelatedLabels() {
+      if (!payment) {
+        setOrderLabel(null);
+        setReviewedByLabel(null);
+        return;
+      }
+
+      setOrderLabel(null);
+
+      if (payment.order) {
+        try {
+          const relatedOrder = await services.orders.getById(payment.order);
+          if (!isActive) {
+            return;
+          }
+          setOrderLabel(resolveOrderLabel(relatedOrder));
+        } catch {
+          if (!isActive) {
+            return;
+          }
+          setOrderLabel(null);
+        }
+      }
+
+      const reviewedByRaw = payment.reviewed_by;
+      if (!reviewedByRaw) {
+        setReviewedByLabel(null);
+        return;
+      }
+
+      if (!isLikelyUuid(reviewedByRaw)) {
+        setReviewedByLabel(reviewedByRaw);
+        return;
+      }
+
+      try {
+        const reviewedByUser = await services.users.getUserById(reviewedByRaw);
+        if (!isActive) {
+          return;
+        }
+
+        setReviewedByLabel(reviewedByUser?.full_name ?? null);
+      } catch {
+        if (!isActive) {
+          return;
+        }
+        setReviewedByLabel(null);
+      }
+    }
+
+    void loadRelatedLabels();
+
+    return () => {
+      isActive = false;
+    };
+  }, [payment]);
+
+  useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key === 'Escape') {
         onClose();
@@ -122,7 +232,15 @@ function PaymentDetailPanel({
     type: 'approve' | 'reject' | 'verify',
     handler: (id: EntityId) => Promise<Payment | null>,
   ) {
-    if (!payment || payment.status !== 'pending') {
+    if (!payment) {
+      return;
+    }
+
+    if (type === 'verify' && payment.status !== 'approved') {
+      return;
+    }
+
+    if ((type === 'approve' || type === 'reject') && payment.status !== 'pending') {
       return;
     }
 
@@ -161,7 +279,7 @@ function PaymentDetailPanel({
                 {t('payments.title')}
               </p>
               <h2 className="mt-1 font-display text-[1.45rem] font-extrabold leading-[1.08] tracking-[-0.03em] text-text-primary [overflow-wrap:anywhere]">
-                {payment?.id ?? t('payments.detail.titleFallback')}
+                {payment ? getPaymentDisplayLabel(payment) : t('payments.detail.titleFallback')}
               </h2>
               {!isLoading && payment ? (
                 <p className="mt-1 text-sm text-text-secondary [overflow-wrap:anywhere]">
@@ -184,13 +302,16 @@ function PaymentDetailPanel({
             <div className="mt-3 flex flex-wrap items-center gap-2">
               <StatusBadge
                 status={payment.status}
+                tone={getPaymentStatusTone(payment.status)}
                 label={getPaymentStatusLabel(t, payment.status)}
               />
               <span className="inline-flex min-h-7 items-center rounded-pill bg-info-bg px-2.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-info">
                 {getPaymentMethodLabel(t, payment.method)}
               </span>
               <span className="inline-flex min-h-7 items-center rounded-pill bg-surface-subtle px-2.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-text-secondary">
-                {t('payments.detail.orderBadge', { order: payment.order })}
+                {t('payments.detail.orderBadge', {
+                  order: orderLabel ?? t('payments.notAvailable'),
+                })}
               </span>
             </div>
           ) : null}
@@ -248,7 +369,7 @@ function PaymentDetailPanel({
                     <div className="rounded-lg bg-surface-subtle/80 p-3">
                       <p className={labelClassName}>{t('payments.detail.reviewedBy')}</p>
                       <p className={`mt-1 ${valueClassName}`}>
-                        {payment.reviewed_by ?? t('payments.notAvailable')}
+                        {reviewedByLabel ?? t('payments.notAvailable')}
                       </p>
                     </div>
                   </div>
@@ -269,7 +390,9 @@ function PaymentDetailPanel({
                     >
                       <img
                         src={payment.screenshot}
-                        alt={t('payments.detail.screenshotAlt', { id: payment.id })}
+                        alt={t('payments.detail.screenshotAlt', {
+                          id: getPaymentDisplayLabel(payment),
+                        })}
                         className="h-52 w-full rounded-lg object-cover transition duration-fast group-hover:scale-[1.01]"
                         loading="lazy"
                       />
@@ -291,19 +414,34 @@ function PaymentDetailPanel({
                     <div className="flex items-center justify-between gap-3 rounded-lg bg-surface-subtle/80 px-3 py-2.5">
                       <dt className={labelClassName}>{t('payments.detail.createdAt')}</dt>
                       <dd className={`m-0 ${valueClassName}`}>
-                        {formatDateTime(payment.created_at, locale, t('payments.notAvailable'))}
+                        {formatDateTime(
+                          payment.created_at,
+                          i18n.language,
+                          locale,
+                          t('payments.notAvailable'),
+                        )}
                       </dd>
                     </div>
                     <div className="flex items-center justify-between gap-3 rounded-lg bg-surface-subtle/80 px-3 py-2.5">
                       <dt className={labelClassName}>{t('payments.detail.updatedAt')}</dt>
                       <dd className={`m-0 ${valueClassName}`}>
-                        {formatDateTime(payment.updated_at, locale, t('payments.notAvailable'))}
+                        {formatDateTime(
+                          payment.updated_at,
+                          i18n.language,
+                          locale,
+                          t('payments.notAvailable'),
+                        )}
                       </dd>
                     </div>
                     <div className="flex items-center justify-between gap-3 rounded-lg bg-surface-subtle/80 px-3 py-2.5">
                       <dt className={labelClassName}>{t('payments.detail.reviewedAt')}</dt>
                       <dd className={`m-0 ${valueClassName}`}>
-                        {formatDateTime(payment.reviewed_at, locale, t('payments.notAvailable'))}
+                        {formatDateTime(
+                          payment.reviewed_at,
+                          i18n.language,
+                          locale,
+                          t('payments.notAvailable'),
+                        )}
                       </dd>
                     </div>
                   </dl>
@@ -348,6 +486,11 @@ function PaymentDetailPanel({
                           ? t('payments.actions.rejecting')
                           : t('payments.actions.reject')}
                       </button>
+                    </div>
+                  ) : null}
+
+                  {canManagePayments && payment.status === 'approved' ? (
+                    <div className="flex flex-wrap items-center gap-2">
                       <button
                         type="button"
                         className={`${actionButtonClassName} bg-info text-white hover:brightness-95 focus-visible:ring-info/35`}

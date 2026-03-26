@@ -20,13 +20,15 @@ export function getLogTypeLabel(type: LogType): string {
   return 'Tizim';
 }
 
-export function getLogTypeTone(type: LogType): 'info' | 'warning' | 'danger' | 'success' | 'neutral' {
+export function getLogTypeTone(
+  type: LogType,
+): 'info' | 'warning' | 'danger' | 'success' | 'neutral' | 'accent' {
   if (type === 'ai') {
     return 'info';
   }
 
   if (type === 'webhook') {
-    return 'neutral';
+    return 'accent';
   }
 
   if (type === 'error') {
@@ -37,5 +39,5 @@ export function getLogTypeTone(type: LogType): 'info' | 'warning' | 'danger' | '
     return 'success';
   }
 
-  return 'warning';
+  return 'neutral';
 }

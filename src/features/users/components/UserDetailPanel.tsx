@@ -4,7 +4,8 @@ import { useTranslation } from 'react-i18next';
 import { StatusBadge } from '../../../components/shared/data';
 import AppIcon from '../../../components/shared/icons/AppIcon';
 import { EmptyState, LoadingState, PageCard } from '../../../components/shared/page';
-import { getUserRoleLabel } from '../../../i18n/labels';
+import { formatLocalizedDate } from '../../../i18n/date-format';
+import { getUserPermissionLabel, getUserRoleLabel } from '../../../i18n/labels';
 import { services } from '../../../services';
 import type { EntityId, ManagedUser, UserPermission, UserRole } from '../../../types/domain';
 
@@ -27,15 +28,30 @@ const labelClassName =
 const valueClassName =
   'text-sm font-semibold text-text-primary [overflow-wrap:anywhere]';
 
-function formatDateTime(timestamp: string | undefined, locale: string, fallback: string): string {
-  if (!timestamp) {
-    return fallback;
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+function isUuidLike(value: string | null | undefined): boolean {
+  if (!value) {
+    return false;
   }
 
-  return new Intl.DateTimeFormat(locale, {
-    dateStyle: 'medium',
-    timeStyle: 'short',
-  }).format(new Date(timestamp));
+  return UUID_PATTERN.test(value);
+}
+
+function formatDateTime(
+  timestamp: string | undefined,
+  language: string,
+  locale: string,
+  fallback: string,
+): string {
+  return formatLocalizedDate(timestamp, language, {
+    locale,
+    withYear: true,
+    withTime: true,
+    shortMonth: true,
+    fallback,
+  });
 }
 
 function canManageTarget(
@@ -137,12 +153,19 @@ function UserDetailPanel({
     return user.custom_permissions
       .map((permissionId) => permissions.find((permission) => permission.id === permissionId))
       .filter((permission): permission is UserPermission => Boolean(permission))
-      .map((permission) => permission.name);
-  }, [permissions, user]);
+      .map((permission) =>
+        getUserPermissionLabel(t, permission.code, permission.name),
+      );
+  }, [permissions, t, user]);
 
   const targetManageable = user
     ? canManageTarget(currentRole, user.role, canManageDeveloperRole)
     : false;
+  const isCurrentManagedUser = Boolean(
+    user &&
+      currentManagedUserId &&
+      (user.id === currentManagedUserId || user.id === `managed-${currentManagedUserId}`),
+  );
 
   async function handleToggleActive() {
     if (!user || isToggling) {
@@ -259,7 +282,10 @@ function UserDetailPanel({
                     <div className="rounded-lg bg-surface-subtle/80 p-3">
                       <p className={labelClassName}>{t('users.detail.createdBy')}</p>
                       <p className={`mt-1 ${valueClassName}`}>
-                        {user.created_by ?? t('common.na')}
+                        {user.created_by_name ??
+                          (user.created_by && !isUuidLike(user.created_by)
+                            ? user.created_by
+                            : t('common.na'))}
                       </p>
                     </div>
                     <div className="rounded-lg bg-surface-subtle/80 p-3">
@@ -305,13 +331,23 @@ function UserDetailPanel({
                   <div className="flex items-center justify-between gap-3 rounded-lg bg-surface-subtle/80 px-3 py-2.5">
                     <dt className={labelClassName}>{t('users.detail.createdAt')}</dt>
                     <dd className={`m-0 ${valueClassName}`}>
-                      {formatDateTime(user.created_at, locale, t('common.na'))}
+                      {formatDateTime(
+                        user.created_at,
+                        i18n.language,
+                        locale,
+                        t('common.na'),
+                      )}
                     </dd>
                   </div>
                   <div className="flex items-center justify-between gap-3 rounded-lg bg-surface-subtle/80 px-3 py-2.5">
                     <dt className={labelClassName}>{t('users.detail.updatedAt')}</dt>
                     <dd className={`m-0 ${valueClassName}`}>
-                      {formatDateTime(user.updated_at, locale, t('common.na'))}
+                      {formatDateTime(
+                        user.updated_at,
+                        i18n.language,
+                        locale,
+                        t('common.na'),
+                      )}
                     </dd>
                   </div>
                 </dl>
@@ -338,7 +374,7 @@ function UserDetailPanel({
                       type="button"
                       className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-info px-4 text-sm font-semibold text-white transition duration-fast hover:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-info/35 disabled:cursor-not-allowed disabled:opacity-60"
                       onClick={() => void handleToggleActive()}
-                      disabled={isToggling || currentManagedUserId === user.id}
+                      disabled={isToggling || isCurrentManagedUser}
                     >
                       {isToggling
                         ? t('users.actions.toggling')
@@ -350,7 +386,7 @@ function UserDetailPanel({
                       type="button"
                       className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-danger-bg px-4 text-sm font-semibold text-danger transition duration-fast hover:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-danger/30 disabled:cursor-not-allowed disabled:opacity-60"
                       onClick={() => onDelete(user)}
-                      disabled={currentManagedUserId === user.id || user.role === 'developer'}
+                      disabled={isCurrentManagedUser || user.role === 'developer'}
                     >
                       <FiTrash2 className="h-4 w-4" />
                       {t('users.actions.delete')}

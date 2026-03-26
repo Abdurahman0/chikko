@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { StatusBadge } from '../../../components/shared/data';
 import AppIcon from '../../../components/shared/icons/AppIcon';
 import { EmptyState, LoadingState, PageCard } from '../../../components/shared/page';
+import { formatLocalizedDate } from '../../../i18n/date-format';
 import { services } from '../../../services';
 import type { AppLog, EntityId } from '../../../types/domain';
 import { getLogTypeLabel, getLogTypeTone } from '../utils/log-format';
@@ -18,11 +19,40 @@ const labelClassName =
 const valueClassName =
   'text-sm font-semibold text-text-primary [overflow-wrap:anywhere]';
 
-function formatLogDateTime(timestamp: string, locale: string): string {
-  return new Intl.DateTimeFormat(locale, {
-    dateStyle: 'medium',
-    timeStyle: 'short',
-  }).format(new Date(timestamp));
+function formatLogDateTime(
+  timestamp: string,
+  language: string,
+  locale: string,
+): string {
+  return formatLocalizedDate(timestamp, language, {
+    locale,
+    withYear: true,
+    withTime: true,
+    shortMonth: true,
+    fallback: '',
+  });
+}
+
+function formatMetadata(metadata: AppLog['metadata']): string {
+  if (metadata == null) {
+    return 'null';
+  }
+
+  if (typeof metadata === 'string') {
+    const trimmed = metadata.trim();
+    if (!trimmed) {
+      return '""';
+    }
+
+    try {
+      const parsed = JSON.parse(trimmed) as unknown;
+      return JSON.stringify(parsed, null, 2);
+    } catch {
+      return trimmed;
+    }
+  }
+
+  return JSON.stringify(metadata, null, 2);
 }
 
 function LogDetailPanel({ logId, onClose }: LogDetailPanelProps) {
@@ -154,9 +184,18 @@ function LogDetailPanel({ logId, onClose }: LogDetailPanelProps) {
                   <div className="rounded-lg bg-surface-subtle/80 p-3">
                     <p className={labelClassName}>{t('logs.columns.createdAt')}</p>
                     <p className={`mt-1 ${valueClassName}`}>
-                      {formatLogDateTime(log.created_at, locale)}
+                      {formatLogDateTime(log.created_at, i18n.language, locale)}
                     </p>
                   </div>
+                </div>
+              </PageCard>
+
+              <PageCard>
+                <div className="grid gap-2.5">
+                  <p className={labelClassName}>{t('logs.detail.metadataTitle')}</p>
+                  <pre className="m-0 max-h-[320px] overflow-auto rounded-lg bg-surface-subtle/80 p-3 text-[12px] leading-6 text-text-secondary">
+                    {formatMetadata(log.metadata)}
+                  </pre>
                 </div>
               </PageCard>
 

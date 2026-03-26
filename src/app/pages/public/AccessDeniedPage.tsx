@@ -30,7 +30,7 @@ function AccessDeniedPage() {
           <p className="m-0">
             {t('auth.accessDenied.currentAccount')}{' '}
             <span className="font-semibold text-text-primary">
-              {currentUser?.email ?? t('auth.accessDenied.notSignedIn')}
+              {currentUser?.fullName ?? t('auth.accessDenied.notSignedIn')}
             </span>
           </p>
           {currentUser ? (

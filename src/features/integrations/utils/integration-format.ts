@@ -2,6 +2,7 @@ import type {
   IntegrationPlatform,
   IntegrationProvider,
 } from '../../../types/domain';
+import { formatLocalizedDate } from '../../../i18n/date-format';
 
 export function getIntegrationProviderLabel(provider: IntegrationProvider): string {
   if (provider === 'telegram') {
@@ -64,13 +65,18 @@ export function getProcessedLabel(processed: boolean): string {
 }
 
 export function formatIntegrationDateTime(
-  timestamp: string,
+  timestamp: string | undefined,
+  language: string,
   locale: string,
+  fallback = '',
 ): string {
-  return new Intl.DateTimeFormat(locale, {
-    dateStyle: 'medium',
-    timeStyle: 'short',
-  }).format(new Date(timestamp));
+  return formatLocalizedDate(timestamp, language, {
+    locale,
+    withYear: true,
+    withTime: true,
+    shortMonth: true,
+    fallback,
+  });
 }
 
 export function maskSecretValue(value: string): string {
@@ -78,9 +84,5 @@ export function maskSecretValue(value: string): string {
     return '';
   }
 
-  if (value.length <= 8) {
-    return '••••••••';
-  }
-
-  return `${value.slice(0, 4)}••••••${value.slice(-2)}`;
+  return '••••••••';
 }

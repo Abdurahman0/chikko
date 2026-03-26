@@ -26,10 +26,10 @@ function Pagination({
 
   return (
     <nav
-      className="pagination flex flex-wrap items-center justify-between gap-3 px-0.5 pt-1"
+      className="pagination flex flex-wrap items-center justify-end gap-3 px-0.5 pt-1"
       aria-label="Pagination"
     >
-      <div className="pagination__summary flex w-full flex-wrap items-center gap-2 text-sm font-medium text-text-secondary min-[821px]:w-auto">
+      <div className="pagination__summary flex flex-wrap items-center gap-2 text-sm font-medium text-text-secondary">
         <span className="pagination__current inline-flex min-h-7 items-center rounded-pill bg-primary/12 px-2.5 text-[12px] font-semibold text-text-accent">
           {t('shared.pagination.page')} {currentPage}
         </span>
@@ -42,7 +42,7 @@ function Pagination({
           </span>
         ) : null}
       </div>
-      <div className="pagination__actions ml-auto flex w-full items-center gap-3 min-[821px]:ml-auto min-[821px]:w-auto">
+      <div className="pagination__actions flex items-center gap-3">
         <button
           type="button"
           className={PAGINATION_BUTTON_CLASS_NAME}

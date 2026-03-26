@@ -15,6 +15,14 @@ interface LoginResponse extends Partial<AuthTokens> {
 type MeResponse = unknown;
 
 const PERMISSION_CODE_SET = new Set<string>(PERMISSION_CODES);
+const PRIMARY_PERMISSION_COLLECTION_KEYS = [
+  'permissionKeys',
+  'permission_keys',
+  'custom_permissions',
+  'custom_permission_ids',
+  'effective_permissions',
+  'role_permissions',
+] as const;
 
 function toRecord(value: unknown): Record<string, unknown> | null {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
@@ -36,35 +44,97 @@ function resolveRole(value: unknown): AppRole {
   return 'operator';
 }
 
+function toPermissionCode(value: unknown): PermissionCode | null {
+  const raw = readString(value);
+  if (!raw) {
+    return null;
+  }
+
+  return PERMISSION_CODE_SET.has(raw) ? (raw as PermissionCode) : null;
+}
+
+function pushPermissionCode(value: unknown, bucket: Set<PermissionCode>): void {
+  const directCode = toPermissionCode(value);
+  if (directCode) {
+    bucket.add(directCode);
+    return;
+  }
+
+  const raw = readString(value);
+  if (!raw || (!raw.includes(',') && !raw.includes(' '))) {
+    return;
+  }
+
+  raw
+    .split(/[,\s]+/)
+    .map((token) => token.trim())
+    .filter(Boolean)
+    .forEach((token) => {
+      if (PERMISSION_CODE_SET.has(token)) {
+        bucket.add(token as PermissionCode);
+      }
+    });
+}
+
+function collectPermissionCodes(
+  value: unknown,
+  bucket: Set<PermissionCode>,
+  depth = 0,
+): void {
+  if (depth > 3 || value === null || typeof value === 'undefined') {
+    return;
+  }
+
+  pushPermissionCode(value, bucket);
+
+  if (Array.isArray(value)) {
+    value.forEach((entry) => collectPermissionCodes(entry, bucket, depth + 1));
+    return;
+  }
+
+  const record = toRecord(value);
+  if (!record) {
+    return;
+  }
+
+  pushPermissionCode(record.code, bucket);
+  pushPermissionCode(record.permission, bucket);
+  pushPermissionCode(record.permission_code, bucket);
+  pushPermissionCode(record.key, bucket);
+  pushPermissionCode(record.name, bucket);
+
+  PRIMARY_PERMISSION_COLLECTION_KEYS.forEach((key) => {
+    collectPermissionCodes(record[key], bucket, depth + 1);
+  });
+
+  collectPermissionCodes(record.results, bucket, depth + 1);
+  collectPermissionCodes(record.items, bucket, depth + 1);
+  collectPermissionCodes(record.data, bucket, depth + 1);
+}
+
 function resolvePermissionCodes(userRecord: Record<string, unknown>, role: AppRole): PermissionCode[] {
-  const permissionKeysValue = userRecord.permissionKeys ?? userRecord.permission_keys;
-  const permissionsValue = userRecord.permissions;
-  const resolvedCodes: PermissionCode[] = [];
-
-  if (Array.isArray(permissionKeysValue)) {
-    for (const item of permissionKeysValue) {
-      const code = readString(item);
-      if (code && PERMISSION_CODE_SET.has(code)) {
-        resolvedCodes.push(code as PermissionCode);
-      }
-    }
-  }
-
-  if (Array.isArray(permissionsValue)) {
-    for (const permission of permissionsValue) {
-      const permissionRecord = toRecord(permission);
-      const code = readString(permissionRecord?.code);
-      if (code && PERMISSION_CODE_SET.has(code)) {
-        resolvedCodes.push(code as PermissionCode);
-      }
-    }
-  }
-
   if (role === 'developer') {
     return [...PERMISSION_CODES];
   }
 
-  return Array.from(new Set(resolvedCodes));
+  const resolvedCodes = new Set<PermissionCode>();
+
+  PRIMARY_PERMISSION_COLLECTION_KEYS.forEach((key) => {
+    collectPermissionCodes(userRecord[key], resolvedCodes);
+  });
+
+  PERMISSION_CODES.forEach((permissionCode) => {
+    if (userRecord[permissionCode] === true) {
+      resolvedCodes.add(permissionCode);
+    }
+  });
+
+  if (resolvedCodes.size === 0) {
+    // Fallback for backends that only expose assigned permissions as `permissions`.
+    collectPermissionCodes(userRecord.permissions, resolvedCodes);
+  }
+
+  return Array.from(resolvedCodes);
 }
 
 function normalizeUser(rawUser: unknown): AuthenticatedUser {

@@ -25,7 +25,6 @@ interface LeadFormPanelProps {
 interface LeadFormState {
   fullName: string;
   phone: string;
-  email: string;
   instagramUsername: string;
   telegramUsername: string;
   source: LeadSource;
@@ -46,6 +45,14 @@ const labelClassName =
 
 const UNASSIGNED_OPERATOR_VALUE = '';
 
+function normalizeLeadSource(source: LeadSource): LeadSource {
+  if (source === 'website' || source === 'web') {
+    return 'manual';
+  }
+
+  return source;
+}
+
 function createInitialState(
   mode: 'create' | 'edit',
   lead: Lead | null | undefined,
@@ -54,10 +61,9 @@ function createInitialState(
     return {
       fullName: lead.fullName,
       phone: lead.contact.phone ?? '',
-      email: lead.contact.email ?? '',
       instagramUsername: lead.instagramUsername ?? '',
       telegramUsername: lead.telegramUsername ?? '',
-      source: lead.source,
+      source: normalizeLeadSource(lead.source),
       status: lead.status,
       notes: lead.notes ?? lead.notesSummary ?? '',
       assignedOperatorId: lead.assignedOperator?.id ?? UNASSIGNED_OPERATOR_VALUE,
@@ -67,7 +73,6 @@ function createInitialState(
   return {
     fullName: '',
     phone: '',
-    email: '',
     instagramUsername: '',
     telegramUsername: '',
     source: 'telegram',
@@ -125,7 +130,6 @@ function LeadFormPanel({
 
     const fullName = form.fullName.trim();
     const phone = form.phone.trim();
-    const email = form.email.trim();
     const instagramUsername = form.instagramUsername.trim();
     const telegramUsername = form.telegramUsername.trim();
     const notes = form.notes.trim();
@@ -138,7 +142,7 @@ function LeadFormPanel({
     onSubmit({
       full_name: fullName,
       phone,
-      email: email || null,
+      email: null,
       instagram_username: instagramUsername || null,
       telegram_username: telegramUsername || null,
       source: form.source,
@@ -231,24 +235,7 @@ function LeadFormPanel({
             </div>
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="grid gap-1.5">
-              <label className={labelClassName} htmlFor="lead-form-email">
-                {t('leads.form.email')}
-              </label>
-              <input
-                id="lead-form-email"
-                type="email"
-                value={form.email}
-                onChange={(event) =>
-                  setForm((current) => ({ ...current, email: event.target.value }))
-                }
-                className={inputClassName}
-                placeholder="lead@example.com"
-                disabled={isSubmitting}
-              />
-            </div>
-
+          <div className="grid gap-3">
             <div className="grid gap-1.5">
               <span className={labelClassName}>{t('leads.form.operator')}</span>
               <FilterSelect

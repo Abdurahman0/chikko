@@ -1,4 +1,3 @@
-import AppIcon from '../icons/AppIcon';
 import { useTranslation } from 'react-i18next';
 
 interface LoadingStateProps {
@@ -20,11 +19,6 @@ function LoadingState({
           aria-hidden="true"
         >
           <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-primary/12 to-transparent" />
-          <AppIcon
-            name="sparkles"
-            className="absolute h-5 w-5 text-primary/85"
-            aria-hidden="true"
-          />
           <div className="h-10 w-10 animate-spin rounded-full border-[3px] border-primary/20 border-t-primary" />
         </div>
         <h3 className="m-0 text-[1.1rem] font-semibold text-text-primary">

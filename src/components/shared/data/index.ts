@@ -6,4 +6,5 @@ export { default as Pagination } from './Pagination';
 export { default as SearchInput } from './SearchInput';
 export { default as StatCard } from './StatCard';
 export { default as StatusBadge } from './StatusBadge';
+export { default as Switch } from './Switch';
 export { getStatusBadgeTone } from './StatusBadge';

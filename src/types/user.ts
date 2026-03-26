@@ -59,6 +59,7 @@ export interface ManagedUser {
   is_active: boolean;
   custom_permissions: EntityId[];
   created_by?: EntityId | null;
+  created_by_name?: string | null;
   created_at: TimestampString;
   updated_at: TimestampString;
 }

@@ -1,7 +1,9 @@
 import { useEffect, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { FiMapPin, FiPhone, FiTag } from 'react-icons/fi';
 import { createPortal } from 'react-dom';
 import AppIcon from '../../../components/shared/icons/AppIcon';
+import { formatLocalizedDate } from '../../../i18n/date-format';
 import type { Conversation } from '../../../types/domain';
 
 interface ChatUserProfilePanelProps {
@@ -141,15 +143,22 @@ function resolveChannelLabel(channel: Conversation['channel']): string {
   }
 }
 
-function formatDateTime(value: string | null): string | null {
+function formatDateTime(
+  value: string | null,
+  language: string,
+  locale: string,
+): string | null {
   if (!value) {
     return null;
   }
 
-  return new Intl.DateTimeFormat('uz-UZ', {
-    dateStyle: 'medium',
-    timeStyle: 'short',
-  }).format(new Date(value));
+  return formatLocalizedDate(value, language, {
+    locale,
+    withYear: true,
+    withTime: true,
+    shortMonth: true,
+    fallback: '',
+  });
 }
 
 function getInitial(name: string): string {
@@ -162,6 +171,9 @@ function getInitial(name: string): string {
 }
 
 function ChatUserProfilePanel({ session, isOpen, onClose }: ChatUserProfilePanelProps) {
+  const { i18n } = useTranslation();
+  const locale = i18n.language === 'ru' ? 'ru-RU' : 'uz-UZ';
+
   useEffect(() => {
     if (!isOpen) {
       return undefined;
@@ -201,7 +213,7 @@ function ChatUserProfilePanel({ session, isOpen, onClose }: ChatUserProfilePanel
       null;
 
     const selectedProduct = statePayload?.selected_product_name ?? null;
-    const lastActivity = formatDateTime(session.last_message_at);
+    const lastActivity = formatDateTime(session.last_message_at, i18n.language, locale);
 
     return {
       name,
@@ -212,7 +224,7 @@ function ChatUserProfilePanel({ session, isOpen, onClose }: ChatUserProfilePanel
       externalId: session.external_id,
       lastActivity,
     };
-  }, [session]);
+  }, [i18n.language, locale, session]);
 
   const panel = (
     <div

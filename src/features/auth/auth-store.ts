@@ -146,13 +146,22 @@ export async function login(email: string, password: string): Promise<Authentica
   try {
     const result = await authService.login(email, password);
     setTokens({ access: result.access, refresh: result.refresh });
+
+    let effectiveUser = result.user;
+    try {
+      // Ensure sidebar/route permissions always use fully resolved backend user data.
+      effectiveUser = await authService.getMe();
+    } catch {
+      // Fall back to login payload if /me is temporarily unavailable.
+    }
+
     setState({
-      user: result.user,
+      user: effectiveUser,
       isAuthenticated: true,
       loading: false,
     });
 
-    return result.user;
+    return effectiveUser;
   } catch (error) {
     clearTokens();
     setState({

@@ -22,7 +22,6 @@ interface CustomerFormPanelProps {
 interface CustomerFormState {
   fullName: string;
   phone: string;
-  email: string;
   address: string;
   notes: string;
   leadId: string;
@@ -49,7 +48,6 @@ function createInitialState(
     return {
       fullName: customer.fullName,
       phone: customer.contact.phone ?? '',
-      email: customer.contact.email ?? '',
       address: customer.address?.line1 ?? '',
       notes: customer.notes ?? '',
       leadId: customer.lead?.id ?? EMPTY_OPTION_VALUE,
@@ -60,7 +58,6 @@ function createInitialState(
   return {
     fullName: '',
     phone: '',
-    email: '',
     address: '',
     notes: '',
     leadId: EMPTY_OPTION_VALUE,
@@ -112,7 +109,6 @@ function CustomerFormPanel({
 
     const fullName = form.fullName.trim();
     const phone = form.phone.trim();
-    const email = form.email.trim();
     const address = form.address.trim();
     const notes = form.notes.trim();
 
@@ -124,7 +120,7 @@ function CustomerFormPanel({
     onSubmit({
       full_name: fullName,
       phone,
-      email: email || null,
+      email: null,
       address: address || null,
       notes: notes || null,
       metadata: mode === 'edit' ? customer?.metadata ?? null : null,
@@ -221,24 +217,7 @@ function CustomerFormPanel({
             </div>
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="grid gap-1.5">
-              <label className={labelClassName} htmlFor="customer-form-email">
-                {t('customers.form.email')}
-              </label>
-              <input
-                id="customer-form-email"
-                type="email"
-                value={form.email}
-                onChange={(event) =>
-                  setForm((current) => ({ ...current, email: event.target.value }))
-                }
-                className={inputClassName}
-                placeholder="customer@example.com"
-                disabled={isSubmitting}
-              />
-            </div>
-
+          <div className="grid gap-3">
             <div className="grid gap-1.5">
               <label className={labelClassName} htmlFor="customer-form-address">
                 {t('customers.form.address')}

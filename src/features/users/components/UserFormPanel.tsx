@@ -1,8 +1,12 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FilterSelect } from '../../../components/shared/data';
+import { FilterSelect, Switch } from '../../../components/shared/data';
 import AppIcon from '../../../components/shared/icons/AppIcon';
-import { getUserRoleLabel } from '../../../i18n/labels';
+import {
+  getUserPermissionDescription,
+  getUserPermissionLabel,
+  getUserRoleLabel,
+} from '../../../i18n/labels';
 import type {
   ManagedUser,
   UserMutationInput,
@@ -203,7 +207,7 @@ function UserFormPanel({
       role: form.role,
       is_active: form.isActive,
       custom_permission_ids:
-        form.role === 'operator' ? form.customPermissionIds : [],
+        form.role === 'developer' ? [] : form.customPermissionIds,
     });
   }
 
@@ -334,7 +338,7 @@ function UserFormPanel({
                     ...current,
                     role: value as UserRole,
                     customPermissionIds:
-                      value === 'operator' ? current.customPermissionIds : [],
+                      value === 'developer' ? [] : current.customPermissionIds,
                   }))
                 }
                 disabled={isSubmitting}
@@ -350,31 +354,17 @@ function UserFormPanel({
                   {t('users.form.activeHint')}
                 </p>
               </div>
-              <button
-                type="button"
-                role="switch"
-                aria-checked={form.isActive}
-                className={[
-                  'relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full p-0.5 transition-colors duration-200 ease-in-out',
-                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30',
-                  form.isActive ? 'bg-primary' : 'bg-border-soft/80',
-                ].join(' ')}
-                onClick={() =>
-                  setForm((current) => ({ ...current, isActive: !current.isActive }))
+              <Switch
+                checked={form.isActive}
+                onChange={(nextValue) =>
+                  setForm((current) => ({ ...current, isActive: nextValue }))
                 }
                 disabled={isSubmitting}
-              >
-                <span
-                  className={[
-                    'pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow-md transition-transform duration-200 ease-in-out',
-                    form.isActive ? 'translate-x-5' : 'translate-x-0',
-                  ].join(' ')}
-                />
-              </button>
+              />
             </div>
           </div>
 
-          {form.role === 'operator' ? (
+          {form.role !== 'developer' ? (
             <div className="grid gap-3 rounded-xl bg-surface-card/80 p-4 ring-1 ring-border-soft/35">
               <div className="grid gap-1">
                 <h3 className="m-0 text-[0.95rem] font-semibold text-text-primary">
@@ -421,9 +411,19 @@ function UserFormPanel({
                               ) : null}
                             </span>
                             <span className="grid gap-0.5">
-                              <span className="text-sm font-semibold">{permission.name}</span>
+                              <span className="text-sm font-semibold">
+                                {getUserPermissionLabel(
+                                  t,
+                                  permission.code,
+                                  permission.name,
+                                )}
+                              </span>
                               <span className="text-[12px] text-text-muted">
-                                {permission.description}
+                                {getUserPermissionDescription(
+                                  t,
+                                  permission.code,
+                                  permission.description,
+                                )}
                               </span>
                             </span>
                           </button>

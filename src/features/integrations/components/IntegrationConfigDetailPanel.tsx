@@ -28,6 +28,16 @@ const labelClassName =
 
 const valueClassName =
   'text-sm font-semibold text-text-primary [overflow-wrap:anywhere]';
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+function isUuidLike(value: string | null | undefined): boolean {
+  if (!value) {
+    return false;
+  }
+
+  return UUID_PATTERN.test(value);
+}
 
 function ProviderIcon({ provider }: { provider: IntegrationConfig['provider'] }) {
   if (provider === 'telegram') {
@@ -55,6 +65,7 @@ function IntegrationConfigDetailPanel({
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
   const [revealSecret, setRevealSecret] = useState(false);
+  const [resolvedUpdatedBy, setResolvedUpdatedBy] = useState<string | null>(null);
 
   useEffect(() => {
     let isActive = true;
@@ -78,6 +89,7 @@ function IntegrationConfigDetailPanel({
 
         setHasError(true);
         setConfig(null);
+        setResolvedUpdatedBy(null);
       } finally {
         if (isActive) {
           setIsLoading(false);
@@ -104,6 +116,49 @@ function IntegrationConfigDetailPanel({
       window.removeEventListener('keydown', handleEscape);
     };
   }, [onClose]);
+
+  useEffect(() => {
+    let isActive = true;
+
+    async function resolveUpdatedBy() {
+      const updatedByName = config?.updated_by_name ?? null;
+      if (updatedByName && !isUuidLike(updatedByName)) {
+        setResolvedUpdatedBy(updatedByName);
+        return;
+      }
+
+      const updatedById = config?.updated_by ?? null;
+      if (!updatedById) {
+        setResolvedUpdatedBy(null);
+        return;
+      }
+
+      if (!isUuidLike(updatedById)) {
+        setResolvedUpdatedBy(updatedById);
+        return;
+      }
+
+      try {
+        const user = await services.users.getUserById(updatedById);
+        if (!isActive) {
+          return;
+        }
+
+        const fullName = user?.full_name ?? null;
+        setResolvedUpdatedBy(fullName && !isUuidLike(fullName) ? fullName : null);
+      } catch {
+        if (isActive) {
+          setResolvedUpdatedBy(null);
+        }
+      }
+    }
+
+    void resolveUpdatedBy();
+
+    return () => {
+      isActive = false;
+    };
+  }, [config?.updated_by, config?.updated_by_name]);
 
   return (
     <div
@@ -211,7 +266,7 @@ function IntegrationConfigDetailPanel({
                     <div className="rounded-lg bg-surface-subtle/80 p-3">
                       <p className={labelClassName}>{t('integrations.configFields.updatedBy')}</p>
                       <p className={`mt-1 ${valueClassName}`}>
-                        {config.updated_by ?? t('common.na')}
+                        {resolvedUpdatedBy ?? t('common.na')}
                       </p>
                     </div>
                   </div>
@@ -256,13 +311,23 @@ function IntegrationConfigDetailPanel({
                   <div className="flex items-center justify-between gap-3 rounded-lg bg-surface-subtle/80 px-3 py-2.5">
                     <dt className={labelClassName}>{t('integrations.configFields.createdAt')}</dt>
                     <dd className={`m-0 ${valueClassName}`}>
-                      {formatIntegrationDateTime(config.created_at, locale)}
+                      {formatIntegrationDateTime(
+                        config.created_at,
+                        i18n.language,
+                        locale,
+                        t('common.na'),
+                      )}
                     </dd>
                   </div>
                   <div className="flex items-center justify-between gap-3 rounded-lg bg-surface-subtle/80 px-3 py-2.5">
                     <dt className={labelClassName}>{t('integrations.configFields.updatedAt')}</dt>
                     <dd className={`m-0 ${valueClassName}`}>
-                      {formatIntegrationDateTime(config.updated_at, locale)}
+                      {formatIntegrationDateTime(
+                        config.updated_at,
+                        i18n.language,
+                        locale,
+                        t('common.na'),
+                      )}
                     </dd>
                   </div>
                 </dl>

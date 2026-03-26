@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Switch } from '../../../components/shared/data';
 import AppIcon from '../../../components/shared/icons/AppIcon';
 import type { AISetting, AISettingMutationInput } from '../../../types/domain';
 
@@ -65,6 +66,15 @@ function createInitialState(
     resumeAfterOperatorMinutes: '15',
     isActive: false,
   };
+}
+
+function normalizeUnitRangeValue(value: string, fallback = 0): number {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) {
+    return fallback;
+  }
+
+  return Math.min(1, Math.max(0, parsed));
 }
 
 function AISettingFormPanel({
@@ -268,6 +278,18 @@ function AISettingFormPanel({
                 {t('aiSettings.form.temperature')}
               </label>
               <input
+                id="ai-setting-temperature-range"
+                type="range"
+                min={0}
+                max={1}
+                step={0.01}
+                value={normalizeUnitRangeValue(form.temperature, 0.35)}
+                onChange={(event) =>
+                  setForm((current) => ({ ...current, temperature: event.target.value }))
+                }
+                disabled={isSubmitting}
+              />
+              <input
                 id="ai-setting-temperature"
                 type="number"
                 min={0}
@@ -287,6 +309,21 @@ function AISettingFormPanel({
               <label className={labelClassName} htmlFor="ai-setting-threshold">
                 {t('aiSettings.form.orderConfidenceThreshold')}
               </label>
+              <input
+                id="ai-setting-threshold-range"
+                type="range"
+                min={0}
+                max={1}
+                step={0.01}
+                value={normalizeUnitRangeValue(form.orderConfidenceThreshold, 0.82)}
+                onChange={(event) =>
+                  setForm((current) => ({
+                    ...current,
+                    orderConfidenceThreshold: event.target.value,
+                  }))
+                }
+                disabled={isSubmitting}
+              />
               <input
                 id="ai-setting-threshold"
                 type="number"
@@ -339,30 +376,16 @@ function AISettingFormPanel({
                   {t('aiSettings.form.autoOrderHint')}
                 </p>
               </div>
-              <button
-                type="button"
-                role="switch"
-                aria-checked={form.autoOrderEnabled}
-                className={[
-                  'relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full p-0.5 transition-colors duration-200 ease-in-out',
-                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30',
-                  form.autoOrderEnabled ? 'bg-primary' : 'bg-border-soft/80',
-                ].join(' ')}
-                onClick={() =>
+              <Switch
+                checked={form.autoOrderEnabled}
+                onChange={(nextValue) =>
                   setForm((current) => ({
                     ...current,
-                    autoOrderEnabled: !current.autoOrderEnabled,
+                    autoOrderEnabled: nextValue,
                   }))
                 }
                 disabled={isSubmitting}
-              >
-                <span
-                  className={[
-                    'pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow-md transition-transform duration-200 ease-in-out',
-                    form.autoOrderEnabled ? 'translate-x-5' : 'translate-x-0',
-                  ].join(' ')}
-                />
-              </button>
+              />
             </div>
 
             <div className="flex items-center justify-between gap-4 rounded-xl bg-surface-card px-4 py-4 ring-1 ring-border-soft/35">
@@ -374,30 +397,16 @@ function AISettingFormPanel({
                   {t('aiSettings.form.isActiveHint')}
                 </p>
               </div>
-              <button
-                type="button"
-                role="switch"
-                aria-checked={form.isActive}
-                className={[
-                  'relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full p-0.5 transition-colors duration-200 ease-in-out',
-                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30',
-                  form.isActive ? 'bg-primary' : 'bg-border-soft/80',
-                ].join(' ')}
-                onClick={() =>
+              <Switch
+                checked={form.isActive}
+                onChange={(nextValue) =>
                   setForm((current) => ({
                     ...current,
-                    isActive: !current.isActive,
+                    isActive: nextValue,
                   }))
                 }
                 disabled={isSubmitting}
-              >
-                <span
-                  className={[
-                    'pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow-md transition-transform duration-200 ease-in-out',
-                    form.isActive ? 'translate-x-5' : 'translate-x-0',
-                  ].join(' ')}
-                />
-              </button>
+              />
             </div>
           </div>
 

@@ -24,10 +24,12 @@ import { PAYMENT_METHODS, PAYMENT_STATUSES } from '../../../constants';
 import PaymentDeleteDialog from '../../../features/payments/components/PaymentDeleteDialog';
 import PaymentDetailPanel from '../../../features/payments/components/PaymentDetailPanel';
 import PaymentFormPanel from '../../../features/payments/components/PaymentFormPanel';
+import { formatLocalizedDate } from '../../../i18n/date-format';
 import { getPaymentMethodLabel, getPaymentStatusLabel } from '../../../i18n/labels';
 import { services } from '../../../services';
 import { useAuth } from '../../../auth';
 import type {
+  Order,
   EntityId,
   PaginationMeta,
   Payment,
@@ -58,6 +60,20 @@ const DEFAULT_PAGINATION_META: PaginationMeta = {
   totalPages: 1,
 };
 
+function resolveOrderLabel(order: Order | null): string | null {
+  if (!order) {
+    return null;
+  }
+
+  const label =
+    order.orderNumber ||
+    order.customer?.fullName ||
+    order.contactName ||
+    null;
+
+  return label && label.trim().length > 0 ? label : null;
+}
+
 const tablePrimaryTextClassName =
   'block max-w-[140px] truncate text-sm font-semibold leading-[1.35] text-text-primary min-[640px]:max-w-[220px]';
 
@@ -75,6 +91,8 @@ const filterInputClassName = [
   'placeholder:text-text-muted focus-visible:ring-2 focus-visible:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-60',
 ].join(' ');
 
+type PaymentStatusBadgeTone = 'success' | 'warning' | 'danger' | 'info' | 'neutral';
+
 function parseOrdering(ordering: PaymentOrdering): Pick<
   TableQueryParams,
   'sortBy' | 'sortDirection'
@@ -88,10 +106,18 @@ function parseOrdering(ordering: PaymentOrdering): Pick<
   };
 }
 
-function formatDate(timestamp: string, locale: string): string {
-  return new Intl.DateTimeFormat(locale, { dateStyle: 'medium' }).format(
-    new Date(timestamp),
-  );
+function formatDate(
+  timestamp: string,
+  language: string,
+  locale: string,
+  fallback: string,
+): string {
+  return formatLocalizedDate(timestamp, language, {
+    locale,
+    withYear: true,
+    shortMonth: true,
+    fallback,
+  });
 }
 
 function formatAmount(amount: number, locale: string): string {
@@ -113,6 +139,35 @@ function shortenPaymentId(id: string): string {
   return `${id.slice(0, 8)}...${id.slice(-4)}`;
 }
 
+function getPaymentDisplayLabel(payment: Payment): string {
+  const candidate =
+    payment.submitted_by_name.trim() ||
+    (payment.verification_reference ?? '').trim() ||
+    '';
+
+  if (candidate) {
+    return candidate;
+  }
+
+  return 'Payment';
+}
+
+function getPaymentStatusTone(status: PaymentStatus): PaymentStatusBadgeTone {
+  switch (status) {
+    case 'pending':
+      return 'warning';
+    case 'approved':
+      return 'success';
+    case 'rejected':
+      return 'danger';
+    case 'verified':
+      return 'info';
+    case 'failed':
+    default:
+      return 'neutral';
+  }
+}
+
 function PaymentsPage() {
   const { t, i18n } = useTranslation();
   const { hasPermission } = useAuth();
@@ -127,6 +182,7 @@ function PaymentsPage() {
   const [currentPage, setCurrentPage] = useState(1);
 
   const [payments, setPayments] = useState<Payment[]>([]);
+  const [orderLabelById, setOrderLabelById] = useState<Record<string, string>>({});
   const [paginationMeta, setPaginationMeta] = useState<PaginationMeta>(
     DEFAULT_PAGINATION_META,
   );
@@ -186,6 +242,41 @@ function PaymentsPage() {
 
         setPayments(result.items);
         setPaginationMeta(result.meta);
+
+        const orderIds = Array.from(
+          new Set(
+            result.items
+              .map((payment) => payment.order)
+              .filter((orderId) => orderId.trim().length > 0),
+          ),
+        );
+
+        void (async () => {
+          const resolvedEntries = await Promise.all(
+            orderIds.map(async (orderId) => {
+              try {
+                const order = await services.orders.getById(orderId);
+                return [orderId, resolveOrderLabel(order)] as const;
+              } catch {
+                return [orderId, null] as const;
+              }
+            }),
+          );
+
+          if (!isActive) {
+            return;
+          }
+
+          setOrderLabelById((current) => {
+            const next = { ...current };
+            for (const [orderId, label] of resolvedEntries) {
+              if (label) {
+                next[orderId] = label;
+              }
+            }
+            return next;
+          });
+        })();
       } catch {
         if (!isActive) {
           return;
@@ -363,10 +454,10 @@ function PaymentsPage() {
         render: (payment) => (
           <div className="grid gap-0.5">
             <span className={tablePrimaryTextClassName}>
-              {shortenPaymentId(payment.id)}
+              {getPaymentDisplayLabel(payment)}
             </span>
             <span className={tableSecondaryTextClassName}>
-              {payment.verification_reference ?? t('payments.noReference')}
+              {payment.verification_reference || t('payments.noReference')}
             </span>
           </div>
         ),
@@ -395,6 +486,7 @@ function PaymentsPage() {
         render: (payment) => (
           <StatusBadge
             status={payment.status}
+            tone={getPaymentStatusTone(payment.status)}
             label={getPaymentStatusLabel(t, payment.status)}
           />
         ),
@@ -419,15 +511,17 @@ function PaymentsPage() {
         key: 'order',
         label: t('payments.columns.order'),
         render: (payment) => (
-          <span className={tablePrimaryTextClassName}>{payment.order}</span>
+          <span className={tablePrimaryTextClassName}>
+            {orderLabelById[payment.order] ?? t('payments.notAvailable')}
+          </span>
         ),
       },
       {
-        key: 'updatedAt',
-        label: t('payments.columns.updated'),
+        key: 'createdAt',
+        label: t('payments.detail.createdAt'),
         render: (payment) => (
           <span className={tablePrimaryTextClassName}>
-            {formatDate(payment.updated_at, locale)}
+            {formatDate(payment.created_at, i18n.language, locale, t('common.na'))}
           </span>
         ),
       },
@@ -452,7 +546,9 @@ function PaymentsPage() {
                 event.stopPropagation();
                 setPaymentToDelete(payment);
               }}
-              aria-label={t('payments.actions.deleteWithId', { id: payment.id })}
+              aria-label={t('payments.actions.deleteWithId', {
+                id: getPaymentDisplayLabel(payment),
+              })}
             >
               <FiTrash2 className="h-3.5 w-3.5" />
             </button>
@@ -460,7 +556,7 @@ function PaymentsPage() {
         ),
       },
     ];
-  }, [canManagePayments, locale, t]);
+  }, [canManagePayments, i18n.language, locale, orderLabelById, t]);
 
   const activeFilterCount =
     Number(statusFilter !== ALL_STATUS_VALUE) +
@@ -673,6 +769,7 @@ function PaymentsPage() {
       {paymentToDelete ? (
         <PaymentDeleteDialog
           payment={paymentToDelete}
+          paymentLabel={getPaymentDisplayLabel(paymentToDelete)}
           isDeleting={isDeleting}
           onCancel={() => {
             if (!isDeleting) {

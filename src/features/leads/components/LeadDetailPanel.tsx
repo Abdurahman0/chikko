@@ -4,9 +4,16 @@ import { useTranslation } from 'react-i18next';
 import { FilterSelect, StatusBadge } from '../../../components/shared/data';
 import AppIcon from '../../../components/shared/icons/AppIcon';
 import { EmptyState, LoadingState, PageCard } from '../../../components/shared/page';
+import { formatLocalizedDate } from '../../../i18n/date-format';
 import { getChannelLabel, getLeadStatusLabel } from '../../../i18n/labels';
 import { services } from '../../../services';
-import type { EntityId, Lead, LeadStatus, SelectOption } from '../../../types/domain';
+import type {
+  EntityId,
+  Lead,
+  LeadSource,
+  LeadStatus,
+  SelectOption,
+} from '../../../types/domain';
 
 interface LeadDetailPanelProps {
   leadId: EntityId;
@@ -24,6 +31,16 @@ const labelClassName =
 
 const valueClassName =
   'text-sm font-semibold text-text-primary [overflow-wrap:anywhere]';
+
+function isUuidLike(value: string | undefined): boolean {
+  if (!value) {
+    return false;
+  }
+
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+    value.trim(),
+  );
+}
 
 function getLeadStatusTone(status: LeadStatus): 'info' | 'warning' | 'accent' | 'success' | 'danger' {
   switch (status) {
@@ -44,19 +61,27 @@ function getLeadStatusTone(status: LeadStatus): 'info' | 'warning' | 'accent' | 
   }
 }
 
+function normalizeLeadSource(source: LeadSource): LeadSource {
+  if (source === 'website' || source === 'web') {
+    return 'manual';
+  }
+
+  return source;
+}
+
 function formatDateTime(
   timestamp: string | undefined,
+  language: string,
   locale: string,
   fallback: string,
 ): string {
-  if (!timestamp) {
-    return fallback;
-  }
-
-  return new Intl.DateTimeFormat(locale, {
-    dateStyle: 'medium',
-    timeStyle: 'short',
-  }).format(new Date(timestamp));
+  return formatLocalizedDate(timestamp, language, {
+    locale,
+    withYear: true,
+    withTime: true,
+    shortMonth: true,
+    fallback,
+  });
 }
 
 function LeadDetailPanel({
@@ -72,6 +97,9 @@ function LeadDetailPanel({
   const { t, i18n } = useTranslation();
   const locale = i18n.language === 'ru' ? 'ru-RU' : 'uz-UZ';
   const [lead, setLead] = useState<Lead | null>(null);
+  const [resolvedOperatorName, setResolvedOperatorName] = useState<string | null>(
+    null,
+  );
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
   const [isStatusUpdating, setIsStatusUpdating] = useState(false);
@@ -112,6 +140,7 @@ function LeadDetailPanel({
 
         setHasError(true);
         setLead(null);
+        setResolvedOperatorName(null);
       } finally {
         if (isActive) {
           setIsLoading(false);
@@ -125,6 +154,50 @@ function LeadDetailPanel({
       isActive = false;
     };
   }, [leadId, refreshToken]);
+
+  useEffect(() => {
+    let isActive = true;
+
+    async function resolveOwnerName() {
+      const assignedOperator = lead?.assignedOperator;
+      if (!assignedOperator?.id) {
+        setResolvedOperatorName(null);
+        return;
+      }
+
+      const resolvedFromParent =
+        resolveOperatorName?.(assignedOperator.id, assignedOperator.fullName) ??
+        assignedOperator.fullName;
+
+      if (resolvedFromParent && !isUuidLike(resolvedFromParent)) {
+        setResolvedOperatorName(resolvedFromParent);
+        return;
+      }
+
+      try {
+        const operator = await services.users.getUserById(assignedOperator.id);
+        if (!isActive) {
+          return;
+        }
+
+        setResolvedOperatorName(operator?.full_name ?? null);
+      } catch {
+        if (isActive) {
+          setResolvedOperatorName(null);
+        }
+      }
+    }
+
+    void resolveOwnerName();
+
+    return () => {
+      isActive = false;
+    };
+  }, [
+    lead?.assignedOperator?.fullName,
+    lead?.assignedOperator?.id,
+    resolveOperatorName,
+  ]);
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
@@ -161,12 +234,6 @@ function LeadDetailPanel({
       setIsStatusUpdating(false);
     }
   }
-
-  const resolvedOperatorName =
-    lead?.assignedOperator?.id
-      ? resolveOperatorName?.(lead.assignedOperator.id, lead.assignedOperator.fullName) ??
-        lead.assignedOperator.fullName
-      : lead?.assignedOperator?.fullName;
 
   return (
     <div
@@ -207,15 +274,20 @@ function LeadDetailPanel({
 
           {!isLoading && lead ? (
             <div className="mt-3 flex flex-wrap items-center gap-2">
+              {(() => {
+                const source = normalizeLeadSource(lead.source);
+                return (
+                  <span className="inline-flex min-h-7 items-center gap-1.5 rounded-pill bg-info-bg px-2.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-info">
+                    <AppIcon name="chat" className="h-3.5 w-3.5" aria-hidden="true" />
+                    {getChannelLabel(t, source)}
+                  </span>
+                );
+              })()}
               <StatusBadge
                 status={lead.status}
                 label={getLeadStatusLabel(t, lead.status)}
                 tone={getLeadStatusTone(lead.status)}
               />
-              <span className="inline-flex min-h-7 items-center gap-1.5 rounded-pill bg-info-bg px-2.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-info">
-                <AppIcon name="chat" className="h-3.5 w-3.5" aria-hidden="true" />
-                {getChannelLabel(t, lead.source)}
-              </span>
             </div>
           ) : null}
         </header>
@@ -256,12 +328,6 @@ function LeadDetailPanel({
                       </p>
                     </div>
                     <div className="rounded-lg bg-surface-subtle/80 p-3">
-                      <p className={labelClassName}>{t('leads.detail.email')}</p>
-                      <p className={`mt-1 ${valueClassName}`}>
-                        {lead.contact.email ?? t('common.na')}
-                      </p>
-                    </div>
-                    <div className="rounded-lg bg-surface-subtle/80 p-3">
                       <p className={labelClassName}>{t('leads.detail.instagram')}</p>
                       <p className={`mt-1 ${valueClassName}`}>
                         {lead.instagramUsername ?? t('common.na')}
@@ -276,7 +342,7 @@ function LeadDetailPanel({
                     <div className="rounded-lg bg-surface-subtle/80 p-3">
                       <p className={labelClassName}>{t('leads.detail.source')}</p>
                       <p className={`mt-1 ${valueClassName}`}>
-                        {getChannelLabel(t, lead.source)}
+                        {getChannelLabel(t, normalizeLeadSource(lead.source))}
                       </p>
                     </div>
                     <div className="rounded-lg bg-surface-subtle/80 p-3">
@@ -304,25 +370,45 @@ function LeadDetailPanel({
                     <div className="flex items-center justify-between gap-3 rounded-lg bg-surface-subtle/80 px-3 py-2.5">
                       <dt className={labelClassName}>{t('leads.detail.created')}</dt>
                       <dd className={`m-0 ${valueClassName}`}>
-                        {formatDateTime(lead.createdAt, locale, t('common.na'))}
+                        {formatDateTime(
+                          lead.createdAt,
+                          i18n.language,
+                          locale,
+                          t('common.na'),
+                        )}
                       </dd>
                     </div>
                     <div className="flex items-center justify-between gap-3 rounded-lg bg-surface-subtle/80 px-3 py-2.5">
                       <dt className={labelClassName}>{t('leads.detail.updated')}</dt>
                       <dd className={`m-0 ${valueClassName}`}>
-                        {formatDateTime(lead.updatedAt, locale, t('common.na'))}
+                        {formatDateTime(
+                          lead.updatedAt,
+                          i18n.language,
+                          locale,
+                          t('common.na'),
+                        )}
                       </dd>
                     </div>
                     <div className="flex items-center justify-between gap-3 rounded-lg bg-surface-subtle/80 px-3 py-2.5">
                       <dt className={labelClassName}>{t('leads.detail.lastContact')}</dt>
                       <dd className={`m-0 ${valueClassName}`}>
-                        {formatDateTime(lead.lastContactAt, locale, t('common.na'))}
+                        {formatDateTime(
+                          lead.lastContactAt,
+                          i18n.language,
+                          locale,
+                          t('common.na'),
+                        )}
                       </dd>
                     </div>
                     <div className="flex items-center justify-between gap-3 rounded-lg bg-surface-subtle/80 px-3 py-2.5">
                       <dt className={labelClassName}>{t('leads.detail.lastMessage')}</dt>
                       <dd className={`m-0 ${valueClassName}`}>
-                        {formatDateTime(lead.lastMessageAt, locale, t('common.na'))}
+                        {formatDateTime(
+                          lead.lastMessageAt,
+                          i18n.language,
+                          locale,
+                          t('common.na'),
+                        )}
                       </dd>
                     </div>
                   </dl>

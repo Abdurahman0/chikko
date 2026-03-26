@@ -154,4 +154,19 @@ export const apiConversationService: ConversationService = {
     );
     return mapConversationDtoToModel(data);
   },
+
+  async pauseSessionAI(sessionId, pausedUntilIso) {
+    const { data } = await apiClient.post<ConversationDto>(
+      `/api/chat/sessions/${sessionId}/pause_ai/`,
+      pausedUntilIso ? { ai_paused_until: pausedUntilIso } : {},
+    );
+    return mapConversationDtoToModel(data);
+  },
+
+  async resumeSessionAI(sessionId) {
+    const { data } = await apiClient.post<ConversationDto>(
+      `/api/chat/sessions/${sessionId}/resume_ai/`,
+    );
+    return mapConversationDtoToModel(data);
+  },
 };

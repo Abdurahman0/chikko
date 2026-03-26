@@ -22,6 +22,21 @@ const labelClassName =
 
 const valueClassName =
   'text-sm font-semibold text-text-primary [overflow-wrap:anywhere]';
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+function resolveHumanLabel(value: string | null | undefined): string | null {
+  if (!value) {
+    return null;
+  }
+
+  const trimmed = value.trim();
+  if (!trimmed || UUID_PATTERN.test(trimmed)) {
+    return null;
+  }
+
+  return trimmed;
+}
 
 function PlatformIcon({ platform }: { platform: IntegrationEvent['platform'] }) {
   if (platform === 'telegram') {
@@ -119,7 +134,7 @@ function IntegrationEventDetailPanel({
               </h2>
               {!isLoading && event ? (
                 <p className="mt-1 text-sm text-text-secondary [overflow-wrap:anywhere]">
-                  {event.external_id}
+                  {resolveHumanLabel(event.external_id) ?? t('common.na')}
                 </p>
               ) : null}
             </div>
@@ -188,11 +203,15 @@ function IntegrationEventDetailPanel({
                     </div>
                     <div className="rounded-lg bg-surface-subtle/80 p-3">
                       <p className={labelClassName}>{t('integrations.eventFields.externalId')}</p>
-                      <p className={`mt-1 ${valueClassName}`}>{event.external_id}</p>
+                      <p className={`mt-1 ${valueClassName}`}>
+                        {resolveHumanLabel(event.external_id) ?? t('common.na')}
+                      </p>
                     </div>
                     <div className="rounded-lg bg-surface-subtle/80 p-3">
                       <p className={labelClassName}>{t('integrations.eventFields.eventKey')}</p>
-                      <p className={`mt-1 ${valueClassName}`}>{event.event_key}</p>
+                      <p className={`mt-1 ${valueClassName}`}>
+                        {resolveHumanLabel(event.event_key) ?? t('common.na')}
+                      </p>
                     </div>
                     <div className="rounded-lg bg-surface-subtle/80 p-3">
                       <p className={labelClassName}>{t('integrations.eventFields.attempts')}</p>
@@ -235,13 +254,23 @@ function IntegrationEventDetailPanel({
                   <div className="flex items-center justify-between gap-3 rounded-lg bg-surface-subtle/80 px-3 py-2.5">
                     <dt className={labelClassName}>{t('integrations.eventFields.createdAt')}</dt>
                     <dd className={`m-0 ${valueClassName}`}>
-                      {formatIntegrationDateTime(event.created_at, locale)}
+                      {formatIntegrationDateTime(
+                        event.created_at,
+                        i18n.language,
+                        locale,
+                        t('common.na'),
+                      )}
                     </dd>
                   </div>
                   <div className="flex items-center justify-between gap-3 rounded-lg bg-surface-subtle/80 px-3 py-2.5">
                     <dt className={labelClassName}>{t('integrations.eventFields.updatedAt')}</dt>
                     <dd className={`m-0 ${valueClassName}`}>
-                      {formatIntegrationDateTime(event.updated_at, locale)}
+                      {formatIntegrationDateTime(
+                        event.updated_at,
+                        i18n.language,
+                        locale,
+                        t('common.na'),
+                      )}
                     </dd>
                   </div>
                 </dl>

@@ -64,6 +64,46 @@ const USER_STATUS_KEYS: Record<UserStatus, string> = {
   invited: 'labels.userStatus.invited',
 };
 
+const USER_PERMISSION_LABEL_KEYS: Record<string, string> = {
+  can_view_dashboard: 'labels.permissions.can_view_dashboard',
+  can_view_leads: 'labels.permissions.can_view_leads',
+  can_manage_leads: 'labels.permissions.can_manage_leads',
+  can_view_customers: 'labels.permissions.can_view_customers',
+  can_manage_customers: 'labels.permissions.can_manage_customers',
+  can_view_products: 'labels.permissions.can_view_products',
+  can_manage_products: 'labels.permissions.can_manage_products',
+  can_view_orders: 'labels.permissions.can_view_orders',
+  can_update_orders: 'labels.permissions.can_update_orders',
+  can_view_payments: 'labels.permissions.can_view_payments',
+  can_manage_payments: 'labels.permissions.can_manage_payments',
+  can_chat: 'labels.permissions.can_chat',
+  can_view_notifications: 'labels.permissions.can_view_notifications',
+  can_manage_users: 'labels.permissions.can_manage_users',
+  can_manage_integrations: 'labels.permissions.can_manage_integrations',
+  can_manage_ai_settings: 'labels.permissions.can_manage_ai_settings',
+  can_view_logs: 'labels.permissions.can_view_logs',
+};
+
+const USER_PERMISSION_DESCRIPTION_KEYS: Record<string, string> = {
+  can_view_dashboard: 'labels.permissionDescriptions.can_view_dashboard',
+  can_view_leads: 'labels.permissionDescriptions.can_view_leads',
+  can_manage_leads: 'labels.permissionDescriptions.can_manage_leads',
+  can_view_customers: 'labels.permissionDescriptions.can_view_customers',
+  can_manage_customers: 'labels.permissionDescriptions.can_manage_customers',
+  can_view_products: 'labels.permissionDescriptions.can_view_products',
+  can_manage_products: 'labels.permissionDescriptions.can_manage_products',
+  can_view_orders: 'labels.permissionDescriptions.can_view_orders',
+  can_update_orders: 'labels.permissionDescriptions.can_update_orders',
+  can_view_payments: 'labels.permissionDescriptions.can_view_payments',
+  can_manage_payments: 'labels.permissionDescriptions.can_manage_payments',
+  can_chat: 'labels.permissionDescriptions.can_chat',
+  can_view_notifications: 'labels.permissionDescriptions.can_view_notifications',
+  can_manage_users: 'labels.permissionDescriptions.can_manage_users',
+  can_manage_integrations: 'labels.permissionDescriptions.can_manage_integrations',
+  can_manage_ai_settings: 'labels.permissionDescriptions.can_manage_ai_settings',
+  can_view_logs: 'labels.permissionDescriptions.can_view_logs',
+};
+
 function resolveLabel(
   t: TFunction,
   dictionary: Record<string, string>,
@@ -131,4 +171,25 @@ export function getUserStatusLabel(
   }
 
   return t(USER_STATUS_KEYS[status], { defaultValue: status });
+}
+
+export function getUserPermissionLabel(
+  t: TFunction,
+  permissionCode: string,
+  fallback?: string,
+): string {
+  return resolveLabel(t, USER_PERMISSION_LABEL_KEYS, permissionCode, fallback);
+}
+
+export function getUserPermissionDescription(
+  t: TFunction,
+  permissionCode: string,
+  fallback?: string,
+): string {
+  return resolveLabel(
+    t,
+    USER_PERMISSION_DESCRIPTION_KEYS,
+    permissionCode,
+    fallback,
+  );
 }

@@ -13,6 +13,55 @@ interface LoginLocationState {
   from?: string;
 }
 
+function asRecord(value: unknown): Record<string, unknown> | null {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return null;
+  }
+
+  return value as Record<string, unknown>;
+}
+
+function readMessage(value: unknown): string | null {
+  if (typeof value !== 'string') {
+    return null;
+  }
+
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
+}
+
+function extractLoginErrorMessage(error: unknown, fallback: string): string {
+  const topLevel = asRecord(error);
+  const response = asRecord(topLevel?.response);
+  const data = response?.data;
+  const dataRecord = asRecord(data);
+
+  const candidates: Array<unknown> = [
+    dataRecord?.detail,
+    dataRecord?.message,
+    dataRecord?.error,
+    Array.isArray(dataRecord?.non_field_errors)
+      ? (dataRecord?.non_field_errors as unknown[])[0]
+      : null,
+    Array.isArray(dataRecord?.errors)
+      ? (dataRecord?.errors as unknown[])[0]
+      : null,
+    Array.isArray(data)
+      ? (data as unknown[])[0]
+      : null,
+    topLevel?.message,
+  ];
+
+  for (const candidate of candidates) {
+    const message = readMessage(candidate);
+    if (message) {
+      return message;
+    }
+  }
+
+  return fallback;
+}
+
 function isValidEmail(value: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 }
@@ -62,8 +111,10 @@ function LoginPage() {
           : resolveDefaultLandingPathForUser(user);
 
       navigate(nextPath, { replace: true });
-    } catch {
-      setErrorMessage(t('auth.login.invalidCredentials'));
+    } catch (error) {
+      setErrorMessage(
+        extractLoginErrorMessage(error, t('auth.login.invalidCredentials')),
+      );
     } finally {
       setIsSubmitting(false);
     }
