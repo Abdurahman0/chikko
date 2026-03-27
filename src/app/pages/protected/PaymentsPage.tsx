@@ -1,7 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import { FiTrash2 } from 'react-icons/fi';
 import { useTranslation } from 'react-i18next';
-import { formatCurrencyAmount } from '../../../constants';
+import {
+  PAYMENT_METHODS,
+  PAYMENT_STATUSES,
+  formatCurrencyAmount,
+} from '../../../constants';
 import {
   DataTable,
   FilterBar,
@@ -20,7 +24,6 @@ import {
   PageLayout,
   PageSection,
 } from '../../../components/shared/page';
-import { PAYMENT_METHODS, PAYMENT_STATUSES } from '../../../constants';
 import PaymentDeleteDialog from '../../../features/payments/components/PaymentDeleteDialog';
 import PaymentDetailPanel from '../../../features/payments/components/PaymentDetailPanel';
 import PaymentFormPanel from '../../../features/payments/components/PaymentFormPanel';
@@ -49,6 +52,8 @@ type PaymentOrdering =
   | 'amount';
 
 const PAGE_SIZE = 8;
+const ORDER_OPTIONS_FETCH_SIZE = 400;
+const SEARCH_DEBOUNCE_MS = 350;
 const ALL_STATUS_VALUE = 'all';
 const ALL_METHOD_VALUE = 'all';
 const DEFAULT_ORDERING: PaymentOrdering = '-updated_at';
@@ -58,6 +63,13 @@ const DEFAULT_PAGINATION_META: PaginationMeta = {
   pageSize: PAGE_SIZE,
   totalItems: 0,
   totalPages: 1,
+};
+
+type PaymentFormOrderSummary = {
+  amount: number;
+  customerName: string;
+  customerPhone: string;
+  createdAtLabel: string;
 };
 
 function resolveOrderLabel(order: Order | null): string | null {
@@ -72,6 +84,76 @@ function resolveOrderLabel(order: Order | null): string | null {
     null;
 
   return label && label.trim().length > 0 ? label : null;
+}
+
+function getOrderOptionLabel(
+  order: Order,
+  fallback: string,
+  productNameById: Map<string, string>,
+  productNameBySku: Map<string, string>,
+  productNameByName: Map<string, string>,
+): string {
+  const primaryProductName = getOrderPrimaryProductName(
+    order,
+    productNameById,
+    productNameBySku,
+    productNameByName,
+  );
+  const customerName =
+    order.customer?.fullName?.trim() || order.contactName?.trim() || '';
+  const orderNumber = order.orderNumber?.trim() ?? '';
+
+  if (primaryProductName) {
+    return primaryProductName;
+  }
+
+  if (orderNumber) {
+    return orderNumber;
+  }
+
+  if (customerName) {
+    return customerName;
+  }
+
+  return fallback;
+}
+
+function getOrderPrimaryProductName(
+  order: Order,
+  productNameById: Map<string, string>,
+  productNameBySku: Map<string, string>,
+  productNameByName: Map<string, string>,
+): string {
+  const firstItem = order.items[0];
+  if (!firstItem) {
+    return '';
+  }
+
+  const productId = firstItem.product.id?.trim() ?? '';
+  if (productId) {
+    const catalogName = productNameById.get(productId);
+    if (catalogName) {
+      return catalogName;
+    }
+  }
+
+  const sku = firstItem.product.sku?.trim().toUpperCase() ?? '';
+  if (sku) {
+    const fromSku = productNameBySku.get(sku);
+    if (fromSku) {
+      return fromSku;
+    }
+  }
+
+  const name = firstItem.product.name?.trim() ?? '';
+  if (name) {
+    const fromName = productNameByName.get(name.toLowerCase());
+    if (fromName) {
+      return fromName;
+    }
+  }
+
+  return name;
 }
 
 const tablePrimaryTextClassName =
@@ -117,6 +199,20 @@ function formatDate(
     withYear: true,
     shortMonth: true,
     fallback,
+  });
+}
+
+function formatOrderOptionDate(
+  timestamp: string,
+  language: string,
+  locale: string,
+): string {
+  return formatLocalizedDate(timestamp, language, {
+    locale,
+    withYear: true,
+    withTime: true,
+    shortMonth: true,
+    fallback: '',
   });
 }
 
@@ -195,15 +291,41 @@ function PaymentsPage() {
   const [detailRefreshToken, setDetailRefreshToken] = useState(0);
 
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [formOrderOptions, setFormOrderOptions] = useState<SelectOption[]>([]);
+  const [formOrderSummaryById, setFormOrderSummaryById] = useState<
+    Record<string, PaymentFormOrderSummary>
+  >({});
   const [isSaving, setIsSaving] = useState(false);
   const [formErrorMessage, setFormErrorMessage] = useState<string | null>(null);
 
   const [paymentToDelete, setPaymentToDelete] = useState<Payment | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [debouncedOrderFilter, setDebouncedOrderFilter] = useState('');
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      setDebouncedSearch(search.trim());
+    }, SEARCH_DEBOUNCE_MS);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [search]);
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      setDebouncedOrderFilter(orderFilter.trim());
+    }, SEARCH_DEBOUNCE_MS);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [orderFilter]);
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [search, statusFilter, methodFilter, orderFilter, ordering]);
+  }, [debouncedSearch, statusFilter, methodFilter, debouncedOrderFilter, ordering]);
 
   useEffect(() => {
     let isActive = true;
@@ -217,7 +339,7 @@ function PaymentsPage() {
         const result = await services.payments.listPayments({
           page: currentPage,
           pageSize: PAGE_SIZE,
-          search: search.trim() || undefined,
+          search: debouncedSearch || undefined,
           status:
             statusFilter === ALL_STATUS_VALUE
               ? undefined
@@ -226,7 +348,7 @@ function PaymentsPage() {
             methodFilter === ALL_METHOD_VALUE
               ? undefined
               : (methodFilter as PaymentMethod),
-          order: orderFilter.trim() || undefined,
+          order: debouncedOrderFilter || undefined,
           ordering,
           ...sortConfig,
         });
@@ -300,13 +422,113 @@ function PaymentsPage() {
     };
   }, [
     currentPage,
+    debouncedOrderFilter,
+    debouncedSearch,
     methodFilter,
-    orderFilter,
     ordering,
     reloadCursor,
-    search,
     statusFilter,
   ]);
+
+  useEffect(() => {
+    if (!canManagePayments) {
+      return;
+    }
+
+    let isActive = true;
+
+    async function loadOrderOptions() {
+      try {
+        const [ordersResult, productsResult] = await Promise.all([
+          services.orders.list({
+            page: 1,
+            pageSize: ORDER_OPTIONS_FETCH_SIZE,
+            ordering: '-updated_at',
+          }),
+          services.products.list({
+            page: 1,
+            pageSize: ORDER_OPTIONS_FETCH_SIZE,
+            ordering: 'name',
+          }),
+        ]);
+
+        if (!isActive) {
+          return;
+        }
+
+        const productNameById = new Map(
+          productsResult.items.map((product) => [product.id, product.name]),
+        );
+        const productNameBySku = new Map(
+          productsResult.items
+            .map((product) => [(product.sku ?? '').trim().toUpperCase(), product.name] as const)
+            .filter(([sku]) => sku.length > 0),
+        );
+        const productNameByName = new Map(
+          productsResult.items
+            .map((product) => [product.name.trim().toLowerCase(), product.name] as const)
+            .filter(([name]) => name.length > 0),
+        );
+
+        const availableOrders = ordersResult.items
+          .filter((order) => order.status !== 'cancelled' && order.status !== 'completed')
+          .sort(
+            (left, right) =>
+              new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime(),
+          );
+
+        const options = availableOrders.map((order) => ({
+          value: order.id,
+          label: getOrderOptionLabel(
+            order,
+            t('payments.order'),
+            productNameById,
+            productNameBySku,
+            productNameByName,
+          ),
+        }));
+
+        const summaries = availableOrders.reduce<Record<string, PaymentFormOrderSummary>>(
+          (accumulator, order) => {
+            accumulator[order.id] = {
+              amount: Number.isFinite(order.totalAmount) ? order.totalAmount : 0,
+              customerName:
+                order.customer?.fullName?.trim() ||
+                order.contactName?.trim() ||
+                t('common.notAvailable'),
+              customerPhone:
+                order.customer?.phone?.trim() ||
+                order.contactPhone?.trim() ||
+                t('common.notAvailable'),
+              createdAtLabel: formatOrderOptionDate(
+                order.createdAt,
+                i18n.language,
+                locale,
+              ),
+            };
+            return accumulator;
+          },
+          {},
+        );
+
+        setFormOrderOptions(options);
+        setFormOrderSummaryById(summaries);
+      } catch {
+        if (!isActive) {
+          return;
+        }
+
+        setFormOrderOptions([]);
+        setFormOrderSummaryById({});
+      }
+    }
+
+    void loadOrderOptions();
+
+    return () => {
+      isActive = false;
+    };
+  }, [canManagePayments, i18n.language, locale, reloadCursor, t]);
 
   useEffect(() => {
     if (!selectedPaymentId) {
@@ -754,6 +976,8 @@ function PaymentsPage() {
 
       {isFormOpen ? (
         <PaymentFormPanel
+          orderOptions={formOrderOptions}
+          orderSummaryById={formOrderSummaryById}
           isSubmitting={isSaving}
           errorMessage={formErrorMessage}
           onClose={() => {

@@ -44,6 +44,7 @@ type ProductOrdering =
 
 const PAGE_SIZE = 8;
 const SERVICE_FETCH_SIZE = 500;
+const SEARCH_DEBOUNCE_MS = 350;
 const ALL_CURRENCIES_VALUE = 'all';
 const DEFAULT_ORDERING: ProductOrdering = '-created_at';
 
@@ -105,6 +106,7 @@ function ProductsPage() {
   );
 
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [currencyFilter, setCurrencyFilter] = useState(ALL_CURRENCIES_VALUE);
   const [activeFilter, setActiveFilter] = useState<ActiveFilter>('all');
   const [ordering, setOrdering] = useState<ProductOrdering>(DEFAULT_ORDERING);
@@ -131,6 +133,16 @@ function ProductsPage() {
   const [productToDelete, setProductToDelete] = useState<Product | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      setDebouncedSearch(search.trim());
+    }, SEARCH_DEBOUNCE_MS);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [search]);
+
   const currencyAllOption = useMemo<SelectOption>(
     () => ({
       value: ALL_CURRENCIES_VALUE,
@@ -141,7 +153,7 @@ function ProductsPage() {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [search, currencyFilter, activeFilter, ordering]);
+  }, [debouncedSearch, currencyFilter, activeFilter, ordering]);
 
   useEffect(() => {
     let isActive = true;
@@ -236,7 +248,7 @@ function ProductsPage() {
         const result = await services.products.list({
           page: currentPage,
           pageSize: PAGE_SIZE,
-          search,
+          search: debouncedSearch || undefined,
           currency:
             currencyFilter === ALL_CURRENCIES_VALUE ? undefined : currencyFilter,
           is_active:
@@ -277,7 +289,7 @@ function ProductsPage() {
     return () => {
       isActive = false;
     };
-  }, [activeFilter, currencyFilter, currentPage, ordering, reloadCursor, search]);
+  }, [activeFilter, currencyFilter, currentPage, debouncedSearch, ordering, reloadCursor]);
 
   useEffect(() => {
     if (!selectedProductId) {

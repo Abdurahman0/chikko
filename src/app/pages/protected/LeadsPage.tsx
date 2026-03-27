@@ -41,6 +41,7 @@ type LeadOrdering = '-updated_at' | 'updated_at' | '-created_at' | 'created_at';
 
 const PAGE_SIZE = 8;
 const SERVICE_FETCH_SIZE = 300;
+const SEARCH_DEBOUNCE_MS = 350;
 const DEFAULT_ORDERING: LeadOrdering = '-updated_at';
 const ALL_OPERATORS_VALUE = 'all';
 const STATUS_VALUES: readonly LeadStatus[] = [
@@ -233,6 +234,7 @@ function LeadsPage() {
   );
 
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<LeadStatusFilter>('all');
   const [sourceFilter, setSourceFilter] = useState<LeadSourceFilter>('all');
   const [assignedOperatorFilter, setAssignedOperatorFilter] =
@@ -265,8 +267,18 @@ function LeadsPage() {
   const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      setDebouncedSearch(search.trim());
+    }, SEARCH_DEBOUNCE_MS);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [search]);
+
+  useEffect(() => {
     setCurrentPage(1);
-  }, [search, statusFilter, sourceFilter, assignedOperatorFilter, ordering]);
+  }, [debouncedSearch, statusFilter, sourceFilter, assignedOperatorFilter, ordering]);
 
   useEffect(() => {
     let isActive = true;
@@ -372,7 +384,7 @@ function LeadsPage() {
         const result = await services.leads.listLeads({
           page: currentPage,
           pageSize: PAGE_SIZE,
-          search: search.trim() || undefined,
+          search: debouncedSearch || undefined,
           status: statusFilter === 'all' ? undefined : statusFilter,
           source: sourceFilter === 'all' ? undefined : sourceFilter,
           assigned_operator:
@@ -469,9 +481,9 @@ function LeadsPage() {
   }, [
     assignedOperatorFilter,
     currentPage,
+    debouncedSearch,
     ordering,
     reloadCursor,
-    search,
     sourceFilter,
     statusFilter,
   ]);

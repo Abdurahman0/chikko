@@ -2,8 +2,9 @@ import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FilterSelect } from '../../../components/shared/data';
 import AppIcon from '../../../components/shared/icons/AppIcon';
-import { PAYMENT_METHODS } from '../../../constants';
+import { PAYMENT_METHODS, formatCurrencyAmount } from '../../../constants';
 import { getPaymentMethodLabel } from '../../../i18n/labels';
+import { useAuth } from '../../../auth';
 import type {
   PaymentMethod,
   PaymentMutationInput,
@@ -11,6 +12,16 @@ import type {
 } from '../../../types/domain';
 
 interface PaymentFormPanelProps {
+  orderOptions: SelectOption[];
+  orderSummaryById: Record<
+    string,
+    {
+      amount: number;
+      customerName: string;
+      customerPhone: string;
+      createdAtLabel: string;
+    }
+  >;
   isSubmitting: boolean;
   errorMessage?: string | null;
   onClose: () => void;
@@ -22,7 +33,6 @@ interface PaymentFormState {
   method: PaymentMethod;
   screenshot: string;
   last_four_digits: string;
-  submitted_by_name: string;
   order: string;
   verification_reference: string;
 }
@@ -42,20 +52,23 @@ const initialState: PaymentFormState = {
   method: 'manual',
   screenshot: '',
   last_four_digits: '',
-  submitted_by_name: '',
   order: '',
   verification_reference: '',
 };
 
 function PaymentFormPanel({
+  orderOptions,
+  orderSummaryById,
   isSubmitting,
   errorMessage,
   onClose,
   onSubmit,
 }: PaymentFormPanelProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const { currentUser } = useAuth();
   const [form, setForm] = useState<PaymentFormState>(initialState);
   const [fieldError, setFieldError] = useState<string | null>(null);
+  const locale = i18n.language === 'ru' ? 'ru-RU' : 'uz-UZ';
   const methodOptions = useMemo<SelectOption[]>(
     () =>
       PAYMENT_METHODS.map((method) => ({
@@ -64,6 +77,12 @@ function PaymentFormPanel({
       })),
     [t],
   );
+  const isManualMethod = form.method === 'manual';
+  const submittedByName = useMemo(
+    () => currentUser?.fullName?.trim() || currentUser?.email?.trim() || '',
+    [currentUser?.email, currentUser?.fullName],
+  );
+  const selectedOrderSummary = form.order ? orderSummaryById[form.order] : undefined;
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
@@ -78,13 +97,31 @@ function PaymentFormPanel({
     };
   }, [isSubmitting, onClose]);
 
+  useEffect(() => {
+    if (form.order.trim().length > 0 || orderOptions.length === 0) {
+      return;
+    }
+
+    const defaultOrderId = orderOptions[0]?.value ?? '';
+    const defaultAmount = orderSummaryById[defaultOrderId]?.amount;
+
+    setForm((current) => ({
+      ...current,
+      order: defaultOrderId,
+      amount:
+        typeof defaultAmount === 'number' && Number.isFinite(defaultAmount)
+          ? String(defaultAmount)
+          : current.amount,
+    }));
+  }, [form.order, orderOptions, orderSummaryById]);
+
   const canSubmit = useMemo(() => {
     return (
       Number(form.amount) > 0 &&
-      form.submitted_by_name.trim().length > 0 &&
+      submittedByName.length > 0 &&
       form.order.trim().length > 0
     );
-  }, [form]);
+  }, [form, submittedByName]);
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -96,7 +133,7 @@ function PaymentFormPanel({
       return;
     }
 
-    if (!form.submitted_by_name.trim()) {
+    if (!submittedByName) {
       setFieldError(t('payments.form.submittedByRequired'));
       return;
     }
@@ -106,16 +143,21 @@ function PaymentFormPanel({
       return;
     }
 
-    onSubmit({
+    const payload: PaymentMutationInput = {
       amount,
       method: form.method,
-      screenshot: form.screenshot.trim() || null,
-      last_four_digits: form.last_four_digits.trim() || null,
-      submitted_by_name: form.submitted_by_name.trim(),
+      submitted_by_name: submittedByName,
       metadata: null,
-      verification_reference: form.verification_reference.trim() || null,
       order: form.order.trim(),
-    });
+    };
+
+    if (!isManualMethod) {
+      payload.screenshot = form.screenshot.trim() || null;
+      payload.last_four_digits = form.last_four_digits.trim() || null;
+      payload.verification_reference = form.verification_reference.trim() || null;
+    }
+
+    onSubmit(payload);
   }
 
   return (
@@ -195,103 +237,144 @@ function PaymentFormPanel({
 
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="grid gap-1.5">
-              <label className={labelClassName} htmlFor="payment-form-submitted-by">
-                {t('payments.form.submittedBy')}
-              </label>
+              <span className={labelClassName}>{t('payments.form.submittedBy')}</span>
               <input
-                id="payment-form-submitted-by"
                 type="text"
-                value={form.submitted_by_name}
-                onChange={(event) =>
-                  setForm((current) => ({
-                    ...current,
-                    submitted_by_name: event.target.value,
-                  }))
-                }
+                value={submittedByName || t('common.notAvailable')}
                 className={inputClassName}
-                placeholder={t('payments.form.submittedByPlaceholder')}
-                disabled={isSubmitting}
-                required
+                disabled
+                readOnly
               />
             </div>
             <div className="grid gap-1.5">
-              <label className={labelClassName} htmlFor="payment-form-order">
-                {t('payments.form.order')}
-              </label>
-              <input
-                id="payment-form-order"
-                type="text"
+              <span className={labelClassName}>{t('payments.form.order')}</span>
+              <FilterSelect
                 value={form.order}
-                onChange={(event) =>
-                  setForm((current) => ({ ...current, order: event.target.value }))
+                options={orderOptions}
+                onChange={(value) =>
+                  setForm((current) => {
+                    const selectedAmount = orderSummaryById[value]?.amount;
+                    return {
+                      ...current,
+                      order: value,
+                      amount:
+                        typeof selectedAmount === 'number' &&
+                        Number.isFinite(selectedAmount)
+                          ? String(selectedAmount)
+                          : current.amount,
+                    };
+                  })
                 }
-                className={inputClassName}
-                placeholder={t('payments.form.orderPlaceholder')}
-                disabled={isSubmitting}
-                required
+                disabled={isSubmitting || orderOptions.length === 0}
               />
             </div>
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-2">
+          {selectedOrderSummary ? (
             <div className="grid gap-1.5">
-              <label className={labelClassName} htmlFor="payment-form-last-four">
-                {t('payments.form.lastFourDigits')}
-              </label>
-              <input
-                id="payment-form-last-four"
-                type="text"
-                value={form.last_four_digits}
-                onChange={(event) =>
-                  setForm((current) => ({
-                    ...current,
-                    last_four_digits: event.target.value,
-                  }))
-                }
-                className={inputClassName}
-                placeholder="1234"
-                disabled={isSubmitting}
-                maxLength={4}
-              />
+              <span className={labelClassName}>Buyurtma Ma&apos;lumoti</span>
+              <div className="rounded-lg bg-surface-card p-3 shadow-sm ring-1 ring-border-soft/40">
+                <dl className="grid gap-2">
+                  <div className="flex items-center justify-between gap-3 text-xs">
+                    <dt className="font-semibold uppercase tracking-[0.08em] text-text-muted">
+                      {t('customers.columns.customer')}
+                    </dt>
+                    <dd className="m-0 text-right font-medium text-text-primary">
+                      {selectedOrderSummary.customerName || t('common.notAvailable')}
+                    </dd>
+                  </div>
+                  <div className="flex items-center justify-between gap-3 text-xs">
+                    <dt className="font-semibold uppercase tracking-[0.08em] text-text-muted">
+                      {t('customers.columns.phone')}
+                    </dt>
+                    <dd className="m-0 text-right font-medium text-text-primary">
+                      {selectedOrderSummary.customerPhone || t('common.notAvailable')}
+                    </dd>
+                  </div>
+                  <div className="flex items-center justify-between gap-3 text-xs">
+                    <dt className="font-semibold uppercase tracking-[0.08em] text-text-muted">
+                      {t('payments.detail.createdAt')}
+                    </dt>
+                    <dd className="m-0 text-right font-medium text-text-primary">
+                      {selectedOrderSummary.createdAtLabel || t('common.notAvailable')}
+                    </dd>
+                  </div>
+                  <div className="flex items-center justify-between gap-3 text-xs">
+                    <dt className="font-semibold uppercase tracking-[0.08em] text-text-muted">
+                      {t('payments.form.amount')}
+                    </dt>
+                    <dd className="m-0 text-right text-sm font-semibold text-text-primary">
+                      {formatCurrencyAmount(selectedOrderSummary.amount, locale)}
+                    </dd>
+                  </div>
+                </dl>
+              </div>
             </div>
+          ) : null}
 
-            <div className="grid gap-1.5">
-              <label className={labelClassName} htmlFor="payment-form-verification">
-                {t('payments.form.verificationReference')}
-              </label>
-              <input
-                id="payment-form-verification"
-                type="text"
-                value={form.verification_reference}
-                onChange={(event) =>
-                  setForm((current) => ({
-                    ...current,
-                    verification_reference: event.target.value,
-                  }))
-                }
-                className={inputClassName}
-                placeholder={t('payments.form.verificationPlaceholder')}
-                disabled={isSubmitting}
-              />
-            </div>
-          </div>
+          {!isManualMethod ? (
+            <>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="grid gap-1.5">
+                  <label className={labelClassName} htmlFor="payment-form-last-four">
+                    {t('payments.form.lastFourDigits')}
+                  </label>
+                  <input
+                    id="payment-form-last-four"
+                    type="text"
+                    value={form.last_four_digits}
+                    onChange={(event) =>
+                      setForm((current) => ({
+                        ...current,
+                        last_four_digits: event.target.value,
+                      }))
+                    }
+                    className={inputClassName}
+                    placeholder="1234"
+                    disabled={isSubmitting}
+                    maxLength={4}
+                  />
+                </div>
 
-          <div className="grid gap-1.5">
-            <label className={labelClassName} htmlFor="payment-form-screenshot">
-              {t('payments.form.screenshot')}
-            </label>
-            <input
-              id="payment-form-screenshot"
-              type="text"
-              value={form.screenshot}
-              onChange={(event) =>
-                setForm((current) => ({ ...current, screenshot: event.target.value }))
-              }
-              className={inputClassName}
-              placeholder={t('payments.form.screenshotPlaceholder')}
-              disabled={isSubmitting}
-            />
-          </div>
+                <div className="grid gap-1.5">
+                  <label className={labelClassName} htmlFor="payment-form-verification">
+                    {t('payments.form.verificationReference')}
+                  </label>
+                  <input
+                    id="payment-form-verification"
+                    type="text"
+                    value={form.verification_reference}
+                    onChange={(event) =>
+                      setForm((current) => ({
+                        ...current,
+                        verification_reference: event.target.value,
+                      }))
+                    }
+                    className={inputClassName}
+                    placeholder={t('payments.form.verificationPlaceholder')}
+                    disabled={isSubmitting}
+                  />
+                </div>
+              </div>
+
+              <div className="grid gap-1.5">
+                <label className={labelClassName} htmlFor="payment-form-screenshot">
+                  {t('payments.form.screenshot')}
+                </label>
+                <input
+                  id="payment-form-screenshot"
+                  type="text"
+                  value={form.screenshot}
+                  onChange={(event) =>
+                    setForm((current) => ({ ...current, screenshot: event.target.value }))
+                  }
+                  className={inputClassName}
+                  placeholder={t('payments.form.screenshotPlaceholder')}
+                  disabled={isSubmitting}
+                />
+              </div>
+            </>
+          ) : null}
 
           {fieldError ? (
             <p className="m-0 rounded-lg bg-danger-bg px-3 py-2 text-sm font-medium text-danger">

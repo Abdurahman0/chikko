@@ -27,6 +27,12 @@ const labelClassName =
 const valueClassName =
   'text-sm font-semibold text-text-primary [overflow-wrap:anywhere]';
 
+const overviewCardClassName =
+  'h-[84px] rounded-lg bg-surface-subtle/80 p-3';
+
+const overviewValueClassName =
+  'mt-1 truncate text-sm font-semibold text-text-primary';
+
 const actionButtonClassName =
   'inline-flex min-h-10 items-center gap-2 rounded-lg px-4 text-sm font-semibold transition duration-fast focus-visible:outline-none focus-visible:ring-2 disabled:cursor-not-allowed disabled:opacity-60';
 
@@ -346,29 +352,41 @@ function PaymentDetailPanel({
                   </div>
 
                   <div className="grid gap-2.5 sm:grid-cols-2">
-                    <div className="rounded-lg bg-surface-subtle/80 p-3">
+                    <div className={overviewCardClassName}>
                       <p className={labelClassName}>{t('payments.detail.submittedBy')}</p>
-                      <p className={`mt-1 ${valueClassName}`}>
+                      <p
+                        className={overviewValueClassName}
+                        title={payment.submitted_by_name}
+                      >
                         {payment.submitted_by_name}
                       </p>
                     </div>
-                    <div className="rounded-lg bg-surface-subtle/80 p-3">
+                    <div className={overviewCardClassName}>
                       <p className={labelClassName}>{t('payments.detail.lastFourDigits')}</p>
-                      <p className={`mt-1 ${valueClassName}`}>
+                      <p
+                        className={overviewValueClassName}
+                        title={payment.last_four_digits ?? t('payments.notAvailable')}
+                      >
                         {payment.last_four_digits ?? t('payments.notAvailable')}
                       </p>
                     </div>
-                    <div className="rounded-lg bg-surface-subtle/80 p-3">
+                    <div className={overviewCardClassName}>
                       <p className={labelClassName}>
                         {t('payments.detail.verificationReference')}
                       </p>
-                      <p className={`mt-1 ${valueClassName}`}>
+                      <p
+                        className={overviewValueClassName}
+                        title={payment.verification_reference ?? t('payments.notAvailable')}
+                      >
                         {payment.verification_reference ?? t('payments.notAvailable')}
                       </p>
                     </div>
-                    <div className="rounded-lg bg-surface-subtle/80 p-3">
+                    <div className={overviewCardClassName}>
                       <p className={labelClassName}>{t('payments.detail.reviewedBy')}</p>
-                      <p className={`mt-1 ${valueClassName}`}>
+                      <p
+                        className={overviewValueClassName}
+                        title={reviewedByLabel ?? t('payments.notAvailable')}
+                      >
                         {reviewedByLabel ?? t('payments.notAvailable')}
                       </p>
                     </div>

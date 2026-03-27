@@ -306,7 +306,7 @@ function OrderDetailPanel({
                   </div>
 
                   <div className="overflow-x-auto rounded-lg bg-surface-subtle/80 p-2">
-                    <table className="min-w-[420px] w-full border-separate border-spacing-y-1.5">
+                    <table className="min-w-[360px] w-full border-separate border-spacing-y-1.5">
                       <thead>
                         <tr>
                           <th className="px-2 py-1 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-text-muted">
@@ -314,9 +314,6 @@ function OrderDetailPanel({
                           </th>
                           <th className="px-2 py-1 text-right text-[11px] font-semibold uppercase tracking-[0.1em] text-text-muted">
                             {t('orders.detail.itemQty')}
-                          </th>
-                          <th className="px-2 py-1 text-right text-[11px] font-semibold uppercase tracking-[0.1em] text-text-muted">
-                            {t('orders.detail.itemUnitPrice')}
                           </th>
                           <th className="px-2 py-1 text-right text-[11px] font-semibold uppercase tracking-[0.1em] text-text-muted">
                             {t('orders.detail.itemLineTotal')}
@@ -331,9 +328,6 @@ function OrderDetailPanel({
                             </td>
                             <td className="px-2 py-2 text-right text-sm text-text-secondary">
                               {item.quantity}
-                            </td>
-                            <td className="px-2 py-2 text-right text-sm text-text-secondary">
-                              {formatCurrencyAmount(item.unitPrice, locale)}
                             </td>
                             <td className="rounded-r-lg px-2 py-2 text-right text-sm font-semibold text-text-primary">
                               {formatCurrencyAmount(item.lineTotal, locale)}

@@ -42,6 +42,7 @@ type CustomerOrdering =
 
 const PAGE_SIZE = 8;
 const SERVICE_FETCH_SIZE = 300;
+const SEARCH_DEBOUNCE_MS = 350;
 const ALL_OPERATORS_VALUE = 'all';
 const EMPTY_OPTION_VALUE = '';
 const DEFAULT_ORDERING: CustomerOrdering = '-updated_at';
@@ -107,6 +108,7 @@ function CustomersPage() {
   );
 
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [assignedOperatorFilter, setAssignedOperatorFilter] =
     useState<string>(ALL_OPERATORS_VALUE);
   const [ordering, setOrdering] = useState<CustomerOrdering>(DEFAULT_ORDERING);
@@ -142,8 +144,18 @@ function CustomersPage() {
   const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      setDebouncedSearch(search.trim());
+    }, SEARCH_DEBOUNCE_MS);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [search]);
+
+  useEffect(() => {
     setCurrentPage(1);
-  }, [search, assignedOperatorFilter, ordering]);
+  }, [debouncedSearch, assignedOperatorFilter, ordering]);
 
   useEffect(() => {
     let isActive = true;
@@ -299,7 +311,7 @@ function CustomersPage() {
         const result = await services.customers.listCustomers({
           page: currentPage,
           pageSize: PAGE_SIZE,
-          search,
+          search: debouncedSearch || undefined,
           assignedOperator:
             assignedOperatorFilter === ALL_OPERATORS_VALUE
               ? undefined
@@ -444,7 +456,7 @@ function CustomersPage() {
     return () => {
       isActive = false;
     };
-  }, [assignedOperatorFilter, currentPage, ordering, reloadCursor, search]);
+  }, [assignedOperatorFilter, currentPage, debouncedSearch, ordering, reloadCursor]);
 
   useEffect(() => {
     if (selectedCustomerId === null) {

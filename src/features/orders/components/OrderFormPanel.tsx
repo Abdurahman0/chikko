@@ -40,7 +40,6 @@ interface OrderItemFormState {
   id: string;
   productId: string;
   quantity: string;
-  unitPrice: string;
 }
 
 interface OrderFormState {
@@ -68,18 +67,15 @@ const inputClassName = [
 function createItemState(
   index: number,
   products: Product[],
-  item?: { productId: string; quantity: number; unitPrice: number },
+  item?: { productId: string; quantity: number },
 ): OrderItemFormState {
   const fallbackProduct = products[0];
   const productId = item?.productId ?? fallbackProduct?.id ?? '';
-  const defaultPrice =
-    item?.unitPrice ?? fallbackProduct?.promoPrice ?? fallbackProduct?.price ?? 0;
 
   return {
     id: `order-form-item-${index}-${Math.random().toString(36).slice(2, 7)}`,
     productId,
     quantity: String(item?.quantity ?? 1),
-    unitPrice: String(Number(defaultPrice.toFixed(2))),
   };
 }
 
@@ -150,7 +146,6 @@ function createInitialState(
         createItemState(index, products, {
           productId: resolveInitialProductId(item.product),
           quantity: item.quantity,
-          unitPrice: item.unitPrice,
         }),
       ),
     };
@@ -176,15 +171,6 @@ function parsePositiveInteger(value: string): number {
   }
 
   return Math.max(1, Math.floor(parsed));
-}
-
-function parseNonNegativeNumber(value: string): number {
-  const parsed = Number(value);
-  if (!Number.isFinite(parsed)) {
-    return 0;
-  }
-
-  return Math.max(0, Number(parsed.toFixed(2)));
 }
 
 function isUuidLike(value: string): boolean {
@@ -323,6 +309,15 @@ function OrderFormPanel({
     },
     [productById, productIdByName, productIdBySku],
   );
+  const resolveUnitPrice = useCallback(
+    (rawProductId: string): number => {
+      const productId = resolveProductUuid(rawProductId);
+      const product = productId ? productById.get(productId) : undefined;
+      const price = product?.promoPrice ?? product?.price ?? 0;
+      return Number(Math.max(0, price).toFixed(2));
+    },
+    [productById, resolveProductUuid],
+  );
 
   useEffect(() => {
     if (products.length === 0) {
@@ -355,7 +350,7 @@ function OrderFormPanel({
     () =>
       form.items.map((item) => {
         const quantity = parsePositiveInteger(item.quantity);
-        const unitPrice = parseNonNegativeNumber(item.unitPrice);
+        const unitPrice = resolveUnitPrice(item.productId);
         const lineTotal = Number((quantity * unitPrice).toFixed(2));
 
         return {
@@ -365,7 +360,7 @@ function OrderFormPanel({
           lineTotal,
         };
       }),
-    [form.items],
+    [form.items, resolveUnitPrice],
   );
 
   const totalAmount = useMemo(
@@ -382,11 +377,11 @@ function OrderFormPanel({
         .map((item) => {
           const productId = resolveProductUuid(item.productId);
           const quantity = parsePositiveInteger(item.quantity);
-          const unitPrice = parseNonNegativeNumber(item.unitPrice);
+          const unitPrice = resolveUnitPrice(item.productId);
           return `${productId}:${quantity}:${unitPrice}`;
         })
         .join('|'),
-    [form.items, resolveProductUuid],
+    [form.items, resolveProductUuid, resolveUnitPrice],
   );
 
   const canSubmit = useMemo(() => {
@@ -398,12 +393,11 @@ function OrderFormPanel({
       form.items.length > 0 &&
       form.items.every(
         (item) =>
-          item.productId.trim().length > 0 &&
-          parsePositiveInteger(item.quantity) > 0 &&
-          parseNonNegativeNumber(item.unitPrice) >= 0,
+          resolveProductUuid(item.productId).length > 0 &&
+          parsePositiveInteger(item.quantity) > 0,
       )
     );
-  }, [form]);
+  }, [form, resolveProductUuid]);
 
   function updateItem(id: string, patch: Partial<OrderItemFormState>) {
     setForm((current) => ({
@@ -457,7 +451,7 @@ function OrderFormPanel({
     const normalizedItems = form.items.map((item) => {
       const productId = resolveProductUuid(item.productId);
       const quantity = parsePositiveInteger(item.quantity);
-      const unitPrice = parseNonNegativeNumber(item.unitPrice);
+      const unitPrice = resolveUnitPrice(item.productId);
 
       return {
         productId,
@@ -507,7 +501,7 @@ function OrderFormPanel({
     const normalizedItems = form.items.map((item) => ({
       productId: resolveProductUuid(item.productId),
       quantity: parsePositiveInteger(item.quantity),
-      unitPrice: parseNonNegativeNumber(item.unitPrice),
+      unitPrice: resolveUnitPrice(item.productId),
     }));
     const hasValidItems =
       normalizedItems.length > 0 &&
@@ -576,6 +570,7 @@ function OrderFormPanel({
     order?.id,
     products,
     resolveProductUuid,
+    resolveUnitPrice,
     t,
   ]);
 
@@ -798,9 +793,10 @@ function OrderFormPanel({
             ) : null}
 
             {form.items.map((item, index) => {
-              const selectedProduct = productById.get(item.productId);
+              const resolvedProductId = resolveProductUuid(item.productId);
+              const selectedProduct = productById.get(resolvedProductId);
               const quantity = parsePositiveInteger(item.quantity);
-              const unitPrice = parseNonNegativeNumber(item.unitPrice);
+              const unitPrice = resolveUnitPrice(item.productId);
               const lineTotal = Number((quantity * unitPrice).toFixed(2));
 
               return (
@@ -808,7 +804,7 @@ function OrderFormPanel({
                   key={item.id}
                   className="grid gap-2.5 rounded-xl bg-surface-subtle/85 p-3"
                 >
-                  <div className="grid gap-2.5 sm:grid-cols-[minmax(0,1fr),100px,130px,auto]">
+                  <div className="grid gap-2.5 sm:grid-cols-[minmax(0,1fr),140px,auto]">
                     <label className="grid gap-1.5">
                       <span className={labelClassName}>
                         {t('orders.form.product')}
@@ -817,18 +813,8 @@ function OrderFormPanel({
                         value={item.productId}
                         options={productOptions}
                         onChange={(value) => {
-                          const product = productById.get(value);
                           updateItem(item.id, {
                             productId: value,
-                            unitPrice: String(
-                              Number(
-                                (
-                                  product?.promoPrice ??
-                                  product?.price ??
-                                  0
-                                ).toFixed(2),
-                              ),
-                            ),
                           });
                         }}
                         disabled={isSubmitting || productOptions.length === 0}
@@ -847,30 +833,10 @@ function OrderFormPanel({
                         type="number"
                         min="1"
                         step="1"
+                        inputMode="numeric"
                         value={item.quantity}
                         onChange={(event) =>
                           updateItem(item.id, { quantity: event.target.value })
-                        }
-                        className={inputClassName}
-                        disabled={isSubmitting}
-                      />
-                    </div>
-
-                    <div className="grid gap-1.5">
-                      <label
-                        className={labelClassName}
-                        htmlFor={`order-form-item-price-${index}`}
-                      >
-                        {t('orders.form.unitPrice')}
-                      </label>
-                      <input
-                        id={`order-form-item-price-${index}`}
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        value={item.unitPrice}
-                        onChange={(event) =>
-                          updateItem(item.id, { unitPrice: event.target.value })
                         }
                         className={inputClassName}
                         disabled={isSubmitting}

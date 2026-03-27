@@ -51,6 +51,7 @@ type OrderOrdering =
 
 const PAGE_SIZE = 8;
 const SERVICE_FETCH_SIZE = 400;
+const SEARCH_DEBOUNCE_MS = 350;
 const ALL_STATUS_VALUE = 'all';
 const ALL_SOURCE_VALUE = 'all';
 const ALL_AI_VALUE = 'all';
@@ -98,6 +99,103 @@ function resolveAiGeneratedFilter(value: AiFilter): boolean | undefined {
   return value === 'yes';
 }
 
+function asRecord(value: unknown): Record<string, unknown> | null {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return null;
+  }
+
+  return value as Record<string, unknown>;
+}
+
+function readMessage(value: unknown): string | null {
+  if (typeof value !== 'string') {
+    return null;
+  }
+
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
+}
+
+function readStringList(value: unknown): string[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value
+    .map((entry) => readMessage(entry))
+    .filter((entry): entry is string => Boolean(entry));
+}
+
+function localizeInsufficientStockMessage(
+  message: string,
+  language: string,
+): string | null {
+  const match =
+    /^Insufficient stock for\s+(.+?)\.\s*Available:\s*([^.\s][^.]*)\.?$/i.exec(message);
+  if (!match) {
+    return null;
+  }
+
+  const productName = match[1]?.trim();
+  const availableQuantity = match[2]?.trim();
+
+  if (!productName || !availableQuantity) {
+    return null;
+  }
+
+  if (language === 'ru') {
+    return `Недостаточно остатков для ${productName}. Доступно: ${availableQuantity}.`;
+  }
+
+  return `${productName} uchun zaxira yetarli emas. Mavjud: ${availableQuantity}.`;
+}
+
+function extractOrderSaveErrorMessage(
+  error: unknown,
+  fallback: string,
+  language: string,
+): string {
+  const topLevel = asRecord(error);
+  const response = asRecord(topLevel?.response);
+  const data = response?.data;
+  const dataRecord = asRecord(data);
+
+  const messages: string[] = [
+    ...readStringList(dataRecord?.items),
+    ...readStringList(dataRecord?.non_field_errors),
+    ...readStringList(dataRecord?.errors),
+  ];
+
+  const directCandidates: Array<unknown> = [
+    dataRecord?.detail,
+    dataRecord?.message,
+    dataRecord?.error,
+    Array.isArray(data) ? data[0] : null,
+    data,
+    topLevel?.message,
+  ];
+
+  for (const candidate of directCandidates) {
+    const message = readMessage(candidate);
+    if (message) {
+      messages.push(message);
+    }
+  }
+
+  for (const message of messages) {
+    const localizedStockMessage = localizeInsufficientStockMessage(message, language);
+    if (localizedStockMessage) {
+      return localizedStockMessage;
+    }
+
+    if (message) {
+      return message;
+    }
+  }
+
+  return fallback;
+}
+
 function formatOrderLabel(order: Order): string {
   const firstItemProductName = order.items[0]?.product?.name?.trim() ?? '';
   if (firstItemProductName) {
@@ -139,6 +237,7 @@ function OrdersPage() {
   const locale = i18n.language === 'ru' ? 'ru-RU' : 'uz-UZ';
 
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>(ALL_STATUS_VALUE);
   const [sourceFilter, setSourceFilter] = useState<string>(ALL_SOURCE_VALUE);
   const [aiFilter, setAiFilter] = useState<AiFilter>('all');
@@ -173,8 +272,18 @@ function OrdersPage() {
   const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      setDebouncedSearch(search.trim());
+    }, SEARCH_DEBOUNCE_MS);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [search]);
+
+  useEffect(() => {
     setCurrentPage(1);
-  }, [search, statusFilter, sourceFilter, aiFilter, ordering]);
+  }, [debouncedSearch, statusFilter, sourceFilter, aiFilter, ordering]);
 
   useEffect(() => {
     let isActive = true;
@@ -233,7 +342,7 @@ function OrdersPage() {
         const result = await services.orders.list({
           page: currentPage,
           pageSize: PAGE_SIZE,
-          search,
+          search: debouncedSearch || undefined,
           status: statusFilter === ALL_STATUS_VALUE ? undefined : statusFilter,
           source: sourceFilter === ALL_SOURCE_VALUE ? undefined : sourceFilter,
           ai_generated: resolveAiGeneratedFilter(aiFilter),
@@ -273,7 +382,15 @@ function OrdersPage() {
     return () => {
       isActive = false;
     };
-  }, [aiFilter, currentPage, ordering, reloadCursor, search, sourceFilter, statusFilter]);
+  }, [
+    aiFilter,
+    currentPage,
+    debouncedSearch,
+    ordering,
+    reloadCursor,
+    sourceFilter,
+    statusFilter,
+  ]);
 
   useEffect(() => {
     if (!selectedOrderId) {
@@ -341,8 +458,11 @@ function OrdersPage() {
       setReloadCursor((current) => current + 1);
       setDetailRefreshToken((current) => current + 1);
     } catch (error) {
-      const message =
-        error instanceof Error ? error.message : t('orders.form.saveError');
+      const message = extractOrderSaveErrorMessage(
+        error,
+        t('orders.form.saveError'),
+        i18n.language,
+      );
       setFormErrorMessage(message);
     } finally {
       setIsSaving(false);
