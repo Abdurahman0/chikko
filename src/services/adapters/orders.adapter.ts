@@ -307,8 +307,9 @@ function mapProductSummary(
     price: readNumber(productRecord.price, fallbackUnitPrice),
     currency: readString(productRecord.currency, DEFAULT_CURRENCY_CODE),
     imageUrl:
-      readString(productRecord.image_url) ||
+      readString(productRecord.image) ||
       readString(productRecord.imageUrl) ||
+      readString(productRecord.image_url) ||
       undefined,
   };
 }
@@ -442,4 +443,3 @@ export function mapOrderListDtoToItems(value: unknown): Order[] {
     .filter((item): item is OrderDto => item !== null)
     .map((item) => mapOrderDtoToModel(item));
 }
-

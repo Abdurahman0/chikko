@@ -276,6 +276,14 @@ function ProductDetailPanel({
                         {product.stockQuantity ?? 0}
                       </p>
                     </div>
+                    <div className="rounded-lg bg-surface-subtle/80 p-3">
+                      <p className={labelClassName}>
+                        {t('products.form.category')}
+                      </p>
+                      <p className={`mt-1 ${valueClassName}`}>
+                        {product.categoryName || product.category || t('common.na')}
+                      </p>
+                    </div>
                     <div className="rounded-lg bg-surface-subtle/80 p-3 sm:col-span-2">
                       <p className={labelClassName}>
                         {t('products.detail.description')}

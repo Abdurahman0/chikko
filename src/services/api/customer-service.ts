@@ -65,17 +65,11 @@ function normalizePayload(
   if (input.phone !== undefined) {
     payload.phone = input.phone;
   }
-  if (input.email !== undefined) {
-    payload.email = input.email;
-  }
   if (input.address !== undefined) {
     payload.address = input.address;
   }
   if (input.notes !== undefined) {
     payload.notes = input.notes;
-  }
-  if (input.metadata !== undefined) {
-    payload.metadata = input.metadata;
   }
   if (input.lead !== undefined) {
     payload.lead = input.lead;

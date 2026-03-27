@@ -36,6 +36,12 @@ function readNumber(value: unknown): number | null {
   return null;
 }
 
+function isUuidLike(value: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+    value,
+  );
+}
+
 function toPaginatedResult(
   allItems: Order[],
   params?: TableQueryParams,
@@ -70,11 +76,27 @@ function normalizeItems(
     return undefined;
   }
 
-  return items.map((item) => ({
-    product_id: item.productId,
-    quantity: Math.max(1, Math.floor(Number(item.quantity) || 1)),
-    unit_price: Math.max(0, Number(Number(item.unitPrice || 0).toFixed(2))),
-  }));
+  const normalized = items
+    .map((item) => {
+      const productId = String(item.productId ?? '').trim();
+      if (!isUuidLike(productId)) {
+        return null;
+      }
+
+      return {
+        product_id: productId,
+        quantity: Math.max(1, Math.floor(Number(item.quantity) || 1)),
+        unit_price: Math.max(0, Number(Number(item.unitPrice || 0).toFixed(2))),
+      };
+    })
+    .filter(
+      (
+        item,
+      ): item is { product_id: string; quantity: number; unit_price: number } =>
+        item !== null,
+    );
+
+  return normalized;
 }
 
 function toOrderPayload(
@@ -83,10 +105,8 @@ function toOrderPayload(
   const payload: Record<string, unknown> = {};
 
   if (input.customerId !== undefined) {
-    payload.customer = input.customerId || null;
-  }
-  if (input.leadId !== undefined) {
-    payload.lead = input.leadId || null;
+    const customerId = String(input.customerId ?? '').trim();
+    payload.customer = isUuidLike(customerId) ? customerId : null;
   }
   if (input.status !== undefined) {
     payload.status = input.status;
@@ -105,9 +125,6 @@ function toOrderPayload(
   }
   if (input.notes !== undefined) {
     payload.notes = input.notes;
-  }
-  if (input.metadata !== undefined) {
-    payload.metadata = input.metadata;
   }
   if (input.aiGenerated !== undefined) {
     payload.ai_generated = input.aiGenerated;

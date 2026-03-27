@@ -1,7 +1,8 @@
-import type { Product, ProductImage } from '../../types/domain';
+import type { Product, ProductCategory, ProductImage } from '../../types/domain';
 
 export type ProductDto = Record<string, unknown>;
 export type ProductImageDto = Record<string, unknown>;
+export type ProductCategoryDto = Record<string, unknown>;
 
 function toRecord(value: unknown): Record<string, unknown> | null {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
@@ -64,6 +65,12 @@ function readBoolean(value: unknown): boolean {
   return Boolean(value);
 }
 
+function isUuid(value: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+    value.trim(),
+  );
+}
+
 function normalizeMetadataValue(
   value: unknown,
 ): string | number | boolean | null {
@@ -123,7 +130,7 @@ export function mapProductImageDtoToModel(
   index = 0,
 ): ProductImage {
   const nowIso = new Date().toISOString();
-  const imageUrl = readString(dto.image_url) || readString(dto.image);
+  const imageUrl = readString(dto.image) || readString(dto.image_url);
 
   return {
     id: readString(dto.id) || `product-image-${nowIso}-${index}`,
@@ -156,20 +163,40 @@ export function mapProductDtoToModel(dto: ProductDto): Product {
   const isActive = readBoolean(dto.is_active);
   const metadata = mapMetadata(dto.metadata);
   const images = mapImages(dto.images);
-  const firstImageUrl = images[0]?.imageUrl || readString(dto.image_url) || undefined;
+  const firstImageUrl =
+    images[0]?.imageUrl || readString(dto.image) || readString(dto.image_url) || undefined;
   const categoryFromMetadata =
     metadata?.category !== undefined &&
     metadata?.category !== null
       ? String(metadata.category).trim()
       : '';
   const categoryFromDto = readString(dto.category);
+  const categoryRecord = toRecord(dto.category);
+  const categoryIdFromDto = readString(dto.category_id);
+  const categoryIdFromObject = readString(categoryRecord?.id);
+  const categoryNameFromDto = readString(dto.category_name);
+  const categoryNameFromObject = readString(categoryRecord?.name);
+  const categoryIdFromRaw = isUuid(categoryFromDto) ? categoryFromDto : '';
+  const categoryId =
+    categoryIdFromDto || categoryIdFromObject || categoryIdFromRaw || undefined;
+  const categoryName =
+    categoryNameFromDto ||
+    categoryNameFromObject ||
+    (categoryFromDto && !isUuid(categoryFromDto) ? categoryFromDto : '') ||
+    undefined;
+  const legacyCategory =
+    categoryFromMetadata && !isUuid(categoryFromMetadata)
+      ? categoryFromMetadata
+      : undefined;
 
   return {
     id: readString(dto.id) || `product-${nowIso}`,
     name: readString(dto.name) || "Noma'lum mahsulot",
     sku: readString(dto.sku) || undefined,
     description: readString(dto.description) || undefined,
-    category: categoryFromDto || categoryFromMetadata || undefined,
+    categoryId,
+    categoryName,
+    category: categoryName || legacyCategory,
     price,
     promoPrice: undefined,
     currency: readString(dto.currency, 'UZS'),
@@ -208,4 +235,45 @@ export function mapProductListDtoToItems(value: unknown): Product[] {
     .map((item) => toRecord(item))
     .filter((item): item is ProductDto => item !== null)
     .map((item) => mapProductDtoToModel(item));
+}
+
+export function mapProductCategoryDtoToModel(
+  dto: ProductCategoryDto,
+): ProductCategory {
+  const nowIso = new Date().toISOString();
+
+  return {
+    id: readString(dto.id) || `product-category-${nowIso}`,
+    name: readString(dto.name),
+    code: readString(dto.code),
+    description: readString(dto.description) || undefined,
+    isActive: readBoolean(dto.is_active),
+    createdAt: readString(dto.created_at, nowIso),
+    updatedAt: readString(dto.updated_at, nowIso),
+  };
+}
+
+export function mapProductCategoryListDtoToItems(value: unknown): ProductCategory[] {
+  if (Array.isArray(value)) {
+    return value
+      .map((item) => toRecord(item))
+      .filter((item): item is ProductCategoryDto => item !== null)
+      .map((item) => mapProductCategoryDtoToModel(item));
+  }
+
+  const payload = toRecord(value);
+  if (!payload) {
+    return [];
+  }
+
+  const results = Array.isArray(payload.results)
+    ? payload.results
+    : Array.isArray(payload.items)
+      ? payload.items
+      : [];
+
+  return results
+    .map((item) => toRecord(item))
+    .filter((item): item is ProductCategoryDto => item !== null)
+    .map((item) => mapProductCategoryDtoToModel(item));
 }

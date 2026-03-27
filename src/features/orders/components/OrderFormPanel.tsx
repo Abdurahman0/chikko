@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { FiTrash2 } from 'react-icons/fi';
 import { useTranslation } from 'react-i18next';
 import { FilterSelect, Switch } from '../../../components/shared/data';
@@ -11,7 +11,6 @@ import type {
   CurrencyCode,
   Customer,
   EntityId,
-  Lead,
   Order,
   OrderMutationInput,
   OrderSource,
@@ -24,7 +23,6 @@ interface OrderFormPanelProps {
   mode: 'create' | 'edit';
   order?: Order | null;
   customers: Customer[];
-  leads: Lead[];
   products: Product[];
   statusOptions: SelectOption[];
   sourceOptions: SelectOption[];
@@ -47,7 +45,6 @@ interface OrderItemFormState {
 
 interface OrderFormState {
   customerId: string;
-  leadId: string;
   status: OrderStatus;
   source: OrderSource;
   contactName: string;
@@ -89,12 +86,59 @@ function createItemState(
 function createInitialState(
   mode: 'create' | 'edit',
   order: Order | null | undefined,
+  customers: Customer[],
   products: Product[],
 ): OrderFormState {
+  const productIds = new Set(products.map((product) => product.id));
+  const productIdBySku = new Map(
+    products
+      .map((product) => ({
+        sku: (product.sku ?? '').trim().toUpperCase(),
+        id: product.id,
+      }))
+      .filter((entry) => entry.sku.length > 0)
+      .map((entry) => [entry.sku, entry.id] as const),
+  );
+  const productIdByName = new Map(
+    products
+      .map((product) => ({
+        name: product.name.trim().toLowerCase(),
+        id: product.id,
+      }))
+      .filter((entry) => entry.name.length > 0)
+      .map((entry) => [entry.name, entry.id] as const),
+  );
+  const uuidLikePattern =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+  function resolveInitialProductId(product: Order['items'][number]['product']): string {
+    const rawId = String(product.id ?? '').trim();
+    if (uuidLikePattern.test(rawId) && productIds.has(rawId)) {
+      return rawId;
+    }
+
+    const rawSku = String(product.sku ?? '').trim().toUpperCase();
+    if (rawSku) {
+      const fromSku = productIdBySku.get(rawSku);
+      if (fromSku) {
+        return fromSku;
+      }
+    }
+
+    const rawName = String(product.name ?? '').trim().toLowerCase();
+    if (rawName) {
+      const fromName = productIdByName.get(rawName);
+      if (fromName) {
+        return fromName;
+      }
+    }
+
+    return rawId;
+  }
+
   if (mode === 'edit' && order) {
     return {
       customerId: order.customer?.id ?? '',
-      leadId: order.lead?.id ?? '',
       status: order.status,
       source: order.source,
       contactName: order.contactName,
@@ -104,7 +148,7 @@ function createInitialState(
       aiGenerated: order.aiGenerated,
       items: order.items.map((item, index) =>
         createItemState(index, products, {
-          productId: item.product.id,
+          productId: resolveInitialProductId(item.product),
           quantity: item.quantity,
           unitPrice: item.unitPrice,
         }),
@@ -113,8 +157,7 @@ function createInitialState(
   }
 
   return {
-    customerId: '',
-    leadId: '',
+    customerId: customers[0]?.id ?? '',
     status: 'draft',
     source: 'telegram',
     contactName: '',
@@ -144,6 +187,12 @@ function parseNonNegativeNumber(value: string): number {
   return Math.max(0, Number(parsed.toFixed(2)));
 }
 
+function isUuidLike(value: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+    value,
+  );
+}
+
 function resolveCurrency(items: OrderItemFormState[], products: Product[]): CurrencyCode {
   const productById = new Map(products.map((product) => [product.id, product]));
   const firstResolved = items.find((item) => productById.has(item.productId));
@@ -158,7 +207,6 @@ function OrderFormPanel({
   mode,
   order,
   customers,
-  leads,
   products,
   statusOptions,
   sourceOptions,
@@ -171,7 +219,7 @@ function OrderFormPanel({
   const { t, i18n } = useTranslation();
   const locale = i18n.language === 'ru' ? 'ru-RU' : 'uz-UZ';
   const [form, setForm] = useState<OrderFormState>(() =>
-    createInitialState(mode, order, products),
+    createInitialState(mode, order, customers, products),
   );
   const [fieldError, setFieldError] = useState<string | null>(null);
   const [isRecalculating, setIsRecalculating] = useState(false);
@@ -182,13 +230,13 @@ function OrderFormPanel({
   const didAutoRecalculateRef = useRef(false);
 
   useEffect(() => {
-    setForm(createInitialState(mode, order, products));
+    setForm(createInitialState(mode, order, customers, products));
     setFieldError(null);
     setRecalculateError(null);
     setRecalculatedTotalAmount(null);
     setIsRecalculating(false);
     didAutoRecalculateRef.current = false;
-  }, [mode, order, products]);
+  }, [mode, order, customers, products]);
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
@@ -204,25 +252,12 @@ function OrderFormPanel({
   }, [isSubmitting, onClose]);
 
   const customerOptions = useMemo<SelectOption[]>(
-    () => [
-      { value: '', label: t('orders.form.noneCustomer') },
-      ...customers.map((customer) => ({
+    () =>
+      customers.map((customer) => ({
         value: customer.id,
         label: customer.fullName,
       })),
-    ],
     [customers, t],
-  );
-
-  const leadOptions = useMemo<SelectOption[]>(
-    () => [
-      { value: '', label: t('orders.form.noneLead') },
-      ...leads.map((lead) => ({
-        value: lead.id,
-        label: lead.fullName,
-      })),
-    ],
-    [leads, t],
   );
 
   const productOptions = useMemo<SelectOption[]>(
@@ -238,6 +273,83 @@ function OrderFormPanel({
     () => new Map(products.map((product) => [product.id, product])),
     [products],
   );
+  const productIdBySku = useMemo(() => {
+    const index = new Map<string, string>();
+    for (const product of products) {
+      const sku = (product.sku ?? '').trim().toUpperCase();
+      if (sku) {
+        index.set(sku, product.id);
+      }
+    }
+    return index;
+  }, [products]);
+  const productIdByName = useMemo(() => {
+    const index = new Map<string, string>();
+    for (const product of products) {
+      const name = product.name.trim().toLowerCase();
+      if (name) {
+        index.set(name, product.id);
+      }
+    }
+    return index;
+  }, [products]);
+  const resolveProductUuid = useCallback(
+    (rawProductId: string): string => {
+      const trimmed = rawProductId.trim();
+      if (isUuidLike(trimmed) && productById.has(trimmed)) {
+        return trimmed;
+      }
+
+      const skuFromLabelMatch = /\(([^()]+)\)\s*$/.exec(trimmed);
+      const skuFromLabel = skuFromLabelMatch?.[1]?.trim().toUpperCase() ?? '';
+      if (skuFromLabel) {
+        const fromLabelSku = productIdBySku.get(skuFromLabel);
+        if (fromLabelSku && isUuidLike(fromLabelSku)) {
+          return fromLabelSku;
+        }
+      }
+
+      const fromSku = productIdBySku.get(trimmed.toUpperCase());
+      if (fromSku && isUuidLike(fromSku)) {
+        return fromSku;
+      }
+
+      const fromName = productIdByName.get(trimmed.toLowerCase());
+      if (fromName && isUuidLike(fromName)) {
+        return fromName;
+      }
+
+      return '';
+    },
+    [productById, productIdByName, productIdBySku],
+  );
+
+  useEffect(() => {
+    if (products.length === 0) {
+      return;
+    }
+
+    setForm((current) => {
+      let changed = false;
+      const nextItems = current.items.map((item) => {
+        const resolved = resolveProductUuid(item.productId);
+        if (resolved && resolved !== item.productId) {
+          changed = true;
+          return { ...item, productId: resolved };
+        }
+        return item;
+      });
+
+      if (!changed) {
+        return current;
+      }
+
+      return {
+        ...current,
+        items: nextItems,
+      };
+    });
+  }, [products, resolveProductUuid]);
 
   const itemRows = useMemo(
     () =>
@@ -268,17 +380,18 @@ function OrderFormPanel({
     () =>
       form.items
         .map((item) => {
-          const productId = item.productId.trim();
+          const productId = resolveProductUuid(item.productId);
           const quantity = parsePositiveInteger(item.quantity);
           const unitPrice = parseNonNegativeNumber(item.unitPrice);
           return `${productId}:${quantity}:${unitPrice}`;
         })
         .join('|'),
-    [form.items],
+    [form.items, resolveProductUuid],
   );
 
   const canSubmit = useMemo(() => {
     return (
+      isUuidLike(form.customerId.trim()) &&
       form.contactName.trim().length > 0 &&
       form.contactPhone.trim().length > 0 &&
       form.shippingAddress.trim().length > 0 &&
@@ -325,12 +438,13 @@ function OrderFormPanel({
     event.preventDefault();
     setFieldError(null);
 
+    const customerId = form.customerId.trim();
     const contactName = form.contactName.trim();
     const contactPhone = form.contactPhone.trim();
     const shippingAddress = form.shippingAddress.trim();
     const notes = form.notes.trim();
 
-    if (!contactName || !contactPhone || !shippingAddress) {
+    if (!isUuidLike(customerId) || !contactName || !contactPhone || !shippingAddress) {
       setFieldError(t('orders.form.requiredError'));
       return;
     }
@@ -341,7 +455,7 @@ function OrderFormPanel({
     }
 
     const normalizedItems = form.items.map((item) => {
-      const productId = item.productId.trim();
+      const productId = resolveProductUuid(item.productId);
       const quantity = parsePositiveInteger(item.quantity);
       const unitPrice = parseNonNegativeNumber(item.unitPrice);
 
@@ -360,8 +474,7 @@ function OrderFormPanel({
     const currency = resolveCurrency(form.items, products);
 
     onSubmit({
-      customerId: form.customerId || undefined,
-      leadId: form.leadId || undefined,
+      customerId,
       status: form.status,
       source: form.source,
       contactName,
@@ -392,23 +505,24 @@ function OrderFormPanel({
     }
 
     const normalizedItems = form.items.map((item) => ({
-      productId: item.productId.trim(),
+      productId: resolveProductUuid(item.productId),
       quantity: parsePositiveInteger(item.quantity),
       unitPrice: parseNonNegativeNumber(item.unitPrice),
     }));
     const hasValidItems =
       normalizedItems.length > 0 &&
       normalizedItems.every((item) => item.productId.length > 0);
+    const customerId = form.customerId.trim();
+    const hasValidCustomer = isUuidLike(customerId);
 
-    if (!hasValidItems) {
+    if (!hasValidItems || !hasValidCustomer) {
       setRecalculatedTotalAmount(null);
       setRecalculateError(null);
       return;
     }
 
     const payload: OrderMutationInput = {
-      customerId: form.customerId || undefined,
-      leadId: form.leadId || undefined,
+      customerId,
       status: form.status,
       source: form.source,
       contactName: form.contactName.trim(),
@@ -461,6 +575,7 @@ function OrderFormPanel({
     onRecalculate,
     order?.id,
     products,
+    resolveProductUuid,
     t,
   ]);
 
@@ -513,7 +628,7 @@ function OrderFormPanel({
         </header>
 
         <form className="grid gap-3" onSubmit={handleSubmit} noValidate>
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid gap-3">
             <label className="grid gap-1.5">
               <span className={labelClassName}>{t('orders.form.customer')}</span>
               <FilterSelect
@@ -521,18 +636,6 @@ function OrderFormPanel({
                 options={customerOptions}
                 onChange={(value) =>
                   setForm((current) => ({ ...current, customerId: value }))
-                }
-                disabled={isSubmitting}
-              />
-            </label>
-
-            <label className="grid gap-1.5">
-              <span className={labelClassName}>{t('orders.form.lead')}</span>
-              <FilterSelect
-                value={form.leadId}
-                options={leadOptions}
-                onChange={(value) =>
-                  setForm((current) => ({ ...current, leadId: value }))
                 }
                 disabled={isSubmitting}
               />

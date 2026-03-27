@@ -32,6 +32,10 @@ import type {
   PaymentMutationInput,
   PaymentUpdateInput,
   Product,
+  ProductCategory,
+  ProductCategoryListParams,
+  ProductCategoryMutationInput,
+  ProductCategoryPatchInput,
   ProductPatchInput,
   ProductMutationInput,
   SendMessageInput,
@@ -202,6 +206,20 @@ export interface ProductService {
   patchProduct(id: EntityId, input: ProductPatchInput): Promise<Product | null>;
   delete(id: EntityId): Promise<boolean>;
   deleteProduct(id: EntityId): Promise<boolean>;
+  listProductCategories(
+    params?: ProductCategoryListParams,
+  ): Promise<PaginatedResult<ProductCategory>>;
+  getProductCategoryById(id: EntityId): Promise<ProductCategory | null>;
+  createProductCategory(input: ProductCategoryMutationInput): Promise<ProductCategory>;
+  updateProductCategory(
+    id: EntityId,
+    input: ProductCategoryMutationInput,
+  ): Promise<ProductCategory | null>;
+  patchProductCategory(
+    id: EntityId,
+    input: ProductCategoryPatchInput,
+  ): Promise<ProductCategory | null>;
+  deleteProductCategory(id: EntityId): Promise<boolean>;
   uploadProductImages(productId: EntityId, payload: FormData | File[]): Promise<Product | null>;
   deleteProductImage(productId: EntityId, imageId: EntityId): Promise<boolean>;
 }

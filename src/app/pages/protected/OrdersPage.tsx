@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { FiEdit2, FiRefreshCw, FiTrash2 } from 'react-icons/fi';
 import { useTranslation } from 'react-i18next';
 import { formatCurrencyAmount } from '../../../constants';
@@ -30,7 +30,6 @@ import { services } from '../../../services';
 import type {
   Customer,
   EntityId,
-  Lead,
   Order,
   OrderMutationInput,
   OrderSource,
@@ -119,7 +118,6 @@ function formatOrderLabel(order: Order): string {
   return (
     order.contactName?.trim() ||
     order.customer?.fullName?.trim() ||
-    order.lead?.fullName?.trim() ||
     'Buyurtma'
   );
 }
@@ -153,7 +151,6 @@ function OrdersPage() {
   );
 
   const [customers, setCustomers] = useState<Customer[]>([]);
-  const [leads, setLeads] = useState<Lead[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
 
   const [selectedOrderId, setSelectedOrderId] = useState<EntityId | null>(null);
@@ -184,15 +181,11 @@ function OrdersPage() {
 
     async function loadFormReferences() {
       try {
-        const [customersResponse, leadsResponse, productsResponse] = await Promise.all([
+        const [customersResponse, productsResponse] = await Promise.all([
           services.customers.list({
             page: 1,
             pageSize: SERVICE_FETCH_SIZE,
             ordering: '-updated_at',
-          }),
-          services.leads.list({
-            page: 1,
-            pageSize: SERVICE_FETCH_SIZE,
           }),
           services.products.list({
             page: 1,
@@ -210,11 +203,6 @@ function OrdersPage() {
             left.fullName.localeCompare(right.fullName),
           ),
         );
-        setLeads(
-          [...leadsResponse.items].sort((left, right) =>
-            left.fullName.localeCompare(right.fullName),
-          ),
-        );
         setProducts(productsResponse.items);
       } catch {
         if (!isActive) {
@@ -222,7 +210,6 @@ function OrdersPage() {
         }
 
         setCustomers([]);
-        setLeads([]);
         setProducts([]);
       }
     }
@@ -388,10 +375,10 @@ function OrdersPage() {
     }
   }
 
-  async function handleRecalculate(
+  const handleRecalculate = useCallback(async (
     orderId: EntityId,
     payload?: OrderMutationInput,
-  ): Promise<Order | null> {
+  ): Promise<Order | null> => {
     if (!payload) {
       setRecalculatingOrderId(orderId);
     }
@@ -417,7 +404,7 @@ function OrdersPage() {
         setRecalculatingOrderId(null);
       }
     }
-  }
+  }, []);
 
   const statusOptions = useMemo<SelectOption[]>(
     () => [
@@ -778,7 +765,6 @@ function OrdersPage() {
           mode={formMode}
           order={editingOrder}
           customers={customers}
-          leads={leads}
           products={products}
           statusOptions={statusOptions.filter(
             (option) => option.value !== ALL_STATUS_VALUE,

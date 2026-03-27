@@ -139,7 +139,6 @@ function resolvePermissionCodes(userRecord: Record<string, unknown>, role: AppRo
 
 function normalizeUser(rawUser: unknown): AuthenticatedUser {
   const userRecord = toRecord(rawUser) ?? {};
-  const nowIso = new Date().toISOString();
   const role = resolveRole(userRecord.role);
   const email = readString(userRecord.email) ?? '';
   const fullName =
@@ -169,11 +168,11 @@ function normalizeUser(rawUser: unknown): AuthenticatedUser {
     createdAt:
       readString(userRecord.createdAt) ??
       readString(userRecord.created_at) ??
-      nowIso,
+      '',
     updatedAt:
       readString(userRecord.updatedAt) ??
       readString(userRecord.updated_at) ??
-      nowIso,
+      '',
   };
 }
 

@@ -8,6 +8,30 @@ interface OrderDeleteDialogProps {
   onConfirm: () => void;
 }
 
+function isLikelyUuid(value: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+    value.trim(),
+  );
+}
+
+function resolveOrderLabel(order: Order, fallback: string): string {
+  const firstItemProductName = order.items[0]?.product?.name?.trim() ?? '';
+  if (firstItemProductName) {
+    return firstItemProductName;
+  }
+
+  const orderNumber = order.orderNumber?.trim() ?? '';
+  if (orderNumber && !isLikelyUuid(orderNumber) && !/^#?[0-9a-f]{6,}$/i.test(orderNumber)) {
+    return orderNumber;
+  }
+
+  return (
+    order.contactName?.trim() ||
+    order.customer?.fullName?.trim() ||
+    fallback
+  );
+}
+
 function OrderDeleteDialog({
   order,
   isDeleting,
@@ -15,7 +39,7 @@ function OrderDeleteDialog({
   onConfirm,
 }: OrderDeleteDialogProps) {
   const { t } = useTranslation();
-  const orderLabel = order.orderNumber ?? order.id;
+  const orderLabel = resolveOrderLabel(order, t('orders.title').toLowerCase());
 
   return (
     <div

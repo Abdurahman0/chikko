@@ -65,7 +65,6 @@ export interface Order extends AuditInfo {
 
 export interface OrderMutationInput {
   customerId?: EntityId;
-  leadId?: EntityId;
   status: OrderStatus;
   source: OrderSource;
   contactName: string;

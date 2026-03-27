@@ -114,6 +114,8 @@ function ProductsPage() {
     DEFAULT_PAGINATION_META,
   );
   const [currencyOptions, setCurrencyOptions] = useState<SelectOption[]>([]);
+  const [categoryOptions, setCategoryOptions] = useState<SelectOption[]>([]);
+  const [isCategoryOptionsLoading, setIsCategoryOptionsLoading] = useState(true);
   const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
@@ -175,6 +177,52 @@ function ProductsPage() {
       isActive = false;
     };
   }, [currencyAllOption, reloadCursor]);
+
+  useEffect(() => {
+    let isActive = true;
+
+    async function loadCategoryOptions() {
+      setIsCategoryOptionsLoading(true);
+
+      try {
+        const result = await services.products.listProductCategories({
+          page: 1,
+          pageSize: SERVICE_FETCH_SIZE,
+          ordering: 'name',
+          is_active: true,
+        });
+
+        if (!isActive) {
+          return;
+        }
+
+        const options = result.items
+          .map((category) => ({
+            value: category.id,
+            label: category.name,
+          }))
+          .sort((left, right) => left.label.localeCompare(right.label));
+
+        setCategoryOptions(options);
+      } catch {
+        if (!isActive) {
+          return;
+        }
+
+        setCategoryOptions([]);
+      } finally {
+        if (isActive) {
+          setIsCategoryOptionsLoading(false);
+        }
+      }
+    }
+
+    void loadCategoryOptions();
+
+    return () => {
+      isActive = false;
+    };
+  }, [reloadCursor]);
 
   useEffect(() => {
     let isActive = true;
@@ -650,6 +698,8 @@ function ProductsPage() {
           mode={formMode}
           product={editingProduct}
           currencyOptions={formCurrencyOptions}
+          categoryOptions={categoryOptions}
+          isCategoryOptionsLoading={isCategoryOptionsLoading}
           isSubmitting={isSaving}
           errorMessage={formErrorMessage}
           onClose={() => {

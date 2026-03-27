@@ -81,10 +81,8 @@ const CHIP_TONE_CLASS_NAMES = {
 } as const;
 
 type ChipTone = keyof typeof CHIP_TONE_CLASS_NAMES;
-type DashboardPreset = 'today' | '7d' | '30d';
 
 interface DashboardFilters {
-  preset: DashboardPreset;
   interval: DashboardInterval;
   customDateFrom?: string;
   customDateTo?: string;
@@ -97,11 +95,7 @@ interface DashboardIntervalDropdownProps {
   ariaLabel: string;
 }
 
-const DASHBOARD_PRESET_DAYS: Record<DashboardPreset, number> = {
-  today: 1,
-  '7d': 7,
-  '30d': 30,
-};
+const DASHBOARD_DEFAULT_DAYS = 30;
 
 function asNumber(value: number | string): number {
   const parsed = typeof value === 'number' ? value : Number(value);
@@ -175,10 +169,9 @@ function buildDashboardQuery(filters: DashboardFilters): DashboardOverviewParams
     };
   }
 
-  const days = DASHBOARD_PRESET_DAYS[filters.preset];
   const dateTo = new Date();
   const dateFrom = new Date(dateTo);
-  dateFrom.setDate(dateFrom.getDate() - (days - 1));
+  dateFrom.setDate(dateFrom.getDate() - (DASHBOARD_DEFAULT_DAYS - 1));
 
   return {
     date_from: toIsoDate(dateFrom),
@@ -389,7 +382,6 @@ function DashboardPage() {
   const calendarLocale = i18n.language === 'ru' ? ru : uz;
   const [overview, setOverview] = useState<DashboardOverview | null>(null);
   const [filters, setFilters] = useState<DashboardFilters>({
-    preset: '30d',
     interval: 'day',
   });
   const [isDatePopoverOpen, setIsDatePopoverOpen] = useState(false);
@@ -656,38 +648,6 @@ function DashboardPage() {
             </p>
           </div>
           <div className="flex flex-wrap items-center justify-end gap-2">
-            <div className="inline-flex items-center rounded-pill bg-surface-card p-1 ring-1 ring-border-soft/50">
-              {(['today', '7d', '30d'] as const).map((preset) => (
-                <button
-                  key={preset}
-                  type="button"
-                  onClick={() =>
-                    setFilters((current) => ({
-                      ...current,
-                      preset,
-                      customDateFrom: undefined,
-                      customDateTo: undefined,
-                    }))
-                  }
-                  className={[
-                    'inline-flex min-w-12 items-center justify-center rounded-pill px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.08em] transition duration-fast',
-                    filters.preset === preset &&
-                    !filters.customDateFrom &&
-                    !filters.customDateTo
-                      ? 'bg-primary text-primary-foreground shadow-sm'
-                      : 'text-text-secondary hover:bg-surface-subtle/90',
-                  ].join(' ')}
-                  aria-pressed={
-                    filters.preset === preset &&
-                    !filters.customDateFrom &&
-                    !filters.customDateTo
-                  }
-                >
-                  {t(`dashboard.filters.presets.${preset}`)}
-                </button>
-              ))}
-            </div>
-
             <Popover open={isDatePopoverOpen} onOpenChange={setIsDatePopoverOpen}>
               <PopoverTrigger asChild>
                 <button

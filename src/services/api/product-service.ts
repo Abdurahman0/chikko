@@ -2,15 +2,20 @@ import type { ProductService } from '../core/contracts';
 import type {
   EntityId,
   PaginatedResult,
-  Product,
+  ProductCategoryListParams,
+  ProductCategoryMutationInput,
+  ProductCategoryPatchInput,
   ProductMutationInput,
   ProductPatchInput,
   TableQueryParams,
 } from '../../types/domain';
 import { apiClient } from '../../lib/api-client';
 import {
+  mapProductCategoryDtoToModel,
+  mapProductCategoryListDtoToItems,
   mapProductDtoToModel,
   mapProductListDtoToItems,
+  type ProductCategoryDto,
   type ProductDto,
 } from '../adapters/product-adapter';
 
@@ -27,11 +32,19 @@ function readNumber(value: unknown): number | null {
   return null;
 }
 
-function toPaginatedResult(
-  allItems: Product[],
-  params?: TableQueryParams,
+function toRecord(value: unknown): Record<string, unknown> | null {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return null;
+  }
+
+  return value as Record<string, unknown>;
+}
+
+function toPaginatedResult<T>(
+  allItems: T[],
+  params?: { page?: number; pageSize?: number },
   totalItemsHint?: number | null,
-): PaginatedResult<Product> {
+): PaginatedResult<T> {
   const page = Math.max(1, params?.page ?? 1);
   const pageSize = Math.max(1, params?.pageSize ?? 10);
   const start = (page - 1) * pageSize;
@@ -80,10 +93,29 @@ function toMutationPayload(
   if (input.isActive !== undefined) {
     payload.is_active = input.isActive;
   }
-  if (input.metadata !== undefined) {
-    payload.metadata = input.metadata;
+  if (input.categoryId !== undefined) {
+    payload.category = input.categoryId;
   }
+  return payload;
+}
 
+function toCategoryMutationPayload(
+  input: ProductCategoryMutationInput | ProductCategoryPatchInput,
+): Record<string, unknown> {
+  const payload: Record<string, unknown> = {};
+
+  if (input.name !== undefined) {
+    payload.name = input.name;
+  }
+  if (input.code !== undefined) {
+    payload.code = input.code;
+  }
+  if (input.description !== undefined) {
+    payload.description = input.description;
+  }
+  if (input.isActive !== undefined) {
+    payload.is_active = input.isActive;
+  }
   return payload;
 }
 
@@ -179,6 +211,60 @@ export const apiProductService: ProductService = {
 
   async deleteProduct(id: EntityId) {
     await apiClient.delete(`/api/products/${id}/`);
+    return true;
+  },
+
+  async listProductCategories(params?: ProductCategoryListParams) {
+    const { data } = await apiClient.get<unknown>('/api/products/categories/', {
+      params: {
+        page: params?.page,
+        page_size: params?.pageSize,
+        search: params?.search,
+        ordering: params?.ordering,
+        is_active: params?.isActive ?? params?.is_active,
+      },
+    });
+
+    const items = mapProductCategoryListDtoToItems(data);
+    const payload = toRecord(data);
+    const totalItemsHint = readNumber(payload?.count);
+
+    return toPaginatedResult(items, params, totalItemsHint);
+  },
+
+  async getProductCategoryById(id) {
+    const { data } = await apiClient.get<ProductCategoryDto>(
+      `/api/products/categories/${id}/`,
+    );
+    return mapProductCategoryDtoToModel(data);
+  },
+
+  async createProductCategory(input) {
+    const { data } = await apiClient.post<ProductCategoryDto>(
+      '/api/products/categories/',
+      toCategoryMutationPayload(input),
+    );
+    return mapProductCategoryDtoToModel(data);
+  },
+
+  async updateProductCategory(id, input) {
+    const { data } = await apiClient.put<ProductCategoryDto>(
+      `/api/products/categories/${id}/`,
+      toCategoryMutationPayload(input),
+    );
+    return mapProductCategoryDtoToModel(data);
+  },
+
+  async patchProductCategory(id, input) {
+    const { data } = await apiClient.patch<ProductCategoryDto>(
+      `/api/products/categories/${id}/`,
+      toCategoryMutationPayload(input),
+    );
+    return mapProductCategoryDtoToModel(data);
+  },
+
+  async deleteProductCategory(id: EntityId) {
+    await apiClient.delete(`/api/products/categories/${id}/`);
     return true;
   },
 

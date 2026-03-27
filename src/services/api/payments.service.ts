@@ -82,9 +82,6 @@ function toMutationPayload(
   if (input.submitted_by_name !== undefined) {
     payload.submitted_by_name = input.submitted_by_name;
   }
-  if (input.metadata !== undefined) {
-    payload.metadata = input.metadata;
-  }
   if (input.verification_reference !== undefined) {
     payload.verification_reference = input.verification_reference;
   }
@@ -163,10 +160,7 @@ export async function getPaymentById(id: EntityId): Promise<Payment | null> {
 }
 
 export async function createPayment(input: PaymentMutationInput): Promise<Payment> {
-  const { data } = await apiClient.post<unknown>(
-    '/api/payments/',
-    toMutationPayload(input),
-  );
+  const { data } = await apiClient.post<unknown>('/api/payments/', toMutationPayload(input));
 
   const mapped = mapSinglePayment(data);
   if (!mapped) {

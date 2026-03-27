@@ -81,7 +81,16 @@ function formatDate(
     return fallback;
   }
 
-  return new Intl.DateTimeFormat(locale, { dateStyle: 'medium' }).format(new Date(timestamp));
+  const parsedDate = new Date(timestamp);
+  if (Number.isNaN(parsedDate.getTime())) {
+    return fallback;
+  }
+
+  return new Intl.DateTimeFormat(locale, {
+    year: 'numeric',
+    month: 'short',
+    day: '2-digit',
+  }).format(parsedDate);
 }
 
 function RoleBadge({ role }: { role: UserRole }) {
@@ -342,6 +351,19 @@ function ProfilePage() {
                   </label>
 
                   <label className="grid gap-1.5">
+                    <span className={labelClassName}>{t('profile.fields.email')}</span>
+                    <input
+                      type="email"
+                      className={inputClassName}
+                      value={form.email}
+                      onChange={(event) =>
+                        setForm((prev) => ({ ...prev, email: event.target.value }))
+                      }
+                      placeholder={t('profile.placeholders.email')}
+                    />
+                  </label>
+
+                  <label className="grid gap-1.5">
                     <span className={labelClassName}>{t('profile.fields.phone')}</span>
                     <input
                       type="tel"
@@ -472,6 +494,10 @@ function ProfilePage() {
                     <span className={valueClassName}>{user.fullName}</span>
                   </div>
                   <div className={fieldRowClassName}>
+                    <span className={labelClassName}>{t('profile.fields.email')}</span>
+                    <span className={valueClassName}>{user.email || t('profile.notSet')}</span>
+                  </div>
+                  <div className={fieldRowClassName}>
                     <span className={labelClassName}>{t('profile.fields.phone')}</span>
                     <span className={valueClassName}>{user.phone || t('profile.notSet')}</span>
                   </div>
@@ -500,6 +526,10 @@ function ProfilePage() {
                   <span className="text-[12px] text-text-muted">
                     {isUuidLike(user.id) ? t('common.notAvailable') : user.id}
                   </span>
+                </div>
+                <div className={fieldRowClassName}>
+                  <span className={labelClassName}>{t('profile.fields.email')}</span>
+                  <span className={valueClassName}>{user.email || t('profile.notSet')}</span>
                 </div>
                 <div className={fieldRowClassName}>
                   <span className={labelClassName}>{t('profile.fields.role')}</span>

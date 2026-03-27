@@ -10,6 +10,8 @@ interface ProductFormPanelProps {
   mode: 'create' | 'edit';
   product?: Product | null;
   currencyOptions: SelectOption[];
+  categoryOptions: SelectOption[];
+  isCategoryOptionsLoading?: boolean;
   isSubmitting: boolean;
   errorMessage?: string | null;
   onClose: () => void;
@@ -30,7 +32,7 @@ interface ProductFormState {
   currency: string;
   stockQuantity: string;
   isActive: boolean;
-  category: string;
+  categoryId: string;
 }
 
 const inputClassName = [
@@ -42,6 +44,52 @@ const inputClassName = [
 
 const labelClassName =
   'text-[11px] font-semibold uppercase tracking-[0.12em] text-text-muted';
+
+function normalizeString(value: string | null | undefined): string {
+  return typeof value === 'string' ? value.trim() : '';
+}
+
+function isUuid(value: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+    value.trim(),
+  );
+}
+
+function findCategoryOptionByLabel(
+  categoryOptions: SelectOption[],
+  categoryLabel: string,
+): SelectOption | undefined {
+  const normalizedLabel = normalizeString(categoryLabel).toLocaleLowerCase();
+  if (!normalizedLabel) {
+    return undefined;
+  }
+
+  return categoryOptions.find(
+    (option) => option.label.trim().toLocaleLowerCase() === normalizedLabel,
+  );
+}
+
+function resolveInitialCategoryId(
+  product: Product,
+  categoryOptions: SelectOption[],
+): string {
+  const directCategoryId = normalizeString(product.categoryId);
+  if (directCategoryId.length > 0) {
+    return directCategoryId;
+  }
+
+  const categoryRawValue = normalizeString(product.category);
+  if (categoryRawValue && isUuid(categoryRawValue)) {
+    return categoryRawValue;
+  }
+
+  const categoryName = normalizeString(product.categoryName || product.category);
+  if (!categoryName) {
+    return '';
+  }
+
+  return findCategoryOptionByLabel(categoryOptions, categoryName)?.value ?? '';
+}
 
 function createInitialState(
   mode: 'create' | 'edit',
@@ -59,14 +107,9 @@ function createInitialState(
       currency: product.currency,
       stockQuantity: String(product.stockQuantity ?? 0),
       isActive: product.isActive,
-      category:
-        product.category ??
-        (typeof product.metadata?.category === 'string'
-          ? product.metadata.category
-          : typeof product.metadata?.category === 'number' ||
-              typeof product.metadata?.category === 'boolean'
-            ? String(product.metadata.category)
-            : ''),
+      categoryId:
+        normalizeString(product.categoryId) ||
+        (isUuid(normalizeString(product.category)) ? normalizeString(product.category) : ''),
     };
   }
 
@@ -78,7 +121,7 @@ function createInitialState(
     currency: fallbackCurrency,
     stockQuantity: '0',
     isActive: true,
-    category: '',
+    categoryId: '',
   };
 }
 
@@ -86,6 +129,8 @@ function ProductFormPanel({
   mode,
   product,
   currencyOptions,
+  categoryOptions,
+  isCategoryOptionsLoading = false,
   isSubmitting,
   errorMessage,
   onClose,
@@ -107,6 +152,55 @@ function ProductFormPanel({
   }, [mode, product, currencyOptions]);
 
   useEffect(() => {
+    if (mode !== 'edit' || !product || form.categoryId || categoryOptions.length === 0) {
+      return;
+    }
+
+    const resolvedCategoryId = resolveInitialCategoryId(product, categoryOptions);
+    if (!resolvedCategoryId) {
+      return;
+    }
+
+    setForm((current) =>
+      current.categoryId
+        ? current
+        : {
+            ...current,
+            categoryId: resolvedCategoryId,
+          },
+    );
+  }, [mode, product, categoryOptions, form.categoryId]);
+
+  const categorySelectOptions = useMemo<SelectOption[]>(() => {
+    const baseOptions = [
+      { value: '', label: t('shared.filterSelect.select') },
+      ...categoryOptions,
+    ];
+
+    if (!form.categoryId) {
+      return baseOptions;
+    }
+
+    const hasCurrent = baseOptions.some((option) => option.value === form.categoryId);
+    if (hasCurrent) {
+      return baseOptions;
+    }
+
+    const fallbackLabel =
+      normalizeString(product?.categoryName) ||
+      normalizeString(product?.category) ||
+      form.categoryId;
+
+    return [
+      ...baseOptions,
+      {
+        value: form.categoryId,
+        label: fallbackLabel,
+      },
+    ];
+  }, [categoryOptions, form.categoryId, product?.category, product?.categoryName, t]);
+
+  useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key === 'Escape' && !isSubmitting) {
         onClose();
@@ -124,7 +218,7 @@ function ProductFormPanel({
       form.name.trim().length > 0 &&
       form.sku.trim().length > 0 &&
       form.description.trim().length > 0 &&
-      form.category.trim().length > 0 &&
+      form.categoryId.trim().length > 0 &&
       form.currency.trim().length > 0 &&
       Number(form.price) >= 0 &&
       Number(form.stockQuantity) >= 0
@@ -138,7 +232,7 @@ function ProductFormPanel({
     const normalizedName = form.name.trim();
     const normalizedSku = form.sku.trim().toUpperCase();
     const normalizedDescription = form.description.trim();
-    const normalizedCategory = form.category.trim();
+    const normalizedCategoryId = form.categoryId.trim();
     const parsedPrice = Number(form.price);
     const parsedStock = Number(form.stockQuantity);
 
@@ -146,7 +240,7 @@ function ProductFormPanel({
       !normalizedName ||
       !normalizedSku ||
       !normalizedDescription ||
-      !normalizedCategory ||
+      !normalizedCategoryId ||
       !form.currency.trim()
     ) {
       setFieldError(t('products.form.requiredError'));
@@ -179,13 +273,11 @@ function ProductFormPanel({
       name: normalizedName,
       sku: normalizedSku,
       description: normalizedDescription,
+      categoryId: normalizedCategoryId,
       price: parsedPrice,
       currency: form.currency,
       stockQuantity: Math.floor(parsedStock),
       isActive: form.isActive,
-      metadata: {
-        category: normalizedCategory,
-      },
     }, {
       newImages,
       deletedImageIds,
@@ -511,20 +603,16 @@ function ProductFormPanel({
           </div>
 
           <div className="grid gap-1.5">
-            <label className={labelClassName} htmlFor="product-form-category">
+            <label className={labelClassName}>
               {t('products.form.category')}
             </label>
-            <input
-              id="product-form-category"
-              type="text"
-              value={form.category}
-              onChange={(event) =>
-                setForm((current) => ({ ...current, category: event.target.value }))
+            <FilterSelect
+              value={form.categoryId}
+              options={categorySelectOptions}
+              onChange={(value) =>
+                setForm((current) => ({ ...current, categoryId: value }))
               }
-              className={inputClassName}
-              placeholder={t('products.form.categoryPlaceholder')}
-              disabled={isSubmitting}
-              required
+              disabled={isSubmitting || isCategoryOptionsLoading}
             />
           </div>
 
