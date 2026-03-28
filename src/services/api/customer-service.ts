@@ -58,6 +58,8 @@ function normalizePayload(
   input: CustomerMutationInput | CustomerPatchInput,
 ): Record<string, unknown> {
   const payload: Record<string, unknown> = {};
+  const normalizeText = (value: string | null | undefined): string =>
+    typeof value === 'string' ? value : '';
 
   if (input.full_name !== undefined) {
     payload.full_name = input.full_name;
@@ -66,10 +68,10 @@ function normalizePayload(
     payload.phone = input.phone;
   }
   if (input.address !== undefined) {
-    payload.address = input.address;
+    payload.address = normalizeText(input.address);
   }
   if (input.notes !== undefined) {
-    payload.notes = input.notes;
+    payload.notes = normalizeText(input.notes);
   }
   if (input.lead !== undefined) {
     payload.lead = input.lead;

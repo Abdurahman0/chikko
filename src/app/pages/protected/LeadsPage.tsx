@@ -22,6 +22,7 @@ import LeadDetailPanel from '../../../features/leads/components/LeadDetailPanel'
 import LeadFormPanel from '../../../features/leads/components/LeadFormPanel';
 import { formatLocalizedDate } from '../../../i18n/date-format';
 import { getChannelLabel, getLeadStatusLabel } from '../../../i18n/labels';
+import { usePersistentState } from '../../../lib/persistent-state';
 import { services } from '../../../services';
 import { useAuth } from '../../../auth';
 import type {
@@ -233,7 +234,7 @@ function LeadsPage() {
     [t],
   );
 
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = usePersistentState('leads:search', '');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<LeadStatusFilter>('all');
   const [sourceFilter, setSourceFilter] = useState<LeadSourceFilter>('all');
@@ -814,7 +815,6 @@ function LeadsPage() {
             value={search}
             onChange={setSearch}
             placeholder={t('leads.searchPlaceholder')}
-            disabled={isLoading}
           />
 
           <label className="grid min-w-[min(180px,100%)] flex-[1_1_180px] gap-1.5 min-[640px]:flex-[0_1_200px]">

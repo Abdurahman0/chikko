@@ -142,12 +142,12 @@ function LeadFormPanel({
     onSubmit({
       full_name: fullName,
       phone,
-      email: null,
-      instagram_username: instagramUsername || null,
-      telegram_username: telegramUsername || null,
+      email: '',
+      instagram_username: instagramUsername || '',
+      telegram_username: telegramUsername || '',
       source: form.source,
       status: form.status,
-      notes: notes || null,
+      notes: notes || '',
       metadata: mode === 'edit' ? lead?.metadata ?? null : null,
       assigned_operator: form.assignedOperatorId || null,
     });

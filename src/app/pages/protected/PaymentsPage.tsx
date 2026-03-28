@@ -29,6 +29,7 @@ import PaymentDetailPanel from '../../../features/payments/components/PaymentDet
 import PaymentFormPanel from '../../../features/payments/components/PaymentFormPanel';
 import { formatLocalizedDate } from '../../../i18n/date-format';
 import { getPaymentMethodLabel, getPaymentStatusLabel } from '../../../i18n/labels';
+import { usePersistentState } from '../../../lib/persistent-state';
 import { services } from '../../../services';
 import { useAuth } from '../../../auth';
 import type {
@@ -270,7 +271,7 @@ function PaymentsPage() {
   const locale = i18n.language === 'ru' ? 'ru-RU' : 'uz-UZ';
   const canManagePayments = hasPermission('can_manage_payments');
 
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = usePersistentState('payments:search', '');
   const [statusFilter, setStatusFilter] = useState<string>(ALL_STATUS_VALUE);
   const [methodFilter, setMethodFilter] = useState<string>(ALL_METHOD_VALUE);
   const [orderFilter, setOrderFilter] = useState('');
@@ -471,7 +472,12 @@ function PaymentsPage() {
         );
 
         const availableOrders = ordersResult.items
-          .filter((order) => order.status !== 'cancelled' && order.status !== 'completed')
+          .filter(
+            (order) =>
+              order.status === 'cancelled' ||
+              order.status === 'completed' ||
+              order.status === 'paid',
+          )
           .sort(
             (left, right) =>
               new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime(),
@@ -877,7 +883,6 @@ function PaymentsPage() {
             value={search}
             onChange={setSearch}
             placeholder={t('payments.searchPlaceholder')}
-            disabled={isLoading}
           />
 
           <label className="grid min-w-[min(170px,100%)] flex-[1_1_170px] gap-1.5 min-[640px]:flex-[0_1_170px]">

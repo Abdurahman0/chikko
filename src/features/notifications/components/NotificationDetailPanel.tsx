@@ -6,9 +6,13 @@ import { services } from '../../../services';
 import type { AppNotification, EntityId } from '../../../types/domain';
 import {
   formatNotificationDateTime,
+  formatNotificationMessage,
+  formatNotificationTitle,
+  getFormattedNotificationMetadata,
   getNotificationChannelClassName,
   getNotificationChannelLabel,
   getNotificationReadLabel,
+  getNotificationUserLabel,
 } from '../utils/notification-format';
 
 interface NotificationDetailPanelProps {
@@ -31,11 +35,10 @@ function NotificationDetailPanel({
   const [notification, setNotification] = useState<AppNotification | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
-  const [isMarkingRead, setIsMarkingRead] = useState(false);
 
   const locale = 'uz-UZ';
-  const metadataEntries = notification?.metadata
-    ? Object.entries(notification.metadata)
+  const metadataEntries = notification
+    ? getFormattedNotificationMetadata(notification.metadata, notification.user)
     : [];
 
   useEffect(() => {
@@ -46,14 +49,34 @@ function NotificationDetailPanel({
       setHasError(false);
 
       try {
-        const nextNotification = await services.notifications.getNotificationById(
+        let resolvedNotification = await services.notifications.getNotificationById(
           notificationId,
         );
         if (!isActive) {
           return;
         }
 
-        setNotification(nextNotification);
+        if (resolvedNotification && !resolvedNotification.is_read) {
+          try {
+            const updatedNotification = await services.notifications.markNotificationRead(
+              resolvedNotification.id,
+            );
+
+            if (!isActive) {
+              return;
+            }
+
+            if (updatedNotification) {
+              resolvedNotification = updatedNotification;
+              onNotificationRead(updatedNotification);
+              window.dispatchEvent(new CustomEvent('notifications:changed'));
+            }
+          } catch {
+            // Keep detail available even if marking read fails.
+          }
+        }
+
+        setNotification(resolvedNotification);
       } catch {
         if (!isActive) {
           return;
@@ -73,7 +96,7 @@ function NotificationDetailPanel({
     return () => {
       isActive = false;
     };
-  }, [notificationId]);
+  }, [notificationId, onNotificationRead]);
 
   useEffect(() => {
     function handleEscape(event: KeyboardEvent) {
@@ -87,25 +110,6 @@ function NotificationDetailPanel({
       window.removeEventListener('keydown', handleEscape);
     };
   }, [onClose]);
-
-  async function handleMarkRead() {
-    if (!notification || notification.is_read || isMarkingRead) {
-      return;
-    }
-
-    setIsMarkingRead(true);
-    try {
-      const updated = await services.notifications.markNotificationRead(notification.id);
-      if (!updated) {
-        return;
-      }
-
-      setNotification(updated);
-      onNotificationRead(updated);
-    } finally {
-      setIsMarkingRead(false);
-    }
-  }
 
   return (
     <div
@@ -125,7 +129,7 @@ function NotificationDetailPanel({
                 Bildirishnoma
               </p>
               <h2 className="mt-1 font-display text-[1.35rem] font-extrabold leading-[1.08] tracking-[-0.03em] text-text-primary [overflow-wrap:anywhere]">
-                {notification?.title ?? "Bildirishnoma tafsilotlari"}
+                {notification ? formatNotificationTitle(notification.title) : "Bildirishnoma tafsilotlari"}
               </h2>
             </div>
 
@@ -187,7 +191,7 @@ function NotificationDetailPanel({
 
                   <div className="rounded-lg bg-surface-subtle/80 p-3">
                     <p className="m-0 whitespace-pre-wrap text-sm leading-6 text-text-primary">
-                      {notification.message}
+                      {formatNotificationMessage(notification.message)}
                     </p>
                   </div>
                 </div>
@@ -227,18 +231,18 @@ function NotificationDetailPanel({
                     <div className="rounded-lg bg-surface-subtle/80 p-3 sm:col-span-2">
                       <p className={labelClassName}>Foydalanuvchi</p>
                       <p className={`mt-1 ${valueClassName}`}>
-                        {notification.user?.fullName ?? "Mavjud emas"}
+                        {getNotificationUserLabel(notification.user)}
                       </p>
                     </div>
 
                     {metadataEntries.length > 0 ? (
                       <div className="rounded-lg bg-surface-subtle/80 p-3 sm:col-span-2">
-                        <p className={labelClassName}>Metadata</p>
+                        <p className={labelClassName}>Qo'shimcha ma'lumot</p>
                         <ul className="mt-2 grid list-none gap-1.5 p-0">
-                          {metadataEntries.map(([key, value]) => (
-                            <li key={key} className="text-sm text-text-secondary">
-                              <span className="font-semibold text-text-primary">{key}:</span>{' '}
-                              {String(value)}
+                          {metadataEntries.map((entry) => (
+                            <li key={entry.key} className="text-sm text-text-secondary">
+                              <span className="font-semibold text-text-primary">{entry.label}:</span>{' '}
+                              {entry.value}
                             </li>
                           ))}
                         </ul>
@@ -247,23 +251,6 @@ function NotificationDetailPanel({
                   </div>
                 </div>
               </PageCard>
-
-              {!notification.is_read ? (
-                <PageCard>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <button
-                      type="button"
-                      className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-primary px-4 text-sm font-semibold text-primary-foreground transition duration-fast hover:bg-primary-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35 disabled:cursor-not-allowed disabled:opacity-60"
-                      onClick={() => {
-                        void handleMarkRead();
-                      }}
-                      disabled={isMarkingRead}
-                    >
-                      {isMarkingRead ? "Belgilanmoqda..." : "O'qilgan deb belgilash"}
-                    </button>
-                  </div>
-                </PageCard>
-              ) : null}
             </>
           ) : null}
         </div>

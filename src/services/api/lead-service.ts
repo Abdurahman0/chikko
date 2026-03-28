@@ -58,6 +58,8 @@ function normalizePayload(
   input: LeadMutationInput | LeadPatchInput,
 ): Record<string, unknown> {
   const payload: Record<string, unknown> = {};
+  const normalizeText = (value: string | null | undefined): string =>
+    typeof value === 'string' ? value : '';
 
   if (input.full_name !== undefined) {
     payload.full_name = input.full_name;
@@ -66,10 +68,10 @@ function normalizePayload(
     payload.phone = input.phone;
   }
   if (input.instagram_username !== undefined) {
-    payload.instagram_username = input.instagram_username;
+    payload.instagram_username = normalizeText(input.instagram_username);
   }
   if (input.telegram_username !== undefined) {
-    payload.telegram_username = input.telegram_username;
+    payload.telegram_username = normalizeText(input.telegram_username);
   }
   if (input.source !== undefined) {
     payload.source = input.source;
@@ -78,7 +80,7 @@ function normalizePayload(
     payload.status = input.status;
   }
   if (input.notes !== undefined) {
-    payload.notes = input.notes;
+    payload.notes = normalizeText(input.notes);
   }
   if (input.assigned_operator !== undefined) {
     payload.assigned_operator = input.assigned_operator;

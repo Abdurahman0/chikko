@@ -120,9 +120,9 @@ function CustomerFormPanel({
     onSubmit({
       full_name: fullName,
       phone,
-      email: null,
-      address: address || null,
-      notes: notes || null,
+      email: '',
+      address: address || '',
+      notes: notes || '',
       metadata: mode === 'edit' ? customer?.metadata ?? null : null,
       lead: form.leadId || null,
       assigned_operator: form.operatorId || null,

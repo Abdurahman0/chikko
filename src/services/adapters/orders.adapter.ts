@@ -82,6 +82,19 @@ function readNumber(value: unknown, fallback = 0): number {
   return fallback;
 }
 
+function readOptionalNumber(value: unknown): number | undefined {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value;
+  }
+
+  if (typeof value === 'string') {
+    const parsed = Number(value.trim());
+    return Number.isFinite(parsed) ? parsed : undefined;
+  }
+
+  return undefined;
+}
+
 function readBoolean(value: unknown): boolean {
   if (typeof value === 'boolean') {
     return value;
@@ -405,6 +418,16 @@ export function mapOrderDtoToModel(dto: OrderDto): Order {
     metadata: mapMetadata(dto.metadata),
     aiGenerated: readBoolean(dto.ai_generated ?? dto.aiGenerated),
     totalAmount,
+    paymentTotalAmount: readOptionalNumber(
+      dto.payment_total_amount ?? dto.paymentTotalAmount,
+    ),
+    paymentCollectedAmount: readOptionalNumber(
+      dto.payment_collected_amount ?? dto.paymentCollectedAmount,
+    ),
+    paymentRemainingAmount: readOptionalNumber(
+      dto.payment_remaining_amount ?? dto.paymentRemainingAmount,
+    ),
+    paymentCount: readOptionalNumber(dto.payment_count ?? dto.paymentCount),
     currency:
       readString(dto.currency, '') ||
       items[0]?.product.currency ||

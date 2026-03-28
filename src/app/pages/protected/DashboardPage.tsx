@@ -605,8 +605,8 @@ function DashboardPage() {
     },
     {
       label: t('dashboard.metrics.revenue'),
-      value: formatAmount(overview.revenue, locale),
-      hint: `${formatAmount(overview.filtered_summary.collected_amount, locale)} ${t('dashboard.metrics.collected')}`,
+      value: formatAmount(overview.filtered_summary.collected_amount, locale),
+      hint: `${formatAmount(overview.revenue, locale)} ${t('dashboard.metrics.pending')}`,
     },
   ];
 

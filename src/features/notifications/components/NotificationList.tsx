@@ -2,7 +2,10 @@ import { EmptyState, LoadingState } from '../../../components/shared/page';
 import { StatusBadge } from '../../../components/shared/data';
 import type { AppNotification, EntityId } from '../../../types/domain';
 import {
+  formatNotificationMessage,
   formatNotificationDateTime,
+  formatNotificationTitle,
+  getNotificationUserLabel,
   getNotificationChannelClassName,
   getNotificationChannelLabel,
 } from '../utils/notification-format';
@@ -68,6 +71,9 @@ function NotificationList({
       {notifications.map((notification) => {
         const isSelected = selectedNotificationId === notification.id;
         const isUnread = !notification.is_read;
+        const notificationTitle = formatNotificationTitle(notification.title);
+        const notificationMessage = formatNotificationMessage(notification.message);
+        const notificationUserLabel = getNotificationUserLabel(notification.user);
 
         return (
           <button
@@ -97,11 +103,11 @@ function NotificationList({
                       isUnread ? 'font-semibold' : 'font-medium',
                     ].join(' ')}
                   >
-                    {notification.title}
+                    {notificationTitle}
                   </p>
                 </div>
                 <p className="m-0 mt-1 text-[13px] leading-[1.45] text-text-secondary [overflow-wrap:anywhere]">
-                  {shortenMessage(notification.message)}
+                  {shortenMessage(notificationMessage)}
                 </p>
               </div>
 
@@ -124,7 +130,7 @@ function NotificationList({
                 label={notification.is_read ? "O'qilgan" : "O'qilmagan"}
               />
               <span className="text-[11px] font-medium text-text-muted">
-                {notification.user?.fullName ?? 'Foydalanuvchi belgilanmagan'}
+                {notificationUserLabel}
               </span>
             </div>
           </button>

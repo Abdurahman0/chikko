@@ -337,6 +337,21 @@ function OrderDetailPanel({
                       </tbody>
                     </table>
                   </div>
+
+                  <div className="grid gap-2.5 sm:grid-cols-2">
+                    <div className="rounded-lg bg-surface-subtle/80 p-3">
+                      <p className={labelClassName}>{t('orders.detail.createdAt')}</p>
+                      <p className={`mt-1 ${valueClassName}`}>
+                        {formatDateTime(order.createdAt, language, locale, t('common.na'))}
+                      </p>
+                    </div>
+                    <div className="rounded-lg bg-surface-subtle/80 p-3">
+                      <p className={labelClassName}>{t('orders.detail.updatedAt')}</p>
+                      <p className={`mt-1 ${valueClassName}`}>
+                        {formatDateTime(order.updatedAt, language, locale, t('common.na'))}
+                      </p>
+                    </div>
+                  </div>
                 </div>
               </PageCard>
 
@@ -356,17 +371,13 @@ function OrderDetailPanel({
                       </dd>
                     </div>
                     <div className="flex items-center justify-between gap-3 rounded-lg bg-surface-subtle/80 px-3 py-2.5">
-                    <dt className={labelClassName}>{t('orders.detail.createdAt')}</dt>
-                    <dd className={`m-0 ${valueClassName}`}>
-                      {formatDateTime(order.createdAt, language, locale, t('common.na'))}
-                    </dd>
-                  </div>
-                  <div className="flex items-center justify-between gap-3 rounded-lg bg-surface-subtle/80 px-3 py-2.5">
-                    <dt className={labelClassName}>{t('orders.detail.updatedAt')}</dt>
-                    <dd className={`m-0 ${valueClassName}`}>
-                      {formatDateTime(order.updatedAt, language, locale, t('common.na'))}
-                    </dd>
-                  </div>
+                      <dt className={labelClassName}>{t('orders.detail.paidAmount')}</dt>
+                      <dd className={`m-0 ${valueClassName}`}>
+                        {typeof order.paymentCollectedAmount === 'number'
+                          ? formatCurrencyAmount(order.paymentCollectedAmount, locale)
+                          : t('common.na')}
+                      </dd>
+                    </div>
                   </dl>
                 </div>
               </PageCard>

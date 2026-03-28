@@ -152,9 +152,9 @@ function PaymentFormPanel({
     };
 
     if (!isManualMethod) {
-      payload.screenshot = form.screenshot.trim() || null;
-      payload.last_four_digits = form.last_four_digits.trim() || null;
-      payload.verification_reference = form.verification_reference.trim() || null;
+      payload.screenshot = form.screenshot.trim() || '';
+      payload.last_four_digits = form.last_four_digits.trim() || '';
+      payload.verification_reference = form.verification_reference.trim() || '';
     }
 
     onSubmit(payload);

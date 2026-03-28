@@ -21,6 +21,7 @@ import {
 import LogDetailPanel from '../../../features/logs/components/LogDetailPanel';
 import { getLogTypeLabel, getLogTypeTone } from '../../../features/logs/utils/log-format';
 import { formatLocalizedDate } from '../../../i18n/date-format';
+import { usePersistentState } from '../../../lib/persistent-state';
 import { services } from '../../../services';
 import type {
   AppLog,
@@ -98,7 +99,7 @@ function shortenMessage(message: string): string {
 function LogsPage() {
   const { i18n } = useTranslation();
   const locale = i18n.language === 'ru' ? 'ru-RU' : 'uz-UZ';
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = usePersistentState('logs:search', '');
   const [typeFilter, setTypeFilter] = useState<LogTypeFilter>('all');
   const [ordering, setOrdering] = useState<LogOrdering>(DEFAULT_ORDERING);
   const [currentPage, setCurrentPage] = useState(1);
@@ -328,7 +329,6 @@ function LogsPage() {
             value={search}
             onChange={setSearch}
             placeholder="Xabar bo'yicha qidirish"
-            disabled={isLoading}
           />
 
           <label className="grid min-w-[min(180px,100%)] flex-[1_1_180px] gap-1.5 min-[640px]:flex-[0_1_180px]">

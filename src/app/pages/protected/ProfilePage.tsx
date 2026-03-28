@@ -211,7 +211,7 @@ function ProfilePage() {
       const updated = await services.users.patchUser(user.id, {
         email: form.email.trim(),
         full_name: form.fullName.trim(),
-        phone: form.phone.trim() || null,
+        phone: form.phone.trim() || '',
         role: form.role,
         is_active: form.isActive,
         ...(form.password ? { password: form.password } : {}),

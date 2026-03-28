@@ -123,6 +123,7 @@ function FilterSelect({
           <div className="max-h-64 overflow-y-auto py-1">
             {options.map((option) => {
               const isSelected = option.value === value;
+              const isDisabled = Boolean(option.disabled);
 
               return (
                 <button
@@ -133,13 +134,19 @@ function FilterSelect({
                     isSelected
                       ? 'bg-primary/12 text-text-primary'
                       : 'text-text-secondary hover:bg-surface-subtle hover:text-text-primary',
+                    isDisabled ? 'cursor-not-allowed opacity-50 hover:bg-transparent hover:text-text-secondary' : '',
                   ].join(' ')}
                   onClick={() => {
+                    if (isDisabled) {
+                      return;
+                    }
                     onChange(option.value);
                     setIsOpen(false);
                   }}
                   role="option"
                   aria-selected={isSelected}
+                  aria-disabled={isDisabled}
+                  disabled={isDisabled}
                 >
                   <span className="truncate">{option.label}</span>
                   {isSelected ? (

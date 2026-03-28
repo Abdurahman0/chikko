@@ -3,6 +3,7 @@ import { FiImage, FiTrash2 } from 'react-icons/fi';
 import AppIcon from '../../../components/shared/icons/AppIcon';
 import { FilterSelect, Switch } from '../../../components/shared/data';
 import { DEFAULT_CURRENCY_CODE } from '../../../constants';
+import { services } from '../../../services';
 import type { Product, ProductMutationInput, SelectOption } from '../../../types/domain';
 import { useTranslation } from 'react-i18next';
 
@@ -34,6 +35,8 @@ interface ProductFormState {
   isActive: boolean;
   categoryId: string;
 }
+
+const PRODUCT_FETCH_BATCH_SIZE = 200;
 
 const inputClassName = [
   'w-full rounded-lg border border-border-soft/60 bg-surface-card px-3.5 py-2.5 text-sm font-medium text-text-primary',
@@ -91,6 +94,28 @@ function resolveInitialCategoryId(
   return findCategoryOptionByLabel(categoryOptions, categoryName)?.value ?? '';
 }
 
+function normalizeSkuPrefix(value: string): string {
+  return value
+    .trim()
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '');
+}
+
+function createSku(prefix: string, sequence: number): string {
+  return `${prefix}-${String(Math.max(1, sequence)).padStart(3, '0')}`;
+}
+
+function belongsToCategory(product: Product, categoryId: string): boolean {
+  const normalizedCategoryId = normalizeString(product.categoryId);
+  if (normalizedCategoryId === categoryId) {
+    return true;
+  }
+
+  const normalizedCategory = normalizeString(product.category);
+  return normalizedCategory === categoryId;
+}
+
 function createInitialState(
   mode: 'create' | 'edit',
   product: Product | null | undefined,
@@ -141,12 +166,14 @@ function ProductFormPanel({
     createInitialState(mode, product, currencyOptions),
   );
   const [fieldError, setFieldError] = useState<string | null>(null);
+  const [isGeneratingSku, setIsGeneratingSku] = useState(false);
   const [newImages, setNewImages] = useState<File[]>([]);
   const [deletedImageIds, setDeletedImageIds] = useState<string[]>([]);
 
   useEffect(() => {
     setForm(createInitialState(mode, product, currencyOptions));
     setFieldError(null);
+    setIsGeneratingSku(false);
     setNewImages([]);
     setDeletedImageIds([]);
   }, [mode, product, currencyOptions]);
@@ -170,6 +197,99 @@ function ProductFormPanel({
           },
     );
   }, [mode, product, categoryOptions, form.categoryId]);
+
+  useEffect(() => {
+    if (mode !== 'create') {
+      return;
+    }
+
+    const normalizedCategoryId = form.categoryId.trim();
+    if (!normalizedCategoryId) {
+      setIsGeneratingSku(false);
+      setForm((current) => ({ ...current, sku: '' }));
+      return;
+    }
+
+    const selectedCategory = categoryOptions.find(
+      (option) => option.value === normalizedCategoryId,
+    );
+    const prefix =
+      normalizeSkuPrefix(selectedCategory?.label || '') ||
+      normalizeSkuPrefix(selectedCategory?.description || '');
+
+    if (!prefix) {
+      setIsGeneratingSku(false);
+      setForm((current) => ({ ...current, sku: '' }));
+      return;
+    }
+
+    let isActive = true;
+
+    async function generateSku() {
+      setIsGeneratingSku(true);
+
+      try {
+        let page = 1;
+        let totalPages = 1;
+        let productsInCategory = 0;
+
+        do {
+          const result = await services.products.listProducts({
+            page,
+            pageSize: PRODUCT_FETCH_BATCH_SIZE,
+            ordering: '-created_at',
+          });
+
+          productsInCategory += result.items.filter((item) =>
+            belongsToCategory(item, normalizedCategoryId),
+          ).length;
+
+          totalPages = result.meta.totalPages;
+          page += 1;
+        } while (page <= totalPages);
+
+        if (!isActive) {
+          return;
+        }
+
+        setForm((current) => {
+          if (current.categoryId.trim() !== normalizedCategoryId) {
+            return current;
+          }
+
+          return {
+            ...current,
+            sku: createSku(prefix, productsInCategory + 1),
+          };
+        });
+      } catch {
+        if (!isActive) {
+          return;
+        }
+
+        setForm((current) => {
+          if (current.categoryId.trim() !== normalizedCategoryId) {
+            return current;
+          }
+
+          return {
+            ...current,
+            sku: createSku(prefix, 1),
+          };
+        });
+      } finally {
+        if (isActive) {
+          setIsGeneratingSku(false);
+        }
+      }
+    }
+
+    void generateSku();
+
+    return () => {
+      isActive = false;
+    };
+  }, [mode, form.categoryId, categoryOptions]);
 
   const categorySelectOptions = useMemo<SelectOption[]>(() => {
     const baseOptions = [
@@ -221,9 +341,10 @@ function ProductFormPanel({
       form.categoryId.trim().length > 0 &&
       form.currency.trim().length > 0 &&
       Number(form.price) >= 0 &&
-      Number(form.stockQuantity) >= 0
+      Number(form.stockQuantity) >= 0 &&
+      !isGeneratingSku
     );
-  }, [form]);
+  }, [form, isGeneratingSku]);
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -405,13 +526,25 @@ function ProductFormPanel({
                 type="text"
                 value={form.sku}
                 onChange={(event) =>
-                  setForm((current) => ({ ...current, sku: event.target.value }))
+                  setForm((current) =>
+                    mode === 'create'
+                      ? current
+                      : { ...current, sku: event.target.value }
+                  )
                 }
                 className={inputClassName}
                 placeholder="CHK-0001"
                 disabled={isSubmitting}
+                readOnly={mode === 'create'}
                 required
               />
+              {mode === 'create' ? (
+                <p className="m-0 text-[12px] text-text-muted">
+                  {isGeneratingSku
+                    ? t('common.loading')
+                    : t('products.form.skuAutoHint')}
+                </p>
+              ) : null}
             </div>
 
             <div className="grid gap-1.5">

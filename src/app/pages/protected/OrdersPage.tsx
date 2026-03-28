@@ -26,6 +26,7 @@ import OrderDetailPanel from '../../../features/orders/components/OrderDetailPan
 import OrderFormPanel from '../../../features/orders/components/OrderFormPanel';
 import { formatLocalizedDate } from '../../../i18n/date-format';
 import { getChannelLabel, getOrderStatusLabel } from '../../../i18n/labels';
+import { usePersistentState } from '../../../lib/persistent-state';
 import { services } from '../../../services';
 import type {
   Customer,
@@ -236,7 +237,7 @@ function OrdersPage() {
   const { t, i18n } = useTranslation();
   const locale = i18n.language === 'ru' ? 'ru-RU' : 'uz-UZ';
 
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = usePersistentState('orders:search', '');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>(ALL_STATUS_VALUE);
   const [sourceFilter, setSourceFilter] = useState<string>(ALL_SOURCE_VALUE);
@@ -784,7 +785,6 @@ function OrdersPage() {
             value={search}
             onChange={setSearch}
             placeholder={t('orders.searchPlaceholder')}
-            disabled={isLoading}
           />
 
           <label className="grid min-w-[min(180px,100%)] flex-[1_1_180px] gap-1.5 min-[640px]:flex-[0_1_180px]">

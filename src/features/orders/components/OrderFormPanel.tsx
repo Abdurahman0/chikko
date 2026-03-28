@@ -189,6 +189,21 @@ function resolveCurrency(items: OrderItemFormState[], products: Product[]): Curr
   return productById.get(firstResolved.productId)?.currency ?? DEFAULT_CURRENCY_CODE;
 }
 
+function isRestrictedUnpaidStatus(status: OrderStatus): boolean {
+  return status === 'confirmed' || status === 'paid';
+}
+
+function resolveStatusByPaymentState(
+  currentStatus: OrderStatus,
+  isPaymentFullyPaid: boolean,
+): OrderStatus {
+  if (isPaymentFullyPaid) {
+    return 'paid';
+  }
+
+  return isRestrictedUnpaidStatus(currentStatus) ? 'waiting_payment' : currentStatus;
+}
+
 function OrderFormPanel({
   mode,
   order,
@@ -259,6 +274,45 @@ function OrderFormPanel({
     () => new Map(products.map((product) => [product.id, product])),
     [products],
   );
+  const isPaymentFullyPaid = useMemo(() => {
+    if (mode !== 'edit' || !order) {
+      return false;
+    }
+
+    if (order.paymentStatus === 'paid') {
+      return true;
+    }
+
+    if (typeof order.paymentRemainingAmount === 'number') {
+      return order.paymentRemainingAmount <= 0;
+    }
+
+    if (typeof order.paymentCollectedAmount === 'number') {
+      return order.paymentCollectedAmount >= order.totalAmount;
+    }
+
+    return false;
+  }, [
+    mode,
+    order,
+  ]);
+  const statusSelectOptions = useMemo<SelectOption[]>(() => {
+    return statusOptions.map((option) => {
+      const optionStatus = option.value as OrderStatus;
+
+      if (isPaymentFullyPaid) {
+        return {
+          ...option,
+          disabled: optionStatus !== 'paid',
+        };
+      }
+
+      return {
+        ...option,
+        disabled: isRestrictedUnpaidStatus(optionStatus),
+      };
+    });
+  }, [isPaymentFullyPaid, statusOptions]);
   const productIdBySku = useMemo(() => {
     const index = new Map<string, string>();
     for (const product of products) {
@@ -345,6 +399,24 @@ function OrderFormPanel({
       };
     });
   }, [products, resolveProductUuid]);
+
+  useEffect(() => {
+    setForm((current) => {
+      const nextStatus = resolveStatusByPaymentState(
+        current.status,
+        isPaymentFullyPaid,
+      );
+
+      if (nextStatus === current.status) {
+        return current;
+      }
+
+      return {
+        ...current,
+        status: nextStatus,
+      };
+    });
+  }, [isPaymentFullyPaid]);
 
   const itemRows = useMemo(
     () =>
@@ -466,10 +538,11 @@ function OrderFormPanel({
     }
 
     const currency = resolveCurrency(form.items, products);
+    const status = resolveStatusByPaymentState(form.status, isPaymentFullyPaid);
 
     onSubmit({
       customerId,
-      status: form.status,
+      status,
       source: form.source,
       contactName,
       contactPhone,
@@ -517,7 +590,7 @@ function OrderFormPanel({
 
     const payload: OrderMutationInput = {
       customerId,
-      status: form.status,
+      status: resolveStatusByPaymentState(form.status, isPaymentFullyPaid),
       source: form.source,
       contactName: form.contactName.trim(),
       contactPhone: form.contactPhone.trim(),
@@ -571,6 +644,7 @@ function OrderFormPanel({
     products,
     resolveProductUuid,
     resolveUnitPrice,
+    isPaymentFullyPaid,
     t,
   ]);
 
@@ -642,14 +716,14 @@ function OrderFormPanel({
               <span className={labelClassName}>{t('orders.form.status')}</span>
               <FilterSelect
                 value={form.status}
-                options={statusOptions}
+                options={statusSelectOptions}
                 onChange={(value) =>
                   setForm((current) => ({
                     ...current,
                     status: value as OrderStatus,
                   }))
                 }
-                disabled={isSubmitting}
+                disabled={isSubmitting || isPaymentFullyPaid}
               />
             </label>
 

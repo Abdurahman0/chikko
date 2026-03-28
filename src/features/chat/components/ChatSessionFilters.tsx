@@ -66,7 +66,6 @@ function ChatSessionFilters({
         value={search}
         onChange={onSearchChange}
         placeholder="Suhbat, mijoz yoki tashqi ID bo'yicha qidirish"
-        disabled={disabled}
       />
 
       <div className="grid gap-1.5">

@@ -34,6 +34,7 @@ import {
   getIntegrationProviderLabel,
   maskSecretValue,
 } from '../../../features/integrations/utils/integration-format';
+import { usePersistentState } from '../../../lib/persistent-state';
 import { services } from '../../../services';
 import type {
   EntityId,
@@ -186,9 +187,17 @@ function IntegrationsPage() {
   const canManageIntegrations =
     hasRole('developer') || hasPermission('can_manage_integrations');
 
-  const [view, setView] = useState<IntegrationView>('configs');
+  const [view, setView] = usePersistentState<IntegrationView>('integrations:view', 'configs', {
+    deserialize: (value) => {
+      const parsed = JSON.parse(value);
+      return parsed === 'events' ? 'events' : 'configs';
+    },
+  });
 
-  const [configSearch, setConfigSearch] = useState('');
+  const [configSearch, setConfigSearch] = usePersistentState(
+    'integrations:config-search',
+    '',
+  );
   const [providerFilter, setProviderFilter] = useState<ProviderFilter>('all');
   const [activeFilter, setActiveFilter] = useState<ActiveFilter>('all');
   const [secretFilter, setSecretFilter] = useState<SecretFilter>('all');
@@ -212,7 +221,10 @@ function IntegrationsPage() {
   const [isDeletingConfig, setIsDeletingConfig] = useState(false);
   const [togglingConfigId, setTogglingConfigId] = useState<EntityId | null>(null);
 
-  const [eventSearch, setEventSearch] = useState('');
+  const [eventSearch, setEventSearch] = usePersistentState(
+    'integrations:event-search',
+    '',
+  );
   const [platformFilter, setPlatformFilter] = useState<PlatformFilter>('all');
   const [processedFilter, setProcessedFilter] = useState<ProcessedFilter>('all');
   const [eventOrdering, setEventOrdering] = useState<EventOrdering>(EVENT_DEFAULT_ORDERING);
@@ -859,7 +871,6 @@ function IntegrationsPage() {
           value={configSearch}
           onChange={setConfigSearch}
           placeholder={t('integrations.configSearchPlaceholder')}
-          disabled={isConfigLoading}
         />
         <label className="grid min-w-[min(160px,100%)] flex-[1_1_160px] gap-1.5 min-[640px]:flex-[0_1_170px]">
           <span className={labelClassName}>{t('integrations.filters.provider')}</span>
@@ -928,7 +939,6 @@ function IntegrationsPage() {
           value={eventSearch}
           onChange={setEventSearch}
           placeholder={t('integrations.eventSearchPlaceholder')}
-          disabled={isEventLoading}
         />
         <label className="grid min-w-[min(170px,100%)] flex-[1_1_170px] gap-1.5 min-[640px]:flex-[0_1_180px]">
           <span className={labelClassName}>{t('integrations.filters.platform')}</span>

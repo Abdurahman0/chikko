@@ -3,6 +3,7 @@ import AppIcon from '../../../components/shared/icons/AppIcon';
 import ChatSessionFilters from '../../../features/chat/components/ChatSessionFilters';
 import ChatSessionList from '../../../features/chat/components/ChatSessionList';
 import ChatWorkspacePanel from '../../../features/chat/components/ChatWorkspacePanel';
+import { usePersistentState } from '../../../lib/persistent-state';
 import { services } from '../../../services';
 import type {
   ChatMessage,
@@ -73,7 +74,7 @@ function sortSessionsByLastMessage(
 }
 
 function ChatPage() {
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = usePersistentState('chat:search', '');
   const [channelFilter, setChannelFilter] = useState<ChannelFilter>(ALL_CHANNEL_VALUE);
   const [operatorFilter, setOperatorFilter] = useState<OperatorFilter>('all');
   const [ordering, setOrdering] = useState<SessionOrdering>('-last_message_at');

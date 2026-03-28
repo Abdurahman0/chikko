@@ -94,6 +94,8 @@ function toMutationPayload(
   input: UserMutationInput | UserPatchInput,
 ): Record<string, unknown> {
   const payload: Record<string, unknown> = {};
+  const normalizeText = (value: string | null | undefined): string =>
+    typeof value === 'string' ? value : '';
 
   if (input.email !== undefined) {
     payload.email = input.email;
@@ -102,7 +104,7 @@ function toMutationPayload(
     payload.full_name = input.full_name;
   }
   if (input.phone !== undefined) {
-    payload.phone = input.phone;
+    payload.phone = normalizeText(input.phone);
   }
   if (input.password !== undefined) {
     payload.password = input.password;

@@ -55,6 +55,10 @@ export interface Order extends AuditInfo {
   metadata?: Record<string, string | number | boolean | null>;
   aiGenerated: boolean;
   totalAmount: number;
+  paymentTotalAmount?: number;
+  paymentCollectedAmount?: number;
+  paymentRemainingAmount?: number;
+  paymentCount?: number;
   currency: CurrencyCode;
   items: OrderItem[];
   orderNumber?: string;

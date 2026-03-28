@@ -23,6 +23,7 @@ import CustomerDetailPanel from '../../../features/customers/components/Customer
 import CustomerFormPanel from '../../../features/customers/components/CustomerFormPanel';
 import { useAuth } from '../../../auth';
 import { formatLocalizedDate } from '../../../i18n/date-format';
+import { usePersistentState } from '../../../lib/persistent-state';
 import { services } from '../../../services';
 import type {
   Customer,
@@ -107,7 +108,7 @@ function CustomersPage() {
     [t],
   );
 
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = usePersistentState('customers:search', '');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [assignedOperatorFilter, setAssignedOperatorFilter] =
     useState<string>(ALL_OPERATORS_VALUE);
@@ -760,7 +761,6 @@ function CustomersPage() {
             value={search}
             onChange={setSearch}
             placeholder={t('customers.searchPlaceholder')}
-            disabled={isLoading}
           />
 
           <label className="grid min-w-[min(180px,100%)] flex-[1_1_180px] gap-1.5 min-[640px]:flex-[0_1_220px]">

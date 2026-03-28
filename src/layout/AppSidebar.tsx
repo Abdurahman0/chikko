@@ -1,9 +1,10 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { navigationGroups, type NavigationIconKey } from '../config/navigation';
 import AppIcon from '../components/shared/icons/AppIcon';
 import { useAuth } from '../auth';
+import { services } from '../services';
 
 interface AppSidebarProps {
   isOpen: boolean;
@@ -54,6 +55,66 @@ const navLinkActiveClassName = [
 function AppSidebar({ isOpen, onClose }: AppSidebarProps) {
   const { t } = useTranslation();
   const { canAccessRoute } = useAuth();
+  const [unreadNotificationsCount, setUnreadNotificationsCount] = useState(0);
+  const canViewNotifications = canAccessRoute('notifications');
+
+  useEffect(() => {
+    let isActive = true;
+
+    if (!canViewNotifications) {
+      setUnreadNotificationsCount(0);
+      return () => {
+        isActive = false;
+      };
+    }
+
+    async function loadUnreadNotifications() {
+      try {
+        const result = await services.notifications.listNotifications({
+          page: 1,
+          pageSize: 1,
+          is_read: false,
+          ordering: '-created_at',
+        });
+
+        if (!isActive) {
+          return;
+        }
+
+        setUnreadNotificationsCount(Math.max(0, result.meta.totalItems));
+      } catch {
+        if (!isActive) {
+          return;
+        }
+
+        setUnreadNotificationsCount(0);
+      }
+    }
+
+    void loadUnreadNotifications();
+
+    const pollInterval = window.setInterval(() => {
+      void loadUnreadNotifications();
+    }, 20000);
+
+    function handleWindowFocus() {
+      void loadUnreadNotifications();
+    }
+
+    function handleNotificationsChanged() {
+      void loadUnreadNotifications();
+    }
+
+    window.addEventListener('focus', handleWindowFocus);
+    window.addEventListener('notifications:changed', handleNotificationsChanged);
+
+    return () => {
+      isActive = false;
+      window.clearInterval(pollInterval);
+      window.removeEventListener('focus', handleWindowFocus);
+      window.removeEventListener('notifications:changed', handleNotificationsChanged);
+    };
+  }, [canViewNotifications]);
 
   const visibleNavigationGroups = useMemo(
     () =>
@@ -114,53 +175,65 @@ function AppSidebar({ isOpen, onClose }: AppSidebarProps) {
               })} navigation`}
               className="grid gap-1.5"
             >
-              {group.items.map((item) => (
-                <NavLink
-                  key={item.id}
-                  to={item.path}
-                  end
-                  className={({ isActive }) =>
-                    [
-                      navLinkBaseClassName,
-                      isActive
-                        ? navLinkActiveClassName
-                        : navLinkInactiveClassName,
-                    ].join(' ')
-                  }
-                >
-                  {({ isActive }) => (
-                    <span className="flex items-center gap-3">
-                      <span
-                        aria-hidden="true"
-                        className={[
-                          'inline-flex h-9 min-w-9 items-center justify-center rounded-lg transition duration-fast',
-                          isActive
-                            ? 'bg-primary/20 text-text-accent'
-                            : 'bg-background-elevated/90 text-text-secondary group-hover:bg-primary/10 group-hover:text-text-primary',
-                        ].join(' ')}
-                      >
-                        <AppIcon
-                          name={item.iconKey}
-                          className="h-[17px] w-[17px]"
-                        />
-                      </span>
-                      <span className="grid min-w-0 gap-[3px]">
-                        <span className="font-semibold [overflow-wrap:anywhere]">
-                          {t(`routes.${item.id}.title`, {
-                            defaultValue:
-                              navigationItemMeta[item.iconKey].label ?? item.label,
-                          })}
+              {group.items.map((item) => {
+                const showUnreadBadge =
+                  item.id === 'notifications' && unreadNotificationsCount > 0;
+
+                return (
+                  <NavLink
+                    key={item.id}
+                    to={item.path}
+                    end
+                    className={({ isActive }) =>
+                      [
+                        navLinkBaseClassName,
+                        isActive
+                          ? navLinkActiveClassName
+                          : navLinkInactiveClassName,
+                      ].join(' ')
+                    }
+                  >
+                    {({ isActive }) => (
+                      <span className="flex items-center gap-3">
+                        <span
+                          aria-hidden="true"
+                          className={[
+                            'relative inline-flex h-9 min-w-9 items-center justify-center rounded-lg transition duration-fast',
+                            isActive
+                              ? 'bg-primary/20 text-text-accent'
+                              : 'bg-background-elevated/90 text-text-secondary group-hover:bg-primary/10 group-hover:text-text-primary',
+                          ].join(' ')}
+                        >
+                          <AppIcon
+                            name={item.iconKey}
+                            className="h-[17px] w-[17px]"
+                          />
+                          {showUnreadBadge ? (
+                            <span className="absolute -right-1 -top-1 inline-flex min-h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[9px] font-bold leading-none text-primary-foreground ring-2 ring-background-subtle">
+                              {unreadNotificationsCount > 99
+                                ? '99+'
+                                : unreadNotificationsCount}
+                            </span>
+                          ) : null}
                         </span>
-                        <small className="text-[11px] tracking-[0.02em] text-text-muted [overflow-wrap:anywhere]">
-                          {t(`navigation.captions.${item.id}`, {
-                            defaultValue: navigationItemMeta[item.iconKey].caption,
-                          })}
-                        </small>
+                        <span className="grid min-w-0 gap-[3px]">
+                          <span className="font-semibold [overflow-wrap:anywhere]">
+                            {t(`routes.${item.id}.title`, {
+                              defaultValue:
+                                navigationItemMeta[item.iconKey].label ?? item.label,
+                            })}
+                          </span>
+                          <small className="text-[11px] tracking-[0.02em] text-text-muted [overflow-wrap:anywhere]">
+                            {t(`navigation.captions.${item.id}`, {
+                              defaultValue: navigationItemMeta[item.iconKey].caption,
+                            })}
+                          </small>
+                        </span>
                       </span>
-                    </span>
-                  )}
-                </NavLink>
-              ))}
+                    )}
+                  </NavLink>
+                );
+              })}
             </nav>
           </section>
         ))}

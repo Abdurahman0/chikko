@@ -9,6 +9,7 @@ import {
   Pagination,
   SearchInput,
   StatusBadge,
+  Switch,
   type DataTableColumn,
 } from '../../../components/shared/data';
 import AppIcon from '../../../components/shared/icons/AppIcon';
@@ -21,19 +22,24 @@ import {
   PageSection,
 } from '../../../components/shared/page';
 import ProductDeleteDialog from '../../../features/products/components/ProductDeleteDialog';
+import ProductCategoryDeleteDialog from '../../../features/products/components/ProductCategoryDeleteDialog';
 import ProductDetailPanel from '../../../features/products/components/ProductDetailPanel';
 import ProductFormPanel from '../../../features/products/components/ProductFormPanel';
+import ProductCategoryFormDialog from '../../../features/products/components/ProductCategoryFormDialog';
 import { formatLocalizedDate } from '../../../i18n/date-format';
+import { usePersistentState } from '../../../lib/persistent-state';
 import { services } from '../../../services';
 import type {
   PaginationMeta,
   Product,
+  ProductCategory,
   ProductMutationInput,
   SelectOption,
   TableQueryParams,
 } from '../../../types/domain';
 
 type ActiveFilter = 'all' | 'active' | 'inactive';
+type CatalogView = 'products' | 'categories';
 type ProductOrdering =
   | '-created_at'
   | 'created_at'
@@ -41,12 +47,20 @@ type ProductOrdering =
   | '-name'
   | 'price'
   | '-price';
+type CategoryOrdering =
+  | '-created_at'
+  | 'created_at'
+  | '-updated_at'
+  | 'updated_at'
+  | 'name'
+  | '-name';
 
 const PAGE_SIZE = 8;
 const SERVICE_FETCH_SIZE = 500;
 const SEARCH_DEBOUNCE_MS = 350;
 const ALL_CURRENCIES_VALUE = 'all';
 const DEFAULT_ORDERING: ProductOrdering = '-created_at';
+const DEFAULT_CATEGORY_ORDERING: CategoryOrdering = '-created_at';
 
 const DEFAULT_PAGINATION_META: PaginationMeta = {
   page: 1,
@@ -68,6 +82,19 @@ const actionButtonClassName =
   'inline-flex h-8 w-8 items-center justify-center rounded-md bg-surface-card text-text-secondary shadow-sm ring-1 ring-border-soft/40 transition duration-fast hover:bg-surface-subtle hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20';
 
 function parseOrdering(ordering: ProductOrdering): Pick<
+  TableQueryParams,
+  'sortBy' | 'sortDirection'
+> {
+  const direction = ordering.startsWith('-') ? 'desc' : 'asc';
+  const sortBy = ordering.replace('-', '');
+
+  return {
+    sortBy,
+    sortDirection: direction,
+  };
+}
+
+function parseCategoryOrdering(ordering: CategoryOrdering): Pick<
   TableQueryParams,
   'sortBy' | 'sortDirection'
 > {
@@ -105,8 +132,30 @@ function ProductsPage() {
     [t],
   );
 
-  const [search, setSearch] = useState('');
+  const categoryOrderingOptions = useMemo<SelectOption[]>(
+    () => [
+      { value: '-created_at', label: t('products.createdNewest') },
+      { value: 'created_at', label: t('products.createdOldest') },
+      { value: '-updated_at', label: t('products.updatedNewest') },
+      { value: 'updated_at', label: t('products.updatedOldest') },
+      { value: 'name', label: t('products.nameAz') },
+      { value: '-name', label: t('products.nameZa') },
+    ],
+    [t],
+  );
+
+  const [search, setSearch] = usePersistentState('products:search', '');
   const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [catalogView, setCatalogView] = usePersistentState<CatalogView>(
+    'products:catalog-view',
+    'products',
+    {
+      deserialize: (value) => {
+        const parsed = JSON.parse(value);
+        return parsed === 'categories' ? 'categories' : 'products';
+      },
+    },
+  );
   const [currencyFilter, setCurrencyFilter] = useState(ALL_CURRENCIES_VALUE);
   const [activeFilter, setActiveFilter] = useState<ActiveFilter>('all');
   const [ordering, setOrdering] = useState<ProductOrdering>(DEFAULT_ORDERING);
@@ -118,6 +167,25 @@ function ProductsPage() {
   const [currencyOptions, setCurrencyOptions] = useState<SelectOption[]>([]);
   const [categoryOptions, setCategoryOptions] = useState<SelectOption[]>([]);
   const [isCategoryOptionsLoading, setIsCategoryOptionsLoading] = useState(true);
+  const [categories, setCategories] = useState<ProductCategory[]>([]);
+  const [categorySearch, setCategorySearch] = usePersistentState(
+    'products:categories-search',
+    '',
+  );
+  const [debouncedCategorySearch, setDebouncedCategorySearch] = useState('');
+  const [categoryActiveFilter, setCategoryActiveFilter] = useState<ActiveFilter>('all');
+  const [categoryOrdering, setCategoryOrdering] = useState<CategoryOrdering>(
+    DEFAULT_CATEGORY_ORDERING,
+  );
+  const [categoryCurrentPage, setCategoryCurrentPage] = useState(1);
+  const [categoryPaginationMeta, setCategoryPaginationMeta] = useState<PaginationMeta>(
+    DEFAULT_PAGINATION_META,
+  );
+  const [isCategoriesLoading, setIsCategoriesLoading] = useState(false);
+  const [categoryHasError, setCategoryHasError] = useState(false);
+  const [isCategoryStatusUpdatingId, setIsCategoryStatusUpdatingId] = useState<
+    string | null
+  >(null);
   const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
@@ -129,6 +197,13 @@ function ProductsPage() {
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [formErrorMessage, setFormErrorMessage] = useState<string | null>(null);
+  const [isCategoryFormOpen, setIsCategoryFormOpen] = useState(false);
+  const [categoryFormMode, setCategoryFormMode] = useState<'create' | 'edit'>('create');
+  const [editingCategory, setEditingCategory] = useState<ProductCategory | null>(null);
+  const [isCategorySaving, setIsCategorySaving] = useState(false);
+  const [categoryErrorMessage, setCategoryErrorMessage] = useState<string | null>(null);
+  const [categoryToDelete, setCategoryToDelete] = useState<ProductCategory | null>(null);
+  const [isCategoryDeleting, setIsCategoryDeleting] = useState(false);
 
   const [productToDelete, setProductToDelete] = useState<Product | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -143,6 +218,16 @@ function ProductsPage() {
     };
   }, [search]);
 
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      setDebouncedCategorySearch(categorySearch.trim());
+    }, SEARCH_DEBOUNCE_MS);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [categorySearch]);
+
   const currencyAllOption = useMemo<SelectOption>(
     () => ({
       value: ALL_CURRENCIES_VALUE,
@@ -154,6 +239,10 @@ function ProductsPage() {
   useEffect(() => {
     setCurrentPage(1);
   }, [debouncedSearch, currencyFilter, activeFilter, ordering]);
+
+  useEffect(() => {
+    setCategoryCurrentPage(1);
+  }, [debouncedCategorySearch, categoryActiveFilter, categoryOrdering]);
 
   useEffect(() => {
     let isActive = true;
@@ -212,6 +301,7 @@ function ProductsPage() {
           .map((category) => ({
             value: category.id,
             label: category.name,
+            description: category.code,
           }))
           .sort((left, right) => left.label.localeCompare(right.label));
 
@@ -292,6 +382,69 @@ function ProductsPage() {
   }, [activeFilter, currencyFilter, currentPage, debouncedSearch, ordering, reloadCursor]);
 
   useEffect(() => {
+    let isActive = true;
+
+    async function loadCategories() {
+      setIsCategoriesLoading(true);
+      setCategoryHasError(false);
+
+      try {
+        const sortConfig = parseCategoryOrdering(categoryOrdering);
+        const result = await services.products.listProductCategories({
+          page: categoryCurrentPage,
+          pageSize: PAGE_SIZE,
+          search: debouncedCategorySearch || undefined,
+          is_active:
+            categoryActiveFilter === 'all'
+              ? undefined
+              : categoryActiveFilter === 'active',
+          ordering: categoryOrdering,
+          ...sortConfig,
+        });
+
+        if (!isActive) {
+          return;
+        }
+
+        if (categoryCurrentPage > result.meta.totalPages) {
+          setCategoryCurrentPage(result.meta.totalPages);
+          return;
+        }
+
+        setCategories(result.items);
+        setCategoryPaginationMeta(result.meta);
+      } catch {
+        if (!isActive) {
+          return;
+        }
+
+        setCategoryHasError(true);
+        setCategories([]);
+        setCategoryPaginationMeta(DEFAULT_PAGINATION_META);
+      } finally {
+        if (isActive) {
+          setIsCategoriesLoading(false);
+        }
+      }
+    }
+
+    if (catalogView === 'categories') {
+      void loadCategories();
+    }
+
+    return () => {
+      isActive = false;
+    };
+  }, [
+    categoryActiveFilter,
+    categoryCurrentPage,
+    categoryOrdering,
+    catalogView,
+    debouncedCategorySearch,
+    reloadCursor,
+  ]);
+
+  useEffect(() => {
     if (!selectedProductId) {
       return;
     }
@@ -309,6 +462,20 @@ function ProductsPage() {
     setIsFormOpen(true);
   }
 
+  function openCategoryCreateForm() {
+    setCategoryFormMode('create');
+    setEditingCategory(null);
+    setCategoryErrorMessage(null);
+    setIsCategoryFormOpen(true);
+  }
+
+  function openCategoryEditForm(category: ProductCategory) {
+    setCategoryFormMode('edit');
+    setEditingCategory(category);
+    setCategoryErrorMessage(null);
+    setIsCategoryFormOpen(true);
+  }
+
   function openEditForm(product: Product) {
     setFormMode('edit');
     setEditingProduct(product);
@@ -318,6 +485,10 @@ function ProductsPage() {
 
   function requestDelete(product: Product) {
     setProductToDelete(product);
+  }
+
+  function requestCategoryDelete(category: ProductCategory) {
+    setCategoryToDelete(category);
   }
 
   async function handleSaveProduct(
@@ -406,7 +577,96 @@ function ProductsPage() {
     }
   }
 
-  const columns = useMemo<DataTableColumn<Product>[]>(() => {
+  async function handleSaveCategory(payload: {
+    name: string;
+    code: string;
+    description: string;
+    isActive: boolean;
+  }) {
+    setIsCategorySaving(true);
+    setCategoryErrorMessage(null);
+
+    try {
+      if (categoryFormMode === 'create') {
+        await services.products.createProductCategory({
+          name: payload.name,
+          code: payload.code,
+          description: payload.description,
+          isActive: payload.isActive,
+        });
+      } else {
+        if (!editingCategory) {
+          throw new Error(t('products.categoryForm.saveError'));
+        }
+
+        await services.products.updateProductCategory(editingCategory.id, {
+          name: payload.name,
+          code: payload.code,
+          description: payload.description,
+          isActive: payload.isActive,
+        });
+      }
+
+      setIsCategoryFormOpen(false);
+      setEditingCategory(null);
+      setReloadCursor((current) => current + 1);
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : t('products.categoryForm.saveError');
+      setCategoryErrorMessage(message);
+    } finally {
+      setIsCategorySaving(false);
+    }
+  }
+
+  async function handleConfirmCategoryDelete() {
+    if (!categoryToDelete) {
+      return;
+    }
+
+    setIsCategoryDeleting(true);
+
+    try {
+      const deleted = await services.products.deleteProductCategory(categoryToDelete.id);
+      if (!deleted) {
+        throw new Error();
+      }
+
+      setCategoryToDelete(null);
+      setReloadCursor((current) => current + 1);
+    } catch {
+      // Keep dialog open if deletion fails.
+    } finally {
+      setIsCategoryDeleting(false);
+    }
+  }
+
+  async function handleToggleCategoryActive(category: ProductCategory, nextValue: boolean) {
+    if (isCategoryStatusUpdatingId) {
+      return;
+    }
+
+    setIsCategoryStatusUpdatingId(category.id);
+    try {
+      const updated = await services.products.patchProductCategory(category.id, {
+        isActive: nextValue,
+      });
+
+      if (updated) {
+        setCategories((current) =>
+          current.map((entry) => (entry.id === updated.id ? updated : entry)),
+        );
+      }
+
+      setReloadCursor((current) => current + 1);
+    } catch {
+      // Keep current state if update fails.
+    } finally {
+      setIsCategoryStatusUpdatingId(null);
+    }
+  }
+
+  const productColumns = useMemo<DataTableColumn<Product>[]>(() => {
     return [
       {
         key: 'product',
@@ -525,10 +785,117 @@ function ProductsPage() {
     ];
   }, [i18n.language, locale, t]);
 
-  const activeFilterCount =
+  const categoryColumns = useMemo<DataTableColumn<ProductCategory>[]>(() => {
+    return [
+      {
+        key: 'name',
+        label: t('products.categoryColumns.name'),
+        render: (category) => (
+          <div className="grid gap-0.5">
+            <span className={tablePrimaryTextClassName}>{category.name}</span>
+            <span className={tableSecondaryTextClassName}>
+              {category.description || t('products.categoryNoDescription')}
+            </span>
+          </div>
+        ),
+      },
+      {
+        key: 'code',
+        label: t('products.categoryColumns.code'),
+        render: (category) => (
+          <span className={tablePrimaryTextClassName}>{category.code}</span>
+        ),
+      },
+      {
+        key: 'status',
+        label: t('products.categoryColumns.status'),
+        render: (category) => (
+          <div className="flex items-center gap-2">
+            <StatusBadge
+              status={category.isActive ? 'active' : 'inactive'}
+              label={category.isActive ? t('common.active') : t('common.inactive')}
+              tone={category.isActive ? 'success' : 'neutral'}
+            />
+            <Switch
+              checked={category.isActive}
+              onChange={(nextValue) => {
+                void handleToggleCategoryActive(category, nextValue);
+              }}
+              disabled={isCategoryStatusUpdatingId === category.id}
+              stopPropagation
+              ariaLabel={`${category.name} holatini almashtirish`}
+            />
+          </div>
+        ),
+      },
+      {
+        key: 'updatedAt',
+        label: t('products.categoryColumns.updated'),
+        render: (category) => (
+          <span className={tablePrimaryTextClassName}>
+            {category.updatedAt
+              ? formatLocalizedDate(category.updatedAt, i18n.language, {
+                  locale,
+                  withYear: true,
+                  shortMonth: true,
+                  fallback: t('common.na'),
+                })
+              : t('common.na')}
+          </span>
+        ),
+      },
+      {
+        key: 'actions',
+        label: t('products.categoryColumns.actions'),
+        align: 'right',
+        render: (category) => (
+          <div className="flex items-center justify-end gap-1.5">
+            <button
+              type="button"
+              className={actionButtonClassName}
+              onClick={(event) => {
+                event.stopPropagation();
+                openCategoryEditForm(category);
+              }}
+              aria-label={`${t('products.categoryActions.edit')} ${category.name}`}
+            >
+              <FiEdit2 className="h-3.5 w-3.5" />
+            </button>
+            <button
+              type="button"
+              className={actionButtonClassName}
+              onClick={(event) => {
+                event.stopPropagation();
+                requestCategoryDelete(category);
+              }}
+              aria-label={`${t('products.categoryActions.delete')} ${category.name}`}
+            >
+              <FiTrash2 className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        ),
+      },
+    ];
+  }, [
+    i18n.language,
+    isCategoryStatusUpdatingId,
+    locale,
+    t,
+  ]);
+
+  const productActiveFilterCount =
     Number(currencyFilter !== ALL_CURRENCIES_VALUE) +
     Number(activeFilter !== 'all') +
     Number(ordering !== DEFAULT_ORDERING);
+  const categoryActiveFilterCount =
+    Number(categoryActiveFilter !== 'all') +
+    Number(categoryOrdering !== DEFAULT_CATEGORY_ORDERING);
+  const activeFilterCount =
+    catalogView === 'products' ? productActiveFilterCount : categoryActiveFilterCount;
+  const activeTotalItems =
+    catalogView === 'products'
+      ? paginationMeta.totalItems
+      : categoryPaginationMeta.totalItems;
 
   const formCurrencyOptions = useMemo<SelectOption[]>(() => {
     const filtered = currencyOptions.filter(
@@ -555,9 +922,20 @@ function ProductsPage() {
             <AppIcon name="plus" className="h-4 w-4" aria-hidden="true" />
             {t('products.newProduct')}
           </button>
+          <button
+            type="button"
+            className="inline-flex min-h-9 items-center gap-2 rounded-lg bg-surface-card px-3.5 text-sm font-semibold text-text-primary shadow-sm ring-1 ring-border-soft/40 transition duration-fast hover:bg-surface-subtle focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/25"
+            onClick={openCategoryCreateForm}
+          >
+            <AppIcon name="plus" className="h-4 w-4" aria-hidden="true" />
+            {t('products.newCategory')}
+          </button>
           <span className="inline-flex min-h-8 items-center gap-2 rounded-pill bg-primary/12 px-3 text-[12px] font-semibold text-text-accent">
             <AppIcon name="products" className="h-3.5 w-3.5" aria-hidden="true" />
-            {paginationMeta.totalItems} {t('products.title').toLowerCase()}
+            {activeTotalItems}{' '}
+            {catalogView === 'products'
+              ? t('products.title').toLowerCase()
+              : t('products.categoriesCountLabel')}
           </span>
         </div>
       }
@@ -606,7 +984,10 @@ function ProductsPage() {
                   className="h-4 w-4 text-text-muted"
                   aria-hidden="true"
                 />
-                {paginationMeta.totalItems} {t('products.records')}
+                {activeTotalItems}{' '}
+                {catalogView === 'products'
+                  ? t('products.records')
+                  : t('products.categoriesRecords')}
               </span>
               {activeFilterCount > 0 ? (
                 <span className="inline-flex min-h-9 items-center gap-2 rounded-lg bg-primary/12 px-3 text-sm font-semibold text-text-accent">
@@ -617,69 +998,144 @@ function ProductsPage() {
             </div>
           }
         >
-          <SearchInput
-            value={search}
-            onChange={setSearch}
-            placeholder={t('products.searchPlaceholder')}
-            disabled={isLoading}
-          />
+          {catalogView === 'products' ? (
+            <>
+              <SearchInput
+                value={search}
+                onChange={setSearch}
+                placeholder={t('products.searchPlaceholder')}
+              />
 
-          <label className="grid min-w-[min(180px,100%)] flex-[1_1_180px] gap-1.5 min-[640px]:flex-[0_1_180px]">
-            <span className={labelClassName}>{t('products.currency')}</span>
-            <FilterSelect
-              value={currencyFilter}
-              options={currencyOptions}
-              onChange={setCurrencyFilter}
-              disabled={isLoading}
-            />
-          </label>
+              <label className="grid min-w-[min(180px,100%)] flex-[1_1_180px] gap-1.5 min-[640px]:flex-[0_1_180px]">
+                <span className={labelClassName}>{t('products.currency')}</span>
+                <FilterSelect
+                  value={currencyFilter}
+                  options={currencyOptions}
+                  onChange={setCurrencyFilter}
+                  disabled={isLoading}
+                />
+              </label>
 
-          <label className="grid min-w-[min(180px,100%)] flex-[1_1_180px] gap-1.5 min-[640px]:flex-[0_1_180px]">
-            <span className={labelClassName}>{t('products.status')}</span>
-            <FilterSelect
-              value={activeFilter}
-              options={activeFilterOptions}
-              onChange={(value) => setActiveFilter(value as ActiveFilter)}
-              disabled={isLoading}
-            />
-          </label>
+              <label className="grid min-w-[min(180px,100%)] flex-[1_1_180px] gap-1.5 min-[640px]:flex-[0_1_180px]">
+                <span className={labelClassName}>{t('products.status')}</span>
+                <FilterSelect
+                  value={activeFilter}
+                  options={activeFilterOptions}
+                  onChange={(value) => setActiveFilter(value as ActiveFilter)}
+                  disabled={isLoading}
+                />
+              </label>
 
-          <label className="grid min-w-[min(180px,100%)] flex-[1_1_180px] gap-1.5 min-[640px]:flex-[0_1_200px]">
-            <span className={labelClassName}>{t('products.orderBy')}</span>
-            <FilterSelect
-              value={ordering}
-              options={orderingOptions}
-              onChange={(value) => setOrdering(value as ProductOrdering)}
-              disabled={isLoading}
-            />
-          </label>
+              <label className="grid min-w-[min(180px,100%)] flex-[1_1_180px] gap-1.5 min-[640px]:flex-[0_1_200px]">
+                <span className={labelClassName}>{t('products.orderBy')}</span>
+                <FilterSelect
+                  value={ordering}
+                  options={orderingOptions}
+                  onChange={(value) => setOrdering(value as ProductOrdering)}
+                  disabled={isLoading}
+                />
+              </label>
+            </>
+          ) : (
+            <>
+              <SearchInput
+                value={categorySearch}
+                onChange={setCategorySearch}
+                placeholder={t('products.categorySearchPlaceholder')}
+              />
+
+              <label className="grid min-w-[min(180px,100%)] flex-[1_1_180px] gap-1.5 min-[640px]:flex-[0_1_180px]">
+                <span className={labelClassName}>{t('products.status')}</span>
+                <FilterSelect
+                  value={categoryActiveFilter}
+                  options={activeFilterOptions}
+                  onChange={(value) => setCategoryActiveFilter(value as ActiveFilter)}
+                  disabled={isCategoriesLoading}
+                />
+              </label>
+
+              <label className="grid min-w-[min(180px,100%)] flex-[1_1_180px] gap-1.5 min-[640px]:flex-[0_1_200px]">
+                <span className={labelClassName}>{t('products.orderBy')}</span>
+                <FilterSelect
+                  value={categoryOrdering}
+                  options={categoryOrderingOptions}
+                  onChange={(value) => setCategoryOrdering(value as CategoryOrdering)}
+                  disabled={isCategoriesLoading}
+                />
+              </label>
+            </>
+          )}
         </FilterBar>
 
         <PageCard>
           <div className="grid gap-3">
             <div className="flex flex-wrap items-center justify-between gap-2 px-1">
-              <h2 className="m-0 text-[1rem] font-semibold text-text-primary">
-                {t('products.catalogTitle')}
-              </h2>
+              <div className="inline-flex items-center rounded-xl bg-surface-subtle/80 p-1 ring-1 ring-border-soft/45">
+                <button
+                  type="button"
+                  className={[
+                    'rounded-lg px-3 py-1.5 text-sm font-semibold transition duration-fast',
+                    catalogView === 'products'
+                      ? 'bg-surface-card text-text-primary shadow-sm ring-1 ring-border-soft/45'
+                      : 'text-text-secondary hover:text-text-primary',
+                  ].join(' ')}
+                  onClick={() => setCatalogView('products')}
+                >
+                  {t('products.catalogTitle')}
+                </button>
+                <button
+                  type="button"
+                  className={[
+                    'rounded-lg px-3 py-1.5 text-sm font-semibold transition duration-fast',
+                    catalogView === 'categories'
+                      ? 'bg-surface-card text-text-primary shadow-sm ring-1 ring-border-soft/45'
+                      : 'text-text-secondary hover:text-text-primary',
+                  ].join(' ')}
+                  onClick={() => setCatalogView('categories')}
+                >
+                  {t('products.categoriesCatalogTitle')}
+                </button>
+              </div>
               <span className="text-[12px] font-medium text-text-muted">
-                {t('products.catalogHint')}
+                {catalogView === 'products'
+                  ? t('products.catalogHint')
+                  : t('products.categoriesCatalogHint')}
               </span>
             </div>
 
-            <DataTable
-              data={products}
-              columns={columns}
-              rowKey="id"
-              selectedRowKey={selectedProductId}
-              loading={isLoading}
-              onRowClick={(product) => setSelectedProductId(product.id)}
-              emptyTitle={t('products.emptyTitle')}
-              emptyDescription={t('products.emptyDescription')}
-            />
+            {catalogView === 'products' ? (
+              <DataTable
+                data={products}
+                columns={productColumns}
+                rowKey="id"
+                selectedRowKey={selectedProductId}
+                loading={isLoading}
+                onRowClick={(product) => setSelectedProductId(product.id)}
+                emptyTitle={t('products.emptyTitle')}
+                emptyDescription={t('products.emptyDescription')}
+              />
+            ) : (
+              <DataTable
+                data={categories}
+                columns={categoryColumns}
+                rowKey="id"
+                loading={isCategoriesLoading}
+                emptyTitle={
+                  categoryHasError
+                    ? t('products.categoriesErrorTitle')
+                    : t('products.categoriesEmptyTitle')
+                }
+                emptyDescription={
+                  categoryHasError
+                    ? t('products.categoriesErrorDescription')
+                    : t('products.categoriesEmptyDescription')
+                }
+              />
+            )}
           </div>
         </PageCard>
 
-        {!isLoading && paginationMeta.totalItems > 0 ? (
+        {catalogView === 'products' && !isLoading && paginationMeta.totalItems > 0 ? (
           <Pagination
             currentPage={Math.min(currentPage, paginationMeta.totalPages)}
             totalPages={paginationMeta.totalPages}
@@ -687,9 +1143,20 @@ function ProductsPage() {
             onPageChange={setCurrentPage}
           />
         ) : null}
+
+        {catalogView === 'categories' &&
+        !isCategoriesLoading &&
+        categoryPaginationMeta.totalItems > 0 ? (
+          <Pagination
+            currentPage={Math.min(categoryCurrentPage, categoryPaginationMeta.totalPages)}
+            totalPages={categoryPaginationMeta.totalPages}
+            totalItems={categoryPaginationMeta.totalItems}
+            onPageChange={setCategoryCurrentPage}
+          />
+        ) : null}
       </PageSection>
 
-      {selectedProductId ? (
+      {catalogView === 'products' && selectedProductId ? (
         <ProductDetailPanel
           productId={selectedProductId}
           onClose={() => setSelectedProductId(null)}
@@ -723,6 +1190,40 @@ function ProductsPage() {
           }}
           onSubmit={(payload, options) => {
             void handleSaveProduct(payload, options);
+          }}
+        />
+      ) : null}
+
+      {isCategoryFormOpen ? (
+        <ProductCategoryFormDialog
+          mode={categoryFormMode}
+          category={editingCategory}
+          isSubmitting={isCategorySaving}
+          errorMessage={categoryErrorMessage}
+          onClose={() => {
+            if (!isCategorySaving) {
+              setIsCategoryFormOpen(false);
+              setEditingCategory(null);
+              setCategoryErrorMessage(null);
+            }
+          }}
+          onSubmit={(payload) => {
+            void handleSaveCategory(payload);
+          }}
+        />
+      ) : null}
+
+      {categoryToDelete ? (
+        <ProductCategoryDeleteDialog
+          category={categoryToDelete}
+          isDeleting={isCategoryDeleting}
+          onCancel={() => {
+            if (!isCategoryDeleting) {
+              setCategoryToDelete(null);
+            }
+          }}
+          onConfirm={() => {
+            void handleConfirmCategoryDelete();
           }}
         />
       ) : null}

@@ -103,6 +103,8 @@ function toOrderPayload(
   input: OrderMutationInput | OrderPatchInput,
 ): Record<string, unknown> {
   const payload: Record<string, unknown> = {};
+  const normalizeText = (value: string | null | undefined): string =>
+    typeof value === 'string' ? value : '';
 
   if (input.customerId !== undefined) {
     const customerId = String(input.customerId ?? '').trim();
@@ -124,7 +126,7 @@ function toOrderPayload(
     payload.shipping_address = input.shippingAddress;
   }
   if (input.notes !== undefined) {
-    payload.notes = input.notes;
+    payload.notes = normalizeText(input.notes);
   }
   if (input.aiGenerated !== undefined) {
     payload.ai_generated = input.aiGenerated;

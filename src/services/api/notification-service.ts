@@ -95,4 +95,14 @@ export const apiNotificationService: NotificationService = {
     );
     return mapNotificationDtoToModel(data);
   },
+
+  async markAllRead() {
+    await apiClient.post('/api/notifications/mark_all_read/');
+    return true;
+  },
+
+  async deleteAll() {
+    await apiClient.delete('/api/notifications/delete_all/');
+    return true;
+  },
 };

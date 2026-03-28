@@ -25,6 +25,7 @@ import UserDetailPanel from '../../../features/users/components/UserDetailPanel'
 import UserFormPanel from '../../../features/users/components/UserFormPanel';
 import { formatLocalizedDate } from '../../../i18n/date-format';
 import { getUserRoleLabel } from '../../../i18n/labels';
+import { usePersistentState } from '../../../lib/persistent-state';
 import { services } from '../../../services';
 import type {
   EntityId,
@@ -70,7 +71,7 @@ function UsersPage() {
   const currentManagedUserId = currentUser?.id ?? null;
   const locale = i18n.language === 'ru' ? 'ru-RU' : 'uz-UZ';
 
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = usePersistentState('users:search', '');
   const [roleFilter, setRoleFilter] = useState<RoleFilter>('all');
   const [activeFilter, setActiveFilter] = useState<ActiveFilter>('all');
   const [currentPage, setCurrentPage] = useState(1);
@@ -542,7 +543,6 @@ function UsersPage() {
             value={search}
             onChange={setSearch}
             placeholder={t('users.searchPlaceholder')}
-            disabled={isLoading}
           />
 
           <label className="grid min-w-[min(170px,100%)] flex-[1_1_170px] gap-1.5 min-[640px]:flex-[0_1_170px]">

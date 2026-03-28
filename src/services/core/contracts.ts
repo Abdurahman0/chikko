@@ -277,6 +277,8 @@ export interface NotificationService {
   getNotificationById(id: EntityId): Promise<AppNotification | null>;
   markAsRead(id: EntityId): Promise<AppNotification | null>;
   markNotificationRead(id: EntityId): Promise<AppNotification | null>;
+  markAllRead(): Promise<boolean>;
+  deleteAll(): Promise<boolean>;
 }
 
 export interface ProfileService {

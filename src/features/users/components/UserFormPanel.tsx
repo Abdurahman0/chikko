@@ -202,7 +202,7 @@ function UserFormPanel({
     onSubmit({
       email,
       full_name: fullName,
-      phone: phone || null,
+      phone: phone || '',
       password: password || undefined,
       role: form.role,
       is_active: form.isActive,

@@ -66,6 +66,8 @@ function toMutationPayload(
   input: PaymentMutationInput | PaymentUpdateInput,
 ): Record<string, unknown> {
   const payload: Record<string, unknown> = {};
+  const normalizeText = (value: string | null | undefined): string =>
+    typeof value === 'string' ? value : '';
 
   if (input.amount !== undefined) {
     payload.amount = Number(input.amount);
@@ -74,16 +76,16 @@ function toMutationPayload(
     payload.method = input.method;
   }
   if (input.screenshot !== undefined) {
-    payload.screenshot = input.screenshot;
+    payload.screenshot = normalizeText(input.screenshot);
   }
   if (input.last_four_digits !== undefined) {
-    payload.last_four_digits = input.last_four_digits;
+    payload.last_four_digits = normalizeText(input.last_four_digits);
   }
   if (input.submitted_by_name !== undefined) {
     payload.submitted_by_name = input.submitted_by_name;
   }
   if (input.verification_reference !== undefined) {
-    payload.verification_reference = input.verification_reference;
+    payload.verification_reference = normalizeText(input.verification_reference);
   }
   if (input.order !== undefined) {
     payload.order = input.order;
