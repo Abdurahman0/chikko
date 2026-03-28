@@ -34,6 +34,7 @@ import { services } from '../../../services';
 import { useAuth } from '../../../auth';
 import type {
   Order,
+  OrderStatus,
   EntityId,
   PaginationMeta,
   Payment,
@@ -58,6 +59,7 @@ const SEARCH_DEBOUNCE_MS = 350;
 const ALL_STATUS_VALUE = 'all';
 const ALL_METHOD_VALUE = 'all';
 const DEFAULT_ORDERING: PaymentOrdering = '-updated_at';
+const ORDER_STATUS_AFTER_PAYMENT: OrderStatus = 'pending';
 
 const DEFAULT_PAGINATION_META: PaginationMeta = {
   page: 1,
@@ -474,9 +476,9 @@ function PaymentsPage() {
         const availableOrders = ordersResult.items
           .filter(
             (order) =>
-              order.status === 'cancelled' ||
-              order.status === 'completed' ||
-              order.status === 'paid',
+              order.status !== 'cancelled' &&
+              order.status !== 'completed' &&
+              order.status !== 'paid',
           )
           .sort(
             (left, right) =>
@@ -553,6 +555,19 @@ function PaymentsPage() {
 
     try {
       await services.payments.createPayment(payload);
+      try {
+        await services.orders.patch(payload.order, {
+          status: ORDER_STATUS_AFTER_PAYMENT,
+        });
+      } catch {
+        try {
+          await services.orders.recalculate(payload.order, {
+            status: ORDER_STATUS_AFTER_PAYMENT,
+          });
+        } catch {
+          // Non-blocking: payment is already created successfully.
+        }
+      }
       setIsFormOpen(false);
       setReloadCursor((current) => current + 1);
     } catch (error) {
@@ -791,6 +806,7 @@ function PaymentsPage() {
     Number(methodFilter !== ALL_METHOD_VALUE) +
     Number(orderFilter.trim().length > 0) +
     Number(ordering !== DEFAULT_ORDERING);
+  const hasEligibleOrders = formOrderOptions.length > 0;
 
   const header = (
     <PageHeader
@@ -802,11 +818,16 @@ function PaymentsPage() {
           {canManagePayments ? (
             <button
               type="button"
-              className="inline-flex min-h-9 items-center gap-2 rounded-lg bg-primary px-3.5 text-sm font-semibold text-primary-foreground transition duration-fast hover:bg-primary-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35"
+              className="inline-flex min-h-9 items-center gap-2 rounded-lg bg-primary px-3.5 text-sm font-semibold text-primary-foreground transition duration-fast hover:bg-primary-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35 disabled:cursor-not-allowed disabled:opacity-60"
               onClick={() => {
+                if (!hasEligibleOrders) {
+                  return;
+                }
                 setIsFormOpen(true);
                 setFormErrorMessage(null);
               }}
+              disabled={!hasEligibleOrders}
+              title={!hasEligibleOrders ? t('payments.form.noEligibleOrders') : undefined}
             >
               <AppIcon name="plus" className="h-4 w-4" aria-hidden="true" />
               {t('payments.newPayment')}

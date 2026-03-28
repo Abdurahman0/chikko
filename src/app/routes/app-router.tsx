@@ -1,4 +1,4 @@
-import { lazy, Suspense, type ComponentType, type JSX } from 'react';
+import { Suspense, type ComponentType, type JSX } from 'react';
 import { Navigate, Outlet, createBrowserRouter, useLocation } from 'react-router-dom';
 import type { AppRouteConfig, AppRouteId } from '../../config/routes';
 import { fallbackRoutes, moduleRoutes, publicRoutes, routePaths } from '../../config/routes';
@@ -6,26 +6,37 @@ import RouteGate from './RouteGate';
 import { useAuth } from '../../auth';
 import { getAccessToken } from '../../lib/auth-storage';
 import AppShell from '../../layout/AppShell';
+import RouteErrorBoundary from './RouteErrorBoundary';
+import { lazyRoute } from './lazy-route';
 
 type RoutedPageId = Exclude<AppRouteId, 'home'>;
 
 const pageRegistry: Record<RoutedPageId, ComponentType> = {
-  'access-denied': lazy(() => import('../pages/public/AccessDeniedPage')),
-  'ai-settings': lazy(() => import('../pages/protected/AiSettingsPage')),
-  chat: lazy(() => import('../pages/protected/ChatPage')),
-  customers: lazy(() => import('../pages/protected/CustomersPage')),
-  dashboard: lazy(() => import('../pages/protected/DashboardPage')),
-  integrations: lazy(() => import('../pages/protected/IntegrationsPage')),
-  leads: lazy(() => import('../pages/protected/LeadsPage')),
-  login: lazy(() => import('../pages/public/LoginPage')),
-  logs: lazy(() => import('../pages/protected/LogsPage')),
-  'not-found': lazy(() => import('../pages/public/NotFoundPage')),
-  notifications: lazy(() => import('../pages/protected/NotificationsPage')),
-  orders: lazy(() => import('../pages/protected/OrdersPage')),
-  payments: lazy(() => import('../pages/protected/PaymentsPage')),
-  products: lazy(() => import('../pages/protected/ProductsPage')),
-  profile: lazy(() => import('../pages/protected/ProfilePage')),
-  users: lazy(() => import('../pages/protected/UsersPage')),
+  'access-denied': lazyRoute(
+    () => import('../pages/public/AccessDeniedPage'),
+    'access-denied',
+  ),
+  'ai-settings': lazyRoute(() => import('../pages/protected/AiSettingsPage'), 'ai-settings'),
+  chat: lazyRoute(() => import('../pages/protected/ChatPage'), 'chat'),
+  customers: lazyRoute(() => import('../pages/protected/CustomersPage'), 'customers'),
+  dashboard: lazyRoute(() => import('../pages/protected/DashboardPage'), 'dashboard'),
+  integrations: lazyRoute(
+    () => import('../pages/protected/IntegrationsPage'),
+    'integrations',
+  ),
+  leads: lazyRoute(() => import('../pages/protected/LeadsPage'), 'leads'),
+  login: lazyRoute(() => import('../pages/public/LoginPage'), 'login'),
+  logs: lazyRoute(() => import('../pages/protected/LogsPage'), 'logs'),
+  'not-found': lazyRoute(() => import('../pages/public/NotFoundPage'), 'not-found'),
+  notifications: lazyRoute(
+    () => import('../pages/protected/NotificationsPage'),
+    'notifications',
+  ),
+  orders: lazyRoute(() => import('../pages/protected/OrdersPage'), 'orders'),
+  payments: lazyRoute(() => import('../pages/protected/PaymentsPage'), 'payments'),
+  products: lazyRoute(() => import('../pages/protected/ProductsPage'), 'products'),
+  profile: lazyRoute(() => import('../pages/protected/ProfilePage'), 'profile'),
+  users: lazyRoute(() => import('../pages/protected/UsersPage'), 'users'),
 };
 
 function RouteLoadingFallback(): JSX.Element {
@@ -82,21 +93,26 @@ export const appRouter = createBrowserRouter([
   {
     path: routePaths.root,
     element: <Navigate replace to={routePaths.dashboard} />,
+    errorElement: <RouteErrorBoundary />,
   },
   ...publicRoutes
     .filter((route) => route.id !== 'home')
     .map((route) => ({
       path: route.path,
       element: renderRouteElement(route),
+      errorElement: <RouteErrorBoundary />,
     })),
   {
     element: <ProtectedShellRoute />,
+    errorElement: <RouteErrorBoundary />,
     children: [
       {
         element: <AppShell />,
+        errorElement: <RouteErrorBoundary />,
         children: moduleRoutes.map((route) => ({
           path: route.path,
           element: renderRouteElement(route),
+          errorElement: <RouteErrorBoundary />,
         })),
       },
     ],
@@ -104,6 +120,7 @@ export const appRouter = createBrowserRouter([
   ...fallbackRoutes.map((route) => ({
     path: route.path,
     element: renderRouteElement(route),
+    errorElement: <RouteErrorBoundary />,
   })),
 ]);
 

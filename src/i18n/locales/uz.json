@@ -976,6 +976,7 @@
       "amountError": "Summa 0 dan katta bo'lishi kerak.",
       "submittedByRequired": "Yuboruvchi nomi majburiy.",
       "orderRequired": "Buyurtma ID majburiy.",
+      "noEligibleOrders": "Mos buyurtmalar yo'q. To'lov qo'shish uchun holati bekor qilingan, yakunlangan yoki to'langan bo'lmagan buyurtma kerak.",
       "metadataObjectError": "Metadata JSON object bo'lishi kerak.",
       "metadataValueError": "Metadata qiymatlari faqat string/number/boolean/null bo'lishi mumkin.",
       "metadataInvalid": "Metadata noto'g'ri formatda."

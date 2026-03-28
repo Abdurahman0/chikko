@@ -270,6 +270,12 @@ function PaymentFormPanel({
             </div>
           </div>
 
+          {orderOptions.length === 0 ? (
+            <p className="m-0 rounded-lg bg-warning-bg px-3 py-2 text-sm font-medium text-warning">
+              {t('payments.form.noEligibleOrders')}
+            </p>
+          ) : null}
+
           {selectedOrderSummary ? (
             <div className="grid gap-1.5">
               <span className={labelClassName}>Buyurtma Ma&apos;lumoti</span>

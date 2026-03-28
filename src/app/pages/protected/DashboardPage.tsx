@@ -576,7 +576,6 @@ function DashboardPage() {
       label: getChannelLabel(t, item.key, item.label),
     }),
   );
-
   const metricCards = [
     {
       label: t('dashboard.metrics.leads'),
@@ -606,7 +605,7 @@ function DashboardPage() {
     {
       label: t('dashboard.metrics.revenue'),
       value: formatAmount(overview.filtered_summary.collected_amount, locale),
-      hint: `${formatAmount(overview.revenue, locale)} ${t('dashboard.metrics.pending')}`,
+      hint: `${formatAmount(overview.filtered_summary.pending_payment_amount, locale)} ${t('dashboard.metrics.pending')}`,
     },
   ];
 
