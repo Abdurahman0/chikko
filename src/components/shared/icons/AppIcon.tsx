@@ -16,6 +16,7 @@ import {
   FiMoon,
   FiPackage,
   FiPlus,
+  FiRefreshCw,
   FiSearch,
   FiSettings,
   FiShoppingBag,
@@ -60,7 +61,8 @@ export type AppIconName =
   | 'trending-up'
   | 'trending-down'
   | 'activity'
-  | 'settings';
+  | 'settings'
+  | 'refresh-cw';
 
 interface AppIconProps extends SVGProps<SVGSVGElement> {
   name: AppIconName;
@@ -98,6 +100,7 @@ const ICON_MAP: Record<AppIconName, IconType> = {
   'trending-down': FiTrendingDown,
   activity: FiActivity,
   settings: FiSettings,
+  'refresh-cw': FiRefreshCw,
 };
 
 function AppIcon({ name, className, ...props }: AppIconProps) {

@@ -8,6 +8,7 @@ import AppTopbar from './AppTopbar';
 function AppShell() {
   const { t } = useTranslation();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [refreshCounter, setRefreshCounter] = useState(0);
   const location = useLocation();
 
   useEffect(() => {
@@ -61,6 +62,7 @@ function AppShell() {
               : ''
           }
           onMenuToggle={() => setIsSidebarOpen((open) => !open)}
+          onRefreshCurrentPage={() => setRefreshCounter((current) => current + 1)}
           showRouteMeta={currentRoute?.id === 'chat'}
         />
 
@@ -79,8 +81,10 @@ function AppShell() {
                 : 'px-3 pb-5 pt-3 min-[640px]:px-4 min-[640px]:pb-6 min-[640px]:pt-4 min-[960px]:px-7 min-[960px]:pb-8 min-[960px]:pt-4',
             ].join(' ')}
           >
-          <div className={['mx-auto w-full max-w-page min-w-0', isChatRoute ? 'h-full' : ''].join(' ')}>
-            <Outlet />
+          <div
+            className={['mx-auto w-full max-w-page min-w-0', isChatRoute ? 'h-full' : ''].join(' ')}
+          >
+            <Outlet key={`${location.pathname}:${refreshCounter}`} />
           </div>
           </div>
         </main>

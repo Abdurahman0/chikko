@@ -50,6 +50,7 @@ function ProductDetailPanel({
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
   const [deletingImageId, setDeletingImageId] = useState<string | null>(null);
+  const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
 
   useEffect(() => {
     let isActive = true;
@@ -89,6 +90,11 @@ function ProductDetailPanel({
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key === 'Escape') {
+        if (previewImageUrl) {
+          setPreviewImageUrl(null);
+          return;
+        }
+
         onClose();
       }
     }
@@ -97,7 +103,7 @@ function ProductDetailPanel({
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [onClose]);
+  }, [onClose, previewImageUrl]);
 
   async function handleDeleteImage(imageId: string) {
     if (!product || deletingImageId) {
@@ -218,12 +224,19 @@ function ProductDetailPanel({
                           key={image.id}
                           className="relative aspect-square overflow-hidden rounded-md bg-surface-subtle/70 ring-1 ring-border-soft/45"
                         >
-                          <img
-                            src={image.imageUrl}
-                            alt={product.name}
-                            className="h-full w-full object-cover"
-                            loading="lazy"
-                          />
+                          <button
+                            type="button"
+                            className="h-full w-full cursor-zoom-in"
+                            onClick={() => setPreviewImageUrl(image.imageUrl)}
+                            aria-label={product.name}
+                          >
+                            <img
+                              src={image.imageUrl}
+                              alt={product.name}
+                              className="h-full w-full object-cover transition duration-fast hover:scale-[1.01]"
+                              loading="lazy"
+                            />
+                          </button>
                           <button
                             type="button"
                             className="absolute right-2 top-2 inline-flex h-8 w-8 items-center justify-center rounded-md bg-background-subtle/90 text-danger transition duration-fast hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-60"
@@ -354,6 +367,37 @@ function ProductDetailPanel({
           ) : null}
         </div>
       </aside>
+
+      {previewImageUrl ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-background-overlay/86 p-3 backdrop-blur-[3px] min-[640px]:p-6"
+          onClick={(event) => {
+            event.stopPropagation();
+            setPreviewImageUrl(null);
+          }}
+          role="presentation"
+        >
+          <div
+            className="relative flex w-full max-w-[980px] items-center justify-center rounded-2xl bg-surface-card/95 p-2 shadow-xl ring-1 ring-border-soft/55 min-[640px]:p-3"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <img
+              src={previewImageUrl}
+              alt={product?.name ?? t('products.detail.titleFallback')}
+              className="max-h-[82vh] w-full rounded-xl object-contain"
+            />
+
+            <button
+              type="button"
+              className="absolute right-3 top-3 inline-flex h-9 w-9 items-center justify-center rounded-lg bg-surface-subtle/92 text-text-primary shadow-sm transition duration-fast hover:bg-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20"
+              onClick={() => setPreviewImageUrl(null)}
+              aria-label={t('products.detail.close')}
+            >
+              <AppIcon name="close" className="h-4.5 w-4.5" aria-hidden="true" />
+            </button>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

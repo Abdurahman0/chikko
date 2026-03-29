@@ -11,6 +11,7 @@ interface AppTopbarProps {
   title: string;
   subtitle: string;
   onMenuToggle: () => void;
+  onRefreshCurrentPage: () => void;
   showRouteMeta?: boolean;
 }
 
@@ -48,6 +49,7 @@ function AppTopbar({
   title,
   subtitle,
   onMenuToggle,
+  onRefreshCurrentPage,
   showRouteMeta = false,
 }: AppTopbarProps) {
   const navigate = useNavigate();
@@ -193,6 +195,15 @@ function AppTopbar({
             className="h-5 w-5"
             aria-hidden="true"
           />
+        </button>
+
+        <button
+          type="button"
+          className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-surface-card text-text-secondary transition duration-fast hover:bg-primary/10 hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/25"
+          onClick={onRefreshCurrentPage}
+          aria-label={t('topbar.refresh')}
+        >
+          <AppIcon name="refresh-cw" className="h-5 w-5" aria-hidden="true" />
         </button>
 
         <LanguageDropdown />

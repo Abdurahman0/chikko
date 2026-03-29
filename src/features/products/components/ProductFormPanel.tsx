@@ -538,13 +538,6 @@ function ProductFormPanel({
                 readOnly={mode === 'create'}
                 required
               />
-              {mode === 'create' ? (
-                <p className="m-0 text-[12px] text-text-muted">
-                  {isGeneratingSku
-                    ? t('common.loading')
-                    : t('products.form.skuAutoHint')}
-                </p>
-              ) : null}
             </div>
 
             <div className="grid gap-1.5">
@@ -558,6 +551,14 @@ function ProductFormPanel({
                 disabled={isSubmitting}
               />
             </div>
+
+            {mode === 'create' ? (
+              <p className="m-0 text-[12px] text-text-muted sm:col-span-2">
+                {isGeneratingSku
+                  ? t('common.loading')
+                  : t('products.form.skuAutoHint')}
+              </p>
+            ) : null}
           </div>
 
           <div className="grid gap-1.5">

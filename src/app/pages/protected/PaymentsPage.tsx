@@ -186,11 +186,6 @@ const labelClassName =
 const actionButtonClassName =
   'inline-flex h-8 w-8 items-center justify-center rounded-md bg-surface-card text-text-secondary shadow-sm ring-1 ring-border-soft/40 transition duration-fast hover:bg-surface-subtle hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20';
 
-const filterInputClassName = [
-  'min-h-[44px] w-full rounded-lg border-0 bg-surface-card px-3.5 text-sm font-medium text-text-primary shadow-sm outline-none transition duration-fast',
-  'placeholder:text-text-muted focus-visible:ring-2 focus-visible:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-60',
-].join(' ');
-
 type PaymentStatusBadgeTone = 'success' | 'warning' | 'danger' | 'info' | 'neutral';
 
 function parseOrdering(ordering: PaymentOrdering): Pick<
@@ -306,7 +301,6 @@ function PaymentsPage() {
   const [search, setSearch] = usePersistentState('payments:search', '');
   const [statusFilter, setStatusFilter] = useState<string>(ALL_STATUS_VALUE);
   const [methodFilter, setMethodFilter] = useState<string>(ALL_METHOD_VALUE);
-  const [orderFilter, setOrderFilter] = useState('');
   const [ordering, setOrdering] = useState<PaymentOrdering>(DEFAULT_ORDERING);
   const [currentPage, setCurrentPage] = useState(1);
 
@@ -334,7 +328,6 @@ function PaymentsPage() {
   const [paymentToDelete, setPaymentToDelete] = useState<Payment | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [debouncedSearch, setDebouncedSearch] = useState('');
-  const [debouncedOrderFilter, setDebouncedOrderFilter] = useState('');
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
@@ -347,18 +340,8 @@ function PaymentsPage() {
   }, [search]);
 
   useEffect(() => {
-    const timeoutId = window.setTimeout(() => {
-      setDebouncedOrderFilter(orderFilter.trim());
-    }, SEARCH_DEBOUNCE_MS);
-
-    return () => {
-      window.clearTimeout(timeoutId);
-    };
-  }, [orderFilter]);
-
-  useEffect(() => {
     setCurrentPage(1);
-  }, [debouncedSearch, statusFilter, methodFilter, debouncedOrderFilter, ordering]);
+  }, [debouncedSearch, statusFilter, methodFilter, ordering]);
 
   useEffect(() => {
     let isActive = true;
@@ -381,7 +364,6 @@ function PaymentsPage() {
             methodFilter === ALL_METHOD_VALUE
               ? undefined
               : (methodFilter as PaymentMethod),
-          order: debouncedOrderFilter || undefined,
           ordering,
           ...sortConfig,
         });
@@ -455,7 +437,6 @@ function PaymentsPage() {
     };
   }, [
     currentPage,
-    debouncedOrderFilter,
     debouncedSearch,
     methodFilter,
     ordering,
@@ -823,7 +804,6 @@ function PaymentsPage() {
   const activeFilterCount =
     Number(statusFilter !== ALL_STATUS_VALUE) +
     Number(methodFilter !== ALL_METHOD_VALUE) +
-    Number(orderFilter.trim().length > 0) +
     Number(ordering !== DEFAULT_ORDERING);
   const hasEligibleOrders = formOrderOptions.length > 0;
 
@@ -941,18 +921,6 @@ function PaymentsPage() {
               value={methodFilter}
               options={methodOptions}
               onChange={setMethodFilter}
-              disabled={isLoading}
-            />
-          </label>
-
-          <label className="grid min-w-[min(170px,100%)] flex-[1_1_170px] gap-1.5 min-[640px]:flex-[0_1_170px]">
-            <span className={labelClassName}>{t('payments.order')}</span>
-            <input
-              type="text"
-              value={orderFilter}
-              onChange={(event) => setOrderFilter(event.target.value)}
-              className={filterInputClassName}
-              placeholder={t('payments.orderPlaceholder')}
               disabled={isLoading}
             />
           </label>
