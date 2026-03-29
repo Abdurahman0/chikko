@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { FiCheckCircle, FiShield, FiTrash2, FiXCircle } from 'react-icons/fi';
+import { FiCheckCircle, FiTrash2, FiXCircle } from 'react-icons/fi';
 import { useTranslation } from 'react-i18next';
 import { StatusBadge } from '../../../components/shared/data';
 import AppIcon from '../../../components/shared/icons/AppIcon';
@@ -18,7 +18,6 @@ interface PaymentDetailPanelProps {
   onDelete: (payment: Payment) => void;
   onApprove: (id: EntityId) => Promise<Payment | null>;
   onReject: (id: EntityId) => Promise<Payment | null>;
-  onVerify: (id: EntityId) => Promise<Payment | null>;
 }
 
 const labelClassName =
@@ -110,7 +109,6 @@ function PaymentDetailPanel({
   onDelete,
   onApprove,
   onReject,
-  onVerify,
 }: PaymentDetailPanelProps) {
   const { t, i18n } = useTranslation();
   const locale = i18n.language === 'ru' ? 'ru-RU' : 'uz-UZ';
@@ -121,9 +119,9 @@ function PaymentDetailPanel({
   const [actionError, setActionError] = useState<string | null>(null);
   const [orderLabel, setOrderLabel] = useState<string | null>(null);
   const [reviewedByLabel, setReviewedByLabel] = useState<string | null>(null);
-  const [actionLoading, setActionLoading] = useState<
-    'approve' | 'reject' | 'verify' | null
-  >(null);
+  const [actionLoading, setActionLoading] = useState<'approve' | 'reject' | null>(
+    null,
+  );
 
   useEffect(() => {
     let isActive = true;
@@ -235,14 +233,10 @@ function PaymentDetailPanel({
   }, [onClose]);
 
   async function handleAction(
-    type: 'approve' | 'reject' | 'verify',
+    type: 'approve' | 'reject',
     handler: (id: EntityId) => Promise<Payment | null>,
   ) {
     if (!payment) {
-      return;
-    }
-
-    if (type === 'verify' && payment.status !== 'approved') {
       return;
     }
 
@@ -503,22 +497,6 @@ function PaymentDetailPanel({
                         {actionLoading === 'reject'
                           ? t('payments.actions.rejecting')
                           : t('payments.actions.reject')}
-                      </button>
-                    </div>
-                  ) : null}
-
-                  {canManagePayments && payment.status === 'approved' ? (
-                    <div className="flex flex-wrap items-center gap-2">
-                      <button
-                        type="button"
-                        className={`${actionButtonClassName} bg-info text-white hover:brightness-95 focus-visible:ring-info/35`}
-                        onClick={() => void handleAction('verify', onVerify)}
-                        disabled={Boolean(actionLoading)}
-                      >
-                        <FiShield className="h-4 w-4" />
-                        {actionLoading === 'verify'
-                          ? t('payments.actions.verifying')
-                          : t('payments.actions.verify')}
                       </button>
                     </div>
                   ) : null}

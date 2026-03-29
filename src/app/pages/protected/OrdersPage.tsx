@@ -58,7 +58,7 @@ const ALL_SOURCE_VALUE = 'all';
 const ALL_AI_VALUE = 'all';
 const DEFAULT_ORDERING: OrderOrdering = '-updated_at';
 
-const ORDER_SOURCES: readonly OrderSource[] = ['telegram', 'instagram', 'manual'];
+const ORDER_SOURCES: readonly OrderSource[] = ['manual', 'telegram', 'instagram'];
 
 const DEFAULT_PAGINATION_META: PaginationMeta = {
   page: 1,

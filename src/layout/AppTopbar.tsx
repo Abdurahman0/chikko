@@ -44,11 +44,6 @@ const menuToggleClassName = [
   'min-[960px]:hidden',
 ].join(' ');
 
-const topbarIconButtonClassName = [
-  'hidden h-10 w-10 items-center justify-center rounded-full bg-surface-card text-text-secondary transition duration-fast',
-  'hover:bg-primary/10 hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/25 min-[960px]:inline-flex',
-].join(' ');
-
 function AppTopbar({
   title,
   subtitle,
@@ -198,14 +193,6 @@ function AppTopbar({
             className="h-5 w-5"
             aria-hidden="true"
           />
-        </button>
-
-        <button
-          type="button"
-          className={topbarIconButtonClassName}
-          aria-label={t('topbar.notifications')}
-        >
-          <AppIcon name="bell" className="h-5 w-5" aria-hidden="true" />
         </button>
 
         <LanguageDropdown />

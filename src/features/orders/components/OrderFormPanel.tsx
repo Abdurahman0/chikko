@@ -154,7 +154,7 @@ function createInitialState(
   return {
     customerId: customers[0]?.id ?? '',
     status: 'draft',
-    source: 'telegram',
+    source: 'manual',
     contactName: '',
     contactPhone: '',
     shippingAddress: '',

@@ -59,7 +59,9 @@ const SEARCH_DEBOUNCE_MS = 350;
 const ALL_STATUS_VALUE = 'all';
 const ALL_METHOD_VALUE = 'all';
 const DEFAULT_ORDERING: PaymentOrdering = '-updated_at';
-const ORDER_STATUS_AFTER_PAYMENT: OrderStatus = 'pending';
+const ORDER_STATUS_AFTER_PAYMENT_CREATE: OrderStatus = 'waiting_payment';
+const ORDER_STATUS_AFTER_PAYMENT_REJECT: OrderStatus = 'cancelled';
+const ORDER_STATUS_AFTER_PAYMENT_DELETE: OrderStatus = 'draft';
 
 const DEFAULT_PAGINATION_META: PaginationMeta = {
   page: 1,
@@ -159,6 +161,19 @@ function getOrderPrimaryProductName(
   return name;
 }
 
+function orderHasLinkedPayment(order: Order): boolean {
+  const paymentCount =
+    typeof order.paymentCount === 'number' && Number.isFinite(order.paymentCount)
+      ? order.paymentCount
+      : 0;
+
+  if (paymentCount > 0) {
+    return true;
+  }
+
+  return Boolean(order.paymentStatus && order.paymentStatus !== 'unpaid');
+}
+
 const tablePrimaryTextClassName =
   'block max-w-[140px] truncate text-sm font-semibold leading-[1.35] text-text-primary min-[640px]:max-w-[220px]';
 
@@ -249,6 +264,21 @@ function getPaymentDisplayLabel(payment: Payment): string {
   }
 
   return 'Payment';
+}
+
+async function syncOrderStatusAfterPaymentAction(
+  orderId: EntityId,
+  status: OrderStatus,
+): Promise<void> {
+  try {
+    await services.orders.patch(orderId, { status });
+  } catch {
+    try {
+      await services.orders.recalculate(orderId, { status });
+    } catch {
+      // Non-blocking: primary payment action already completed.
+    }
+  }
 }
 
 function getPaymentStatusTone(status: PaymentStatus): PaymentStatusBadgeTone {
@@ -478,7 +508,8 @@ function PaymentsPage() {
             (order) =>
               order.status !== 'cancelled' &&
               order.status !== 'completed' &&
-              order.status !== 'paid',
+              order.status !== 'paid' &&
+              !orderHasLinkedPayment(order),
           )
           .sort(
             (left, right) =>
@@ -555,19 +586,10 @@ function PaymentsPage() {
 
     try {
       await services.payments.createPayment(payload);
-      try {
-        await services.orders.patch(payload.order, {
-          status: ORDER_STATUS_AFTER_PAYMENT,
-        });
-      } catch {
-        try {
-          await services.orders.recalculate(payload.order, {
-            status: ORDER_STATUS_AFTER_PAYMENT,
-          });
-        } catch {
-          // Non-blocking: payment is already created successfully.
-        }
-      }
+      await syncOrderStatusAfterPaymentAction(
+        payload.order,
+        ORDER_STATUS_AFTER_PAYMENT_CREATE,
+      );
       setIsFormOpen(false);
       setReloadCursor((current) => current + 1);
     } catch (error) {
@@ -595,10 +617,16 @@ function PaymentsPage() {
     setIsDeleting(true);
 
     try {
+      const orderId = paymentToDelete.order;
       const deleted = await services.payments.deletePayment(paymentToDelete.id);
       if (!deleted) {
         throw new Error(t('payments.actions.notFoundError'));
       }
+
+      await syncOrderStatusAfterPaymentAction(
+        orderId,
+        ORDER_STATUS_AFTER_PAYMENT_DELETE,
+      );
 
       if (selectedPaymentId === paymentToDelete.id) {
         setSelectedPaymentId(null);
@@ -633,19 +661,10 @@ function PaymentsPage() {
       return null;
     }
 
-    setPayments((current) =>
-      current.map((payment) => (payment.id === id ? updated : payment)),
+    await syncOrderStatusAfterPaymentAction(
+      updated.order,
+      ORDER_STATUS_AFTER_PAYMENT_REJECT,
     );
-    setDetailRefreshToken((current) => current + 1);
-    setReloadCursor((current) => current + 1);
-    return updated;
-  }
-
-  async function handleVerifyPayment(id: EntityId): Promise<Payment | null> {
-    const updated = await services.payments.verifyPayment(id);
-    if (!updated) {
-      return null;
-    }
 
     setPayments((current) =>
       current.map((payment) => (payment.id === id ? updated : payment)),
@@ -996,7 +1015,6 @@ function PaymentsPage() {
           }}
           onApprove={handleApprovePayment}
           onReject={handleRejectPayment}
-          onVerify={handleVerifyPayment}
         />
       ) : null}
 

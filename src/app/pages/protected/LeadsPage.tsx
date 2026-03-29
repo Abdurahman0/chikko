@@ -54,9 +54,9 @@ const STATUS_VALUES: readonly LeadStatus[] = [
   'lost',
 ];
 const SOURCE_VALUES: readonly LeadSource[] = [
+  'manual',
   'telegram',
   'instagram',
-  'manual',
 ];
 
 const DEFAULT_PAGINATION_META: PaginationMeta = {

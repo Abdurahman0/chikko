@@ -75,7 +75,7 @@ function createInitialState(
     phone: '',
     instagramUsername: '',
     telegramUsername: '',
-    source: 'telegram',
+    source: 'manual',
     status: 'new',
     notes: '',
     assignedOperatorId: UNASSIGNED_OPERATOR_VALUE,

@@ -2,9 +2,9 @@ import type { SelectOption } from '../types/common';
 import type { PlatformChannel } from '../types/common';
 
 export const PLATFORM_CHANNELS = [
-  'instagram',
-  'telegram',
   'manual',
+  'telegram',
+  'instagram',
   'web',
   'whatsapp',
   'facebook',
@@ -30,9 +30,9 @@ export const PLATFORM_CHANNEL_LABELS: Record<PlatformChannel, string> = {
 };
 
 export const PLATFORM_CHANNEL_OPTIONS: SelectOption[] = [
-  { value: 'instagram', label: PLATFORM_CHANNEL_LABELS.instagram },
-  { value: 'telegram', label: PLATFORM_CHANNEL_LABELS.telegram },
   { value: 'manual', label: PLATFORM_CHANNEL_LABELS.manual },
+  { value: 'telegram', label: PLATFORM_CHANNEL_LABELS.telegram },
+  { value: 'instagram', label: PLATFORM_CHANNEL_LABELS.instagram },
   { value: 'web', label: PLATFORM_CHANNEL_LABELS.web },
   { value: 'whatsapp', label: PLATFORM_CHANNEL_LABELS.whatsapp },
   { value: 'facebook', label: PLATFORM_CHANNEL_LABELS.facebook },
