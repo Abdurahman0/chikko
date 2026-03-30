@@ -15,6 +15,8 @@ interface ProductDetailPanelProps {
   onProductChanged?: () => void;
   onEdit: (product: Product) => void;
   onDelete: (product: Product) => void;
+  isDeleteDisabled?: boolean;
+  deleteDisabledReason?: string | null;
 }
 
 const labelClassName =
@@ -43,6 +45,8 @@ function ProductDetailPanel({
   onProductChanged,
   onEdit,
   onDelete,
+  isDeleteDisabled = false,
+  deleteDisabledReason = null,
 }: ProductDetailPanelProps) {
   const { t, i18n } = useTranslation();
   const locale = i18n.language === 'ru' ? 'ru-RU' : 'uz-UZ';
@@ -355,8 +359,10 @@ function ProductDetailPanel({
                   </button>
                   <button
                     type="button"
-                    className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-danger-bg px-4 text-sm font-semibold text-danger transition duration-fast hover:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-danger/30"
+                    className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-danger-bg px-4 text-sm font-semibold text-danger transition duration-fast hover:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-danger/30 disabled:cursor-not-allowed disabled:opacity-55"
                     onClick={() => onDelete(product)}
+                    disabled={isDeleteDisabled}
+                    title={deleteDisabledReason ?? undefined}
                   >
                     <FiTrash2 className="h-4 w-4" />
                     {t('products.detail.deleteProduct')}

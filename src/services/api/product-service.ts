@@ -97,7 +97,11 @@ function toMutationPayload(
     payload.is_active = input.isActive;
   }
   if (input.categoryId !== undefined) {
-    payload.category = input.categoryId;
+    const normalizedCategoryId =
+      typeof input.categoryId === 'string' ? input.categoryId.trim() : input.categoryId;
+    payload.category_id = normalizedCategoryId;
+    // Keep legacy key for backward compatibility with older API versions.
+    payload.category = normalizedCategoryId;
   }
   return payload;
 }

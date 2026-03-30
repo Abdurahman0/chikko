@@ -79,7 +79,7 @@ const labelClassName =
   'text-[11px] font-semibold uppercase tracking-[0.12em] text-text-muted';
 
 const actionButtonClassName =
-  'inline-flex h-8 w-8 items-center justify-center rounded-md bg-surface-card text-text-secondary shadow-sm ring-1 ring-border-soft/40 transition duration-fast hover:bg-surface-subtle hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20';
+  'inline-flex h-8 w-8 items-center justify-center rounded-md bg-surface-card text-text-secondary shadow-sm ring-1 ring-border-soft/40 transition duration-fast hover:bg-surface-subtle hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-45';
 const warningRowClassName =
   '!bg-warning-bg/30 shadow-[inset_0_0_0_1px_rgb(var(--color-warning)/0.28)] hover:!bg-warning-bg/40';
 
@@ -146,6 +146,86 @@ function prioritizeLowStockProducts(products: Product[]): Product[] {
 
   // Keep existing order within each group; only move low-stock group to top.
   return [...lowStockProducts, ...normalProducts];
+}
+
+function toRecord(value: unknown): Record<string, unknown> | null {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return null;
+  }
+
+  return value as Record<string, unknown>;
+}
+
+function readMessage(value: unknown): string | null {
+  if (typeof value !== 'string') {
+    return null;
+  }
+
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
+}
+
+function extractApiErrorDetails(error: unknown): {
+  statusCode: number | null;
+  message: string | null;
+} {
+  const topLevel = toRecord(error);
+  const response = toRecord(topLevel?.response);
+  const data = response?.data;
+  const dataRecord = toRecord(data);
+
+  const statusCode =
+    typeof response?.status === 'number' ? response.status : null;
+
+  const candidates: Array<unknown> = [
+    dataRecord?.detail,
+    dataRecord?.message,
+    dataRecord?.error,
+    Array.isArray(dataRecord?.non_field_errors)
+      ? (dataRecord.non_field_errors as unknown[])[0]
+      : null,
+    Array.isArray(dataRecord?.errors)
+      ? (dataRecord.errors as unknown[])[0]
+      : null,
+    Array.isArray(data) ? (data as unknown[])[0] : null,
+    topLevel?.message,
+  ];
+
+  for (const candidate of candidates) {
+    const message = readMessage(candidate);
+    if (message) {
+      return { statusCode, message };
+    }
+  }
+
+  return { statusCode, message: null };
+}
+
+function isLinkedOrderDeleteError(statusCode: number | null, message: string | null): boolean {
+  if (statusCode === 409) {
+    return true;
+  }
+
+  if (!message) {
+    return false;
+  }
+
+  const normalized = message.toLocaleLowerCase();
+  const matchesReferenceMessage =
+    normalized.includes('buyurtma') ||
+    normalized.includes('order') ||
+    normalized.includes('foreign key') ||
+    normalized.includes('integrity') ||
+    normalized.includes('constraint') ||
+    normalized.includes('related object') ||
+    normalized.includes('referenc') ||
+    normalized.includes('protected');
+
+  if (statusCode === 400 || statusCode === 422) {
+    return matchesReferenceMessage;
+  }
+
+  return matchesReferenceMessage;
 }
 
 function ProductsPage() {
@@ -248,6 +328,10 @@ function ProductsPage() {
 
   const [productToDelete, setProductToDelete] = useState<Product | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteErrorMessage, setDeleteErrorMessage] = useState<string | null>(null);
+  const [isDeleteConfirmDisabled, setIsDeleteConfirmDisabled] = useState(false);
+  const [orderedProductIds, setOrderedProductIds] = useState<string[]>([]);
+  const [isOrderUsageLoading, setIsOrderUsageLoading] = useState(true);
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
@@ -364,6 +448,69 @@ function ProductsPage() {
 
     return () => {
       isActive = false;
+    };
+  }, [reloadCursor]);
+
+  useEffect(() => {
+    let isActive = true;
+
+    async function loadOrderedProducts() {
+      setIsOrderUsageLoading(true);
+
+      try {
+        const productIds = new Set<string>();
+        let page = 1;
+        let totalPages = 1;
+
+        do {
+          const result = await services.orders.list({
+            page,
+            pageSize: SERVICE_FETCH_SIZE,
+            ordering: '-created_at',
+          });
+
+          result.items.forEach((order) => {
+            order.items.forEach((item) => {
+              const productId = item.product?.id?.trim();
+              if (productId) {
+                productIds.add(productId);
+              }
+            });
+          });
+
+          totalPages = result.meta.totalPages;
+          page += 1;
+        } while (page <= totalPages);
+
+        if (!isActive) {
+          return;
+        }
+
+        setOrderedProductIds(Array.from(productIds));
+      } catch {
+        if (!isActive) {
+          return;
+        }
+
+        setOrderedProductIds([]);
+      } finally {
+        if (isActive) {
+          setIsOrderUsageLoading(false);
+        }
+      }
+    }
+
+    void loadOrderedProducts();
+
+    function handleWindowFocus() {
+      void loadOrderedProducts();
+    }
+
+    window.addEventListener('focus', handleWindowFocus);
+
+    return () => {
+      isActive = false;
+      window.removeEventListener('focus', handleWindowFocus);
     };
   }, [reloadCursor]);
 
@@ -496,6 +643,31 @@ function ProductsPage() {
     }
   }, [products, selectedProductId]);
 
+  const orderedProductIdSet = useMemo(
+    () => new Set(orderedProductIds),
+    [orderedProductIds],
+  );
+
+  function getDeleteBlockReason(productId: string): string | null {
+    if (isOrderUsageLoading) {
+      return t('products.deleteDialog.orderCheckInProgress', {
+        defaultValue: "Buyurtmalar bilan bog'liqlik tekshirilmoqda. Iltimos, biroz kuting.",
+      });
+    }
+
+    if (orderedProductIdSet.has(productId)) {
+      return t('products.deleteDialog.linkedOrderError', {
+        defaultValue: "Bu mahsulot buyurtmaga bog'langanligi sababli o'chirib bo'lmaydi.",
+      });
+    }
+
+    return null;
+  }
+
+  function isDeleteBlocked(productId: string): boolean {
+    return getDeleteBlockReason(productId) !== null;
+  }
+
   function openCreateForm() {
     setFormMode('create');
     setEditingProduct(null);
@@ -536,6 +708,9 @@ function ProductsPage() {
   }
 
   function requestDelete(product: Product) {
+    const blockReason = getDeleteBlockReason(product.id);
+    setDeleteErrorMessage(blockReason);
+    setIsDeleteConfirmDisabled(Boolean(blockReason));
     setProductToDelete(product);
   }
 
@@ -604,10 +779,19 @@ function ProductsPage() {
   }
 
   async function handleConfirmDelete() {
-    if (!productToDelete) {
+    if (!productToDelete || isDeleteConfirmDisabled) {
       return;
     }
 
+    const blockReason = getDeleteBlockReason(productToDelete.id);
+    if (blockReason) {
+      setDeleteErrorMessage(blockReason);
+      setIsDeleteConfirmDisabled(true);
+      return;
+    }
+
+    setDeleteErrorMessage(null);
+    setIsDeleteConfirmDisabled(false);
     setIsDeleting(true);
 
     try {
@@ -621,9 +805,29 @@ function ProductsPage() {
       }
 
       setProductToDelete(null);
+      setIsDeleteConfirmDisabled(false);
       setReloadCursor((current) => current + 1);
-    } catch {
-      // Keep dialog open if deletion fails.
+    } catch (error) {
+      const { statusCode, message } = extractApiErrorDetails(error);
+
+      if (isLinkedOrderDeleteError(statusCode, message)) {
+        setIsDeleteConfirmDisabled(true);
+        setDeleteErrorMessage(
+          t('products.deleteDialog.linkedOrderError', {
+            defaultValue:
+              "Bu mahsulot buyurtmaga bog'langanligi sababli o'chirib bo'lmaydi.",
+          }),
+        );
+        return;
+      }
+
+      setDeleteErrorMessage(
+        message ??
+          t('products.deleteDialog.deleteError', {
+            defaultValue: "Mahsulotni o'chirishda xatolik yuz berdi.",
+          }),
+      );
+      setIsDeleteConfirmDisabled(false);
     } finally {
       setIsDeleting(false);
     }
@@ -855,35 +1059,42 @@ function ProductsPage() {
         key: 'actions',
         label: t('products.columns.actions'),
         align: 'right',
-        render: (product) => (
-          <div className="flex items-center justify-end gap-1.5">
-            <button
-              type="button"
-              className={actionButtonClassName}
-              onClick={(event) => {
-                event.stopPropagation();
-                openEditForm(product);
-              }}
-              aria-label={`${t('products.actions.edit')} ${product.name}`}
-            >
-              <FiEdit2 className="h-3.5 w-3.5" />
-            </button>
-            <button
-              type="button"
-              className={actionButtonClassName}
-              onClick={(event) => {
-                event.stopPropagation();
-                requestDelete(product);
-              }}
-              aria-label={`${t('products.actions.delete')} ${product.name}`}
-            >
-              <FiTrash2 className="h-3.5 w-3.5" />
-            </button>
-          </div>
-        ),
+        render: (product) => {
+          const deleteBlockReason = getDeleteBlockReason(product.id);
+          const isDeleteDisabled = Boolean(deleteBlockReason);
+
+          return (
+            <div className="flex items-center justify-end gap-1.5">
+              <button
+                type="button"
+                className={actionButtonClassName}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  openEditForm(product);
+                }}
+                aria-label={`${t('products.actions.edit')} ${product.name}`}
+              >
+                <FiEdit2 className="h-3.5 w-3.5" />
+              </button>
+              <button
+                type="button"
+                className={actionButtonClassName}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  requestDelete(product);
+                }}
+                disabled={isDeleteDisabled}
+                title={deleteBlockReason ?? undefined}
+                aria-label={`${t('products.actions.delete')} ${product.name}`}
+              >
+                <FiTrash2 className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          );
+        },
       },
     ];
-  }, [i18n.language, locale, t]);
+  }, [i18n.language, locale, t, orderedProductIdSet, isOrderUsageLoading]);
 
   const categoryColumns = useMemo<DataTableColumn<ProductCategory>[]>(() => {
     return [
@@ -1262,6 +1473,8 @@ function ProductsPage() {
       {catalogView === 'products' && selectedProductId ? (
         <ProductDetailPanel
           productId={selectedProductId}
+          isDeleteDisabled={isDeleteBlocked(selectedProductId)}
+          deleteDisabledReason={getDeleteBlockReason(selectedProductId)}
           onClose={() => setSelectedProductId(null)}
           onProductChanged={() => setReloadCursor((current) => current + 1)}
           onEdit={(product) => {
@@ -1335,8 +1548,12 @@ function ProductsPage() {
         <ProductDeleteDialog
           product={productToDelete}
           isDeleting={isDeleting}
+          isConfirmDisabled={isDeleteConfirmDisabled}
+          errorMessage={deleteErrorMessage}
           onCancel={() => {
             if (!isDeleting) {
+              setDeleteErrorMessage(null);
+              setIsDeleteConfirmDisabled(false);
               setProductToDelete(null);
             }
           }}

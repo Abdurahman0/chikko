@@ -4,6 +4,8 @@ import { useTranslation } from 'react-i18next';
 interface ProductDeleteDialogProps {
   product: Product;
   isDeleting: boolean;
+  isConfirmDisabled?: boolean;
+  errorMessage?: string | null;
   onCancel: () => void;
   onConfirm: () => void;
 }
@@ -11,6 +13,8 @@ interface ProductDeleteDialogProps {
 function ProductDeleteDialog({
   product,
   isDeleting,
+  isConfirmDisabled = false,
+  errorMessage,
   onCancel,
   onConfirm,
 }: ProductDeleteDialogProps) {
@@ -43,12 +47,18 @@ function ProductDeleteDialog({
           </p>
         </div>
 
+        {errorMessage ? (
+          <p className="m-0 mt-4 rounded-lg bg-danger-bg px-3 py-2 text-sm font-medium text-danger">
+            {errorMessage}
+          </p>
+        ) : null}
+
         <div className="mt-4 flex flex-wrap items-center gap-2">
           <button
             type="button"
             className="inline-flex min-h-10 items-center justify-center rounded-lg bg-danger px-4 text-sm font-semibold text-white transition duration-fast hover:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-danger/35 disabled:cursor-not-allowed disabled:opacity-60"
             onClick={onConfirm}
-            disabled={isDeleting}
+            disabled={isDeleting || isConfirmDisabled}
           >
             {isDeleting
               ? t('products.deleteDialog.deleting')
