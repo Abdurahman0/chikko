@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import {
   FilterBar,
   FilterSelect,
@@ -58,6 +59,8 @@ function toBooleanReadFilter(value: ReadFilter): boolean | undefined {
 }
 
 function NotificationsPage() {
+  const location = useLocation();
+  const navigate = useNavigate();
   const [search, setSearch] = usePersistentState('notifications:search', '');
   const [channelFilter, setChannelFilter] = useState<ChannelFilter>('all');
   const [readFilter, setReadFilter] = useState<ReadFilter>('all');
@@ -80,6 +83,17 @@ function NotificationsPage() {
   const [isDeletingAll, setIsDeletingAll] = useState(false);
   const [isDeleteAllDialogOpen, setIsDeleteAllDialogOpen] = useState(false);
   const [bulkActionError, setBulkActionError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const state = location.state as { notificationId?: EntityId } | null;
+    const toastNotificationId = state?.notificationId;
+    if (!toastNotificationId || typeof toastNotificationId !== 'string') {
+      return;
+    }
+
+    setSelectedNotificationId(toastNotificationId);
+    navigate(location.pathname, { replace: true, state: null });
+  }, [location.pathname, location.state, navigate]);
 
   useEffect(() => {
     setCurrentPage(1);
