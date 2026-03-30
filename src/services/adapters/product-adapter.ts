@@ -160,6 +160,7 @@ export function mapProductDtoToModel(dto: ProductDto): Product {
   const nowIso = new Date().toISOString();
   const price = readNumber(dto.price, 0);
   const stockQuantity = readInteger(dto.stock_quantity, 0);
+  const minimalStock = readInteger(dto.minimal_stock, 0);
   const isActive = readBoolean(dto.is_active);
   const metadata = mapMetadata(dto.metadata);
   const images = mapImages(dto.images);
@@ -201,6 +202,7 @@ export function mapProductDtoToModel(dto: ProductDto): Product {
     promoPrice: undefined,
     currency: readString(dto.currency, 'UZS'),
     stockQuantity,
+    minimalStock,
     isActive,
     embedding: null,
     metadata,

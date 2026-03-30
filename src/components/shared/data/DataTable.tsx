@@ -21,6 +21,7 @@ interface DataTableProps<T> {
   emptyTitle?: string;
   emptyDescription?: string;
   onRowClick?: (row: T) => void;
+  getRowClassName?: (row: T, index: number) => string;
 }
 
 const TABLE_SHELL_CLASS_NAME = [
@@ -103,6 +104,7 @@ function DataTable<T>({
   emptyTitle,
   emptyDescription,
   onRowClick,
+  getRowClassName,
 }: DataTableProps<T>) {
   const { t } = useTranslation();
   const resolvedEmptyTitle = emptyTitle ?? t('shared.table.emptyTitle');
@@ -160,6 +162,7 @@ function DataTable<T>({
                 key={resolvedRowKey}
                 className={[
                   onRowClick ? CLICKABLE_ROW_CLASS_NAME : ROW_CLASS_NAME,
+                  getRowClassName ? getRowClassName(row, index) : '',
                   isSelected ? SELECTED_ROW_CLASS_NAME : '',
                 ].join(' ')}
                 onClick={onRowClick ? () => onRowClick(row) : undefined}

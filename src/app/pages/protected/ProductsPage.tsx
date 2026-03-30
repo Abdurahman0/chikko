@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { FiEdit2, FiImage, FiTrash2 } from 'react-icons/fi';
+import { FiAlertTriangle, FiEdit2, FiImage, FiTrash2 } from 'react-icons/fi';
 import { useTranslation } from 'react-i18next';
 import { DEFAULT_CURRENCY_CODE, formatCurrencyAmount } from '../../../constants';
 import {
@@ -80,6 +80,8 @@ const labelClassName =
 
 const actionButtonClassName =
   'inline-flex h-8 w-8 items-center justify-center rounded-md bg-surface-card text-text-secondary shadow-sm ring-1 ring-border-soft/40 transition duration-fast hover:bg-surface-subtle hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20';
+const warningRowClassName =
+  '!bg-warning-bg/30 shadow-[inset_0_0_0_1px_rgb(var(--color-warning)/0.28)] hover:!bg-warning-bg/40';
 
 function parseOrdering(ordering: ProductOrdering): Pick<
   TableQueryParams,
@@ -105,6 +107,45 @@ function parseCategoryOrdering(ordering: CategoryOrdering): Pick<
     sortBy,
     sortDirection: direction,
   };
+}
+
+function resolveStockQuantity(product: Product): number {
+  if (typeof product.stockQuantity === 'number' && Number.isFinite(product.stockQuantity)) {
+    return Math.max(0, Math.floor(product.stockQuantity));
+  }
+
+  return 0;
+}
+
+function resolveMinimalStock(product: Product): number {
+  if (typeof product.minimalStock === 'number' && Number.isFinite(product.minimalStock)) {
+    return Math.max(0, Math.floor(product.minimalStock));
+  }
+
+  return 0;
+}
+
+function isProductAtMinimalStock(product: Product): boolean {
+  const minimalStock = resolveMinimalStock(product);
+  const stockQuantity = resolveStockQuantity(product);
+  return stockQuantity <= minimalStock;
+}
+
+function prioritizeLowStockProducts(products: Product[]): Product[] {
+  const lowStockProducts: Product[] = [];
+  const normalProducts: Product[] = [];
+
+  products.forEach((product) => {
+    if (isProductAtMinimalStock(product)) {
+      lowStockProducts.push(product);
+      return;
+    }
+
+    normalProducts.push(product);
+  });
+
+  // Keep existing order within each group; only move low-stock group to top.
+  return [...lowStockProducts, ...normalProducts];
 }
 
 function ProductsPage() {
@@ -356,7 +397,7 @@ function ProductsPage() {
           return;
         }
 
-        setProducts(result.items);
+        setProducts(prioritizeLowStockProducts(result.items));
         setPaginationMeta(result.meta);
       } catch {
         if (!isActive) {
@@ -478,9 +519,20 @@ function ProductsPage() {
 
   function openEditForm(product: Product) {
     setFormMode('edit');
-    setEditingProduct(product);
     setFormErrorMessage(null);
+    setEditingProduct(product);
     setIsFormOpen(true);
+
+    void (async () => {
+      try {
+        const freshProduct = await services.products.getProductById(product.id);
+        if (freshProduct) {
+          setEditingProduct(freshProduct);
+        }
+      } catch {
+        // Keep optimistic product data if refresh fails.
+      }
+    })();
   }
 
   function requestDelete(product: Product) {
@@ -671,17 +723,30 @@ function ProductsPage() {
       {
         key: 'product',
         label: t('products.columns.product'),
-        render: (product) => (
+        render: (product) => {
+          const isLowStock = isProductAtMinimalStock(product);
+
+          return (
           <div className="flex items-center gap-2.5">
             {product.images[0]?.imageUrl || product.imageUrl ? (
               <img
                 src={product.images[0]?.imageUrl ?? product.imageUrl}
                 alt={product.name}
-                className="h-10 w-10 shrink-0 rounded-md object-cover ring-1 ring-border-soft/45"
+                className={[
+                  'h-10 w-10 shrink-0 rounded-md object-cover ring-1',
+                  isLowStock ? 'ring-warning/40' : 'ring-border-soft/45',
+                ].join(' ')}
                 loading="lazy"
               />
             ) : (
-              <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-surface-subtle text-text-muted ring-1 ring-border-soft/45">
+              <span
+                className={[
+                  'inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-md text-text-muted ring-1',
+                  isLowStock
+                    ? 'bg-warning-bg/45 ring-warning/40'
+                    : 'bg-surface-subtle ring-border-soft/45',
+                ].join(' ')}
+              >
                 <FiImage className="h-4 w-4" />
               </span>
             )}
@@ -690,9 +755,16 @@ function ProductsPage() {
               <span className={tableSecondaryTextClassName}>
                 {product.description || t('products.noDescription')}
               </span>
+              {isLowStock ? (
+                <span className="inline-flex items-center gap-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-warning">
+                  <FiAlertTriangle className="h-3.5 w-3.5" />
+                  {t('products.lowStockWarning', { defaultValue: 'Kam zaxira' })}
+                </span>
+              ) : null}
             </div>
           </div>
-        ),
+          );
+        },
       },
       {
         key: 'sku',
@@ -720,20 +792,48 @@ function ProductsPage() {
       {
         key: 'stock',
         label: t('products.columns.stock'),
-        render: (product) => (
-          <span className={tablePrimaryTextClassName}>{product.stockQuantity ?? 0}</span>
-        ),
+        render: (product) => {
+          const stockQuantity = resolveStockQuantity(product);
+          const minimalStock = resolveMinimalStock(product);
+          const isLowStock = isProductAtMinimalStock(product);
+
+          return (
+            <div className="grid gap-0.5">
+              <span
+                className={[
+                  tablePrimaryTextClassName,
+                  isLowStock ? 'text-warning' : '',
+                ].join(' ')}
+              >
+                {stockQuantity}
+              </span>
+              <span className="text-[11px] font-medium text-text-muted">
+                {t('products.minStockLabel', { defaultValue: 'Min' })}: {minimalStock}
+              </span>
+            </div>
+          );
+        },
       },
       {
         key: 'status',
         label: t('products.columns.status'),
-        render: (product) => (
-          <StatusBadge
-            status={product.isActive ? 'active' : 'inactive'}
-            label={product.isActive ? t('common.active') : t('common.inactive')}
-            tone={product.isActive ? 'success' : 'neutral'}
-          />
-        ),
+        render: (product) => {
+          const isLowStock = isProductAtMinimalStock(product);
+
+          return (
+            <StatusBadge
+              status={product.isActive ? 'active' : 'inactive'}
+              label={
+                isLowStock
+                  ? t('products.lowStockWarning', { defaultValue: 'Kam zaxira' })
+                  : product.isActive
+                    ? t('common.active')
+                    : t('common.inactive')
+              }
+              tone={isLowStock ? 'warning' : product.isActive ? 'success' : 'neutral'}
+            />
+          );
+        },
       },
       {
         key: 'updatedAt',
@@ -1104,14 +1204,17 @@ function ProductsPage() {
             </div>
 
             {catalogView === 'products' ? (
-              <DataTable
-                data={products}
-                columns={productColumns}
-                rowKey="id"
-                selectedRowKey={selectedProductId}
-                loading={isLoading}
-                onRowClick={(product) => setSelectedProductId(product.id)}
-                emptyTitle={t('products.emptyTitle')}
+            <DataTable
+              data={products}
+              columns={productColumns}
+              rowKey="id"
+              selectedRowKey={selectedProductId}
+              getRowClassName={(product) =>
+                isProductAtMinimalStock(product) ? warningRowClassName : ''
+              }
+              loading={isLoading}
+              onRowClick={(product) => setSelectedProductId(product.id)}
+              emptyTitle={t('products.emptyTitle')}
                 emptyDescription={t('products.emptyDescription')}
               />
             ) : (

@@ -90,6 +90,9 @@ function toMutationPayload(
   if (input.stockQuantity !== undefined) {
     payload.stock_quantity = input.stockQuantity;
   }
+  if (input.minimalStock !== undefined) {
+    payload.minimal_stock = input.minimalStock;
+  }
   if (input.isActive !== undefined) {
     payload.is_active = input.isActive;
   }

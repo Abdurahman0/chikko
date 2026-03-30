@@ -231,7 +231,7 @@ function NotificationDetailPanel({
                     <div className="rounded-lg bg-surface-subtle/80 p-3 sm:col-span-2">
                       <p className={labelClassName}>Foydalanuvchi</p>
                       <p className={`mt-1 ${valueClassName}`}>
-                        {getNotificationUserLabel(notification.user)}
+                        {getNotificationUserLabel(notification.user, notification.metadata)}
                       </p>
                     </div>
 

@@ -107,6 +107,39 @@ function resolveReadableUserName(user: AppNotification['user']): string | null {
   return fullName;
 }
 
+function resolveReadableUserNameFromMetadata(
+  metadata: AppNotification['metadata'] | undefined,
+): string | null {
+  if (!metadata) {
+    return null;
+  }
+
+  const preferredKeys = [
+    'user_name',
+    'username',
+    'actor_name',
+    'reviewer_name',
+    'created_by_name',
+    'updated_by_name',
+  ] as const;
+
+  for (const key of preferredKeys) {
+    const value = metadata[key];
+    if (typeof value !== 'string') {
+      continue;
+    }
+
+    const normalized = cleanupSpaces(value);
+    if (!normalized || isUuidLike(normalized)) {
+      continue;
+    }
+
+    return normalized;
+  }
+
+  return null;
+}
+
 export function getNotificationChannelLabel(channel: NotificationChannel): string {
   if (channel === 'in_app') {
     return 'Ilova ichida';
@@ -178,8 +211,15 @@ export function formatNotificationMessage(message: string): string {
   return replaceKnownEnglishWords(cleaned);
 }
 
-export function getNotificationUserLabel(user: AppNotification['user']): string {
-  return resolveReadableUserName(user) ?? "Foydalanuvchi ko'rsatilmagan";
+export function getNotificationUserLabel(
+  user: AppNotification['user'],
+  metadata?: AppNotification['metadata'] | null,
+): string {
+  return (
+    resolveReadableUserName(user) ??
+    resolveReadableUserNameFromMetadata(metadata ?? undefined) ??
+    "Foydalanuvchi ko'rsatilmagan"
+  );
 }
 
 export function getFormattedNotificationMetadata(

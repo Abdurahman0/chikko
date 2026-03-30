@@ -61,6 +61,30 @@ function resolveRole(value: unknown): AppRole {
   return 'operator';
 }
 
+function readDisplayNameFromUserRecord(userRecord: Record<string, unknown>): string {
+  const directName =
+    readString(userRecord.fullName) ||
+    readString(userRecord.full_name) ||
+    readString(userRecord.name) ||
+    readString(userRecord.displayName) ||
+    readString(userRecord.display_name) ||
+    readString(userRecord.username);
+
+  if (directName) {
+    return directName;
+  }
+
+  const firstName = readString(userRecord.first_name) || readString(userRecord.firstName);
+  const lastName = readString(userRecord.last_name) || readString(userRecord.lastName);
+  const combinedName = [firstName, lastName].filter(Boolean).join(' ').trim();
+
+  if (combinedName) {
+    return combinedName;
+  }
+
+  return '';
+}
+
 function mapUser(value: unknown): UserSummary | null {
   if (typeof value === 'string') {
     const userId = readString(value);
@@ -80,17 +104,23 @@ function mapUser(value: unknown): UserSummary | null {
     return null;
   }
 
-  const userId = readString(userRecord.id);
-  if (!userId) {
+  const resolvedName = readDisplayNameFromUserRecord(userRecord);
+  const userId =
+    readString(userRecord.id) ||
+    readString(userRecord.user_id) ||
+    readString(userRecord.uid) ||
+    readString(userRecord.pk) ||
+    readString(userRecord.email) ||
+    readString(userRecord.username) ||
+    resolvedName;
+
+  if (!userId && !resolvedName) {
     return null;
   }
 
   return {
-    id: userId,
-    fullName:
-      readString(userRecord.fullName) ||
-      readString(userRecord.full_name) ||
-      userId,
+    id: userId || resolvedName,
+    fullName: resolvedName || userId,
     role: resolveRole(userRecord.role),
     avatarUrl: readString(userRecord.avatarUrl) || readString(userRecord.avatar_url) || undefined,
   };
@@ -172,6 +202,11 @@ export function mapNotificationDtoToModel(dto: NotificationDto): AppNotification
   const id = readString(dto.id);
   const title = readString(dto.title);
   const message = readString(dto.message);
+  const user =
+    mapUser(dto.user) ||
+    mapUser(dto.actor) ||
+    mapUser(dto.created_by) ||
+    mapUser(dto.updated_by);
 
   return {
     id: id || `notification-${nowIso}`,
@@ -182,7 +217,7 @@ export function mapNotificationDtoToModel(dto: NotificationDto): AppNotification
     channel: resolveChannel(dto.channel),
     is_read: readBoolean(dto.is_read),
     metadata: mapMetadata(dto.metadata),
-    user: mapUser(dto.user),
+    user,
   };
 }
 

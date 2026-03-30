@@ -190,14 +190,19 @@ function resolveCurrency(items: OrderItemFormState[], products: Product[]): Curr
 }
 
 function isRestrictedUnpaidStatus(status: OrderStatus): boolean {
-  return status === 'confirmed' || status === 'paid';
+  return status === 'confirmed' || status === 'paid' || status === 'completed';
 }
 
 function resolveStatusByPaymentState(
   currentStatus: OrderStatus,
   isPaymentFullyPaid: boolean,
+  isPaidOrder: boolean,
 ): OrderStatus {
   if (isPaymentFullyPaid) {
+    if (isPaidOrder && currentStatus === 'completed') {
+      return 'completed';
+    }
+
     return 'paid';
   }
 
@@ -274,6 +279,7 @@ function OrderFormPanel({
     () => new Map(products.map((product) => [product.id, product])),
     [products],
   );
+  const isPaidOrder = mode === 'edit' && order?.status === 'paid';
   const isPaymentFullyPaid = useMemo(() => {
     if (mode !== 'edit' || !order) {
       return false;
@@ -300,6 +306,13 @@ function OrderFormPanel({
     return statusOptions.map((option) => {
       const optionStatus = option.value as OrderStatus;
 
+      if (isPaidOrder) {
+        return {
+          ...option,
+          disabled: optionStatus !== 'completed',
+        };
+      }
+
       if (isPaymentFullyPaid) {
         return {
           ...option,
@@ -312,7 +325,7 @@ function OrderFormPanel({
         disabled: isRestrictedUnpaidStatus(optionStatus),
       };
     });
-  }, [isPaymentFullyPaid, statusOptions]);
+  }, [isPaidOrder, isPaymentFullyPaid, statusOptions]);
   const productIdBySku = useMemo(() => {
     const index = new Map<string, string>();
     for (const product of products) {
@@ -405,6 +418,7 @@ function OrderFormPanel({
       const nextStatus = resolveStatusByPaymentState(
         current.status,
         isPaymentFullyPaid,
+        isPaidOrder,
       );
 
       if (nextStatus === current.status) {
@@ -416,7 +430,7 @@ function OrderFormPanel({
         status: nextStatus,
       };
     });
-  }, [isPaymentFullyPaid]);
+  }, [isPaidOrder, isPaymentFullyPaid]);
 
   const itemRows = useMemo(
     () =>
@@ -538,7 +552,11 @@ function OrderFormPanel({
     }
 
     const currency = resolveCurrency(form.items, products);
-    const status = resolveStatusByPaymentState(form.status, isPaymentFullyPaid);
+    const status = resolveStatusByPaymentState(
+      form.status,
+      isPaymentFullyPaid,
+      isPaidOrder,
+    );
 
     onSubmit({
       customerId,
@@ -590,7 +608,11 @@ function OrderFormPanel({
 
     const payload: OrderMutationInput = {
       customerId,
-      status: resolveStatusByPaymentState(form.status, isPaymentFullyPaid),
+      status: resolveStatusByPaymentState(
+        form.status,
+        isPaymentFullyPaid,
+        isPaidOrder,
+      ),
       source: form.source,
       contactName: form.contactName.trim(),
       contactPhone: form.contactPhone.trim(),
@@ -644,6 +666,7 @@ function OrderFormPanel({
     products,
     resolveProductUuid,
     resolveUnitPrice,
+    isPaidOrder,
     isPaymentFullyPaid,
     t,
   ]);
@@ -723,7 +746,7 @@ function OrderFormPanel({
                     status: value as OrderStatus,
                   }))
                 }
-                disabled={isSubmitting || isPaymentFullyPaid}
+                disabled={isSubmitting || (isPaymentFullyPaid && !isPaidOrder)}
               />
             </label>
 

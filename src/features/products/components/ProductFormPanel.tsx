@@ -32,6 +32,7 @@ interface ProductFormState {
   price: string;
   currency: string;
   stockQuantity: string;
+  minimalStock: string;
   isActive: boolean;
   categoryId: string;
 }
@@ -131,6 +132,7 @@ function createInitialState(
       price: String(product.price),
       currency: product.currency,
       stockQuantity: String(product.stockQuantity ?? 0),
+      minimalStock: String(product.minimalStock ?? 0),
       isActive: product.isActive,
       categoryId:
         normalizeString(product.categoryId) ||
@@ -145,6 +147,7 @@ function createInitialState(
     price: '',
     currency: fallbackCurrency,
     stockQuantity: '0',
+    minimalStock: '0',
     isActive: true,
     categoryId: '',
   };
@@ -342,6 +345,7 @@ function ProductFormPanel({
       form.currency.trim().length > 0 &&
       Number(form.price) >= 0 &&
       Number(form.stockQuantity) >= 0 &&
+      Number(form.minimalStock) >= 0 &&
       !isGeneratingSku
     );
   }, [form, isGeneratingSku]);
@@ -356,6 +360,7 @@ function ProductFormPanel({
     const normalizedCategoryId = form.categoryId.trim();
     const parsedPrice = Number(form.price);
     const parsedStock = Number(form.stockQuantity);
+    const parsedMinimalStock = Number(form.minimalStock);
 
     if (
       !normalizedName ||
@@ -375,6 +380,14 @@ function ProductFormPanel({
 
     if (!Number.isFinite(parsedStock) || parsedStock < 0) {
       setFieldError(t('products.form.stockError'));
+      return;
+    }
+    if (!Number.isFinite(parsedMinimalStock) || parsedMinimalStock < 0) {
+      setFieldError(
+        t('products.form.minimalStockError', {
+          defaultValue: "Minimal zaxira soni musbat yoki nol butun son bo'lishi kerak.",
+        }),
+      );
       return;
     }
 
@@ -398,6 +411,7 @@ function ProductFormPanel({
       price: parsedPrice,
       currency: form.currency,
       stockQuantity: Math.floor(parsedStock),
+      minimalStock: Math.floor(parsedMinimalStock),
       isActive: form.isActive,
     }, {
       newImages,
@@ -581,7 +595,7 @@ function ProductFormPanel({
             />
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid gap-3 sm:grid-cols-3">
             <div className="grid gap-1.5">
               <label className={labelClassName} htmlFor="product-form-price">
                 {t('products.form.price')}
@@ -616,6 +630,29 @@ function ProductFormPanel({
                   setForm((current) => ({
                     ...current,
                     stockQuantity: event.target.value,
+                  }))
+                }
+                className={inputClassName}
+                placeholder="0"
+                disabled={isSubmitting}
+                required
+              />
+            </div>
+
+            <div className="grid gap-1.5">
+              <label className={labelClassName} htmlFor="product-form-minimal-stock">
+                {t('products.form.minimalStock', { defaultValue: 'Minimal zaxira limiti' })}
+              </label>
+              <input
+                id="product-form-minimal-stock"
+                type="number"
+                min="0"
+                step="1"
+                value={form.minimalStock}
+                onChange={(event) =>
+                  setForm((current) => ({
+                    ...current,
+                    minimalStock: event.target.value,
                   }))
                 }
                 className={inputClassName}

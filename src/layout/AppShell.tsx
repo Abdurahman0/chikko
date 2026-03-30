@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { getRouteByPathname } from '../config/routes';
 import AppSidebar from './AppSidebar';
 import AppTopbar from './AppTopbar';
+import NotificationToastCenter from '../features/notifications/components/NotificationToastCenter';
 
 function AppShell() {
   const { t } = useTranslation();
@@ -89,6 +90,8 @@ function AppShell() {
           </div>
         </main>
       </div>
+
+      <NotificationToastCenter />
     </div>
   );
 }

@@ -73,7 +73,10 @@ function NotificationList({
         const isUnread = !notification.is_read;
         const notificationTitle = formatNotificationTitle(notification.title);
         const notificationMessage = formatNotificationMessage(notification.message);
-        const notificationUserLabel = getNotificationUserLabel(notification.user);
+        const notificationUserLabel = getNotificationUserLabel(
+          notification.user,
+          notification.metadata,
+        );
 
         return (
           <button
