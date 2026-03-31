@@ -10,8 +10,19 @@ const VALUE_LABELS: Record<string, string> = {
   manual: "Qo'lda",
   developer: 'Dasturchi',
   admin: 'Administrator',
+  administrator: 'Administrator',
   operator: 'Operator',
-  payment: "to'lov",
+  payment: "To'lov",
+  product: 'Mahsulot',
+  order: 'Buyurtma',
+  category: 'Kategoriya',
+  status: 'Holat',
+  created: 'Yaratildi',
+  updated: 'Yangilandi',
+  deleted: "O'chirildi",
+  delete: "O'chirish",
+  read: "O'qilgan",
+  unread: "O'qilmagan",
   pending: 'Kutilmoqda',
   rejected: 'Rad etilgan',
 };
@@ -21,10 +32,43 @@ const METADATA_KEY_LABELS: Record<string, string> = {
   method: 'Usul',
   status: 'Holat',
   reviewer_id: "Ko'rib chiquvchi",
+  reviewer_name: "Ko'rib chiquvchi",
   order_id: 'Buyurtma',
   payment_id: "To'lov",
   verification_reference: 'Tasdiqlash raqami',
+  sku: 'SKU',
+  action: 'Amal',
+  entity: 'Obyekt',
+  actor_role: 'Ijrochi roli',
+  actor_email: 'Ijrochi emaili',
+  changed_fields: "O'zgargan maydonlar",
   raw: 'Matn',
+};
+
+const CHANGED_FIELD_LABELS: Record<string, string> = {
+  status: 'Holat',
+  order_status: 'Buyurtma holati',
+  payment_status: "To'lov holati",
+  stock_quantity: 'Zaxira soni',
+  minimal_stock: 'Minimal zaxira limiti',
+  price: 'Narx',
+  currency: 'Valyuta',
+  category: 'Kategoriya',
+  category_id: 'Kategoriya',
+  name: 'Nomi',
+  description: 'Tavsif',
+  sku: 'SKU',
+  is_active: 'Faollik',
+  quantity: 'Soni',
+  unit_price: 'Birlik narxi',
+  total_amount: 'Jami summa',
+  paid_amount: "To'langan summa",
+  contact_name: 'Kontakt nomi',
+  contact_phone: 'Kontakt telefoni',
+  shipping_address: 'Yetkazish manzili',
+  notes: 'Izoh',
+  updated_at: 'Yangilangan sana',
+  created_at: "Qo'shilgan sana",
 };
 
 export interface NotificationMetadataEntry {
@@ -48,8 +92,42 @@ function cleanupSpaces(value: string): string {
     .trim();
 }
 
+function normalizeMetadataKey(key: string): string {
+  return key
+    .replace(/([a-z0-9])([A-Z])/g, '$1_$2')
+    .trim()
+    .toLocaleLowerCase()
+    .replace(/[\s-]+/g, '_');
+}
+
 function replaceKnownEnglishWords(input: string): string {
-  let output = input;
+  const replaceKeepingFirstLetterCase = (
+    value: string,
+    pattern: RegExp,
+    lowercaseReplacement: string,
+  ): string =>
+    value.replace(pattern, (match) =>
+      match.charAt(0) === match.charAt(0).toLocaleUpperCase()
+        ? `${lowercaseReplacement.charAt(0).toLocaleUpperCase()}${lowercaseReplacement.slice(1)}`
+        : lowercaseReplacement,
+    );
+
+  let output = input
+    // Common Uzbek suffix forms that won't match strict word boundaries.
+    ;
+
+  output = replaceKeepingFirstLetterCase(output, /\bproductini\b/gi, 'mahsulotni');
+  output = replaceKeepingFirstLetterCase(output, /\bproductni\b/gi, 'mahsulotni');
+  output = replaceKeepingFirstLetterCase(output, /\bproductga\b/gi, 'mahsulotga');
+  output = replaceKeepingFirstLetterCase(output, /\bproductdan\b/gi, 'mahsulotdan');
+  output = replaceKeepingFirstLetterCase(output, /\borderini\b/gi, 'buyurtmani');
+  output = replaceKeepingFirstLetterCase(output, /\borderni\b/gi, 'buyurtmani');
+  output = replaceKeepingFirstLetterCase(output, /\borderga\b/gi, 'buyurtmaga');
+  output = replaceKeepingFirstLetterCase(output, /\borderdan\b/gi, 'buyurtmadan');
+  output = replaceKeepingFirstLetterCase(output, /\bpaymentini\b/gi, "to'lovni");
+  output = replaceKeepingFirstLetterCase(output, /\bpaymentni\b/gi, "to'lovni");
+  output = replaceKeepingFirstLetterCase(output, /\bpaymentga\b/gi, "to'lovga");
+  output = replaceKeepingFirstLetterCase(output, /\bpaymentdan\b/gi, "to'lovdan");
 
   for (const [source, target] of Object.entries(VALUE_LABELS)) {
     output = output.replace(new RegExp(`\\b${source}\\b`, 'gi'), target);
@@ -58,16 +136,89 @@ function replaceKnownEnglishWords(input: string): string {
   return output;
 }
 
-function humanizeMetadataKey(key: string): string {
-  if (METADATA_KEY_LABELS[key]) {
-    return METADATA_KEY_LABELS[key];
+function capitalizeFirstLetter(value: string): string {
+  const trimmedStart = value.match(/^\s*/)?.[0] ?? '';
+  const content = value.slice(trimmedStart.length);
+  if (!content) {
+    return value;
   }
 
-  const withSpaces = key.replace(/_/g, ' ');
+  return `${trimmedStart}${content.charAt(0).toLocaleUpperCase()}${content.slice(1)}`;
+}
+
+function humanizeMetadataKey(key: string): string {
+  const normalizedKey = normalizeMetadataKey(key);
+
+  if (METADATA_KEY_LABELS[normalizedKey]) {
+    return METADATA_KEY_LABELS[normalizedKey];
+  }
+
+  const withSpaces = normalizedKey.replace(/_/g, ' ');
   return withSpaces.charAt(0).toUpperCase() + withSpaces.slice(1);
 }
 
-function translateMetadataValue(value: string | number | boolean | null): string {
+function humanizeChangedFieldName(rawKey: string): string {
+  const normalizedKey = normalizeMetadataKey(rawKey);
+  if (!normalizedKey) {
+    return '';
+  }
+
+  if (CHANGED_FIELD_LABELS[normalizedKey]) {
+    return CHANGED_FIELD_LABELS[normalizedKey];
+  }
+
+  const readable = normalizedKey.replace(/_/g, ' ');
+  return capitalizeFirstLetter(replaceKnownEnglishWords(readable));
+}
+
+function parseChangedFields(raw: string): string[] {
+  const trimmed = raw.trim();
+  if (!trimmed) {
+    return [];
+  }
+
+  try {
+    const parsed = JSON.parse(trimmed) as unknown;
+
+    if (Array.isArray(parsed)) {
+      return parsed
+        .filter((item): item is string => typeof item === 'string')
+        .map((item) => humanizeChangedFieldName(item))
+        .filter((item) => item.length > 0);
+    }
+
+    if (typeof parsed === 'string') {
+      const single = humanizeChangedFieldName(parsed);
+      return single ? [single] : [];
+    }
+  } catch {
+    // Fall through to tolerant parser below.
+  }
+
+  return trimmed
+    .replace(/^[\[\(]\s*|\s*[\]\)]$/g, '')
+    .split(',')
+    .map((part) => part.trim().replace(/^['"]|['"]$/g, ''))
+    .map((part) => humanizeChangedFieldName(part))
+    .filter((part) => part.length > 0);
+}
+
+function formatChangedFieldsSegment(input: string): string {
+  return input.replace(
+    /(o'zgargan maydonlar|changed fields)\s*:\s*([^.\n]+)([.\n]?)/gi,
+    (_match, _prefix, rawFields, suffix) => {
+      const readableFields = parseChangedFields(String(rawFields ?? ''));
+      const joined =
+        readableFields.length > 0 ? readableFields.join(', ') : "Mavjud emas";
+      return `O'zgargan maydonlar: ${joined}${suffix ?? ''}`;
+    },
+  );
+}
+
+function translateMetadataValue(
+  value: string | number | boolean | null,
+  metadataKey?: string,
+): string {
   if (value === null) {
     return "Mavjud emas";
   }
@@ -82,6 +233,17 @@ function translateMetadataValue(value: string | number | boolean | null): string
 
   const trimmed = value.trim();
   if (!trimmed) {
+    return "Mavjud emas";
+  }
+
+  if (metadataKey && normalizeMetadataKey(metadataKey) === 'changed_fields') {
+    const readableFields = parseChangedFields(trimmed);
+    return readableFields.length > 0
+      ? readableFields.join(', ')
+      : "Mavjud emas";
+  }
+
+  if (trimmed === '[]' || trimmed === '{}') {
     return "Mavjud emas";
   }
 
@@ -199,7 +361,7 @@ export function formatNotificationTitle(title: string): string {
     return 'Bildirishnoma';
   }
 
-  return replaceKnownEnglishWords(cleaned);
+  return capitalizeFirstLetter(replaceKnownEnglishWords(cleaned));
 }
 
 export function formatNotificationMessage(message: string): string {
@@ -208,7 +370,8 @@ export function formatNotificationMessage(message: string): string {
     return "Bildirishnoma matni mavjud emas.";
   }
 
-  return replaceKnownEnglishWords(cleaned);
+  const translated = replaceKnownEnglishWords(cleaned);
+  return formatChangedFieldsSegment(translated);
 }
 
 export function getNotificationUserLabel(
@@ -242,12 +405,12 @@ export function getFormattedNotificationMetadata(
       return entries;
     }
 
-    const translatedValue = translateMetadataValue(value);
+    const translatedValue = translateMetadataValue(value, key);
     if (!translatedValue) {
       return entries;
     }
 
-    if (key.endsWith('_id') && isUuidLike(translatedValue)) {
+    if (normalizeMetadataKey(key).endsWith('_id') && isUuidLike(translatedValue)) {
       return entries;
     }
 

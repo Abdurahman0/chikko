@@ -49,6 +49,8 @@ export interface TableQueryParams extends BaseFilterParams {
   sortDirection?: SortDirection;
   assignedOperator?: EntityId;
   assigned_operator?: EntityId;
+  category?: EntityId;
+  category_id?: EntityId;
   currency?: CurrencyCode;
   isActive?: boolean;
   is_active?: boolean;

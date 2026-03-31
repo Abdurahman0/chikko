@@ -29,6 +29,8 @@ function AppShell() {
     [location.pathname],
   );
   const isChatRoute = currentRoute?.id === 'chat';
+  const showTopbarRouteMeta =
+    currentRoute?.id === 'chat' || currentRoute?.id === 'dashboard';
 
   return (
     <div className="relative flex h-dvh w-full overflow-hidden bg-background-default">
@@ -64,7 +66,7 @@ function AppShell() {
           }
           onMenuToggle={() => setIsSidebarOpen((open) => !open)}
           onRefreshCurrentPage={() => setRefreshCounter((current) => current + 1)}
-          showRouteMeta={currentRoute?.id === 'chat'}
+          showRouteMeta={showTopbarRouteMeta}
         />
 
         <main

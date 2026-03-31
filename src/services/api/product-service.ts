@@ -154,6 +154,7 @@ export const apiProductService: ProductService = {
         page: params?.page,
         page_size: params?.pageSize,
         search: params?.search,
+        category: params?.category ?? params?.category_id,
         currency: params?.currency,
         is_active: params?.isActive ?? params?.is_active,
         ordering:

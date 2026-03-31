@@ -446,7 +446,7 @@ function DashboardPage() {
         },
         orders: {
           label: t('dashboard.metrics.orders'),
-          color: 'rgb(var(--color-info))',
+          color: SOURCE_COLORS.instagram,
         },
       }) satisfies ChartConfig,
     [t],
@@ -637,122 +637,10 @@ function DashboardPage() {
   return (
     <PageLayout>
       <section className="grid gap-4 min-[768px]:gap-5">
-        <header className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <h1 className="m-0 font-display text-[clamp(2rem,3.2vw,3rem)] font-extrabold leading-none tracking-[-0.04em] text-text-primary">
-              {t('dashboard.title')}
-            </h1>
-            <p className="mt-2 text-[1.02rem] text-text-secondary">
-              {rangeLabel} ({overview.date_range.timezone})
-            </p>
-          </div>
-          <div className="flex flex-wrap items-center justify-end gap-2">
-            <Popover open={isDatePopoverOpen} onOpenChange={setIsDatePopoverOpen}>
-              <PopoverTrigger asChild>
-                <button
-                  type="button"
-                  className="inline-flex h-8 min-w-[248px] items-center justify-between gap-2 rounded-pill border border-border-soft/70 bg-gradient-to-b from-surface-card to-surface-subtle/80 px-3.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-text-secondary shadow-[0_15px_26px_-22px_rgba(37,99,235,0.6)] transition duration-fast hover:border-primary/45 hover:text-text-primary"
-                  aria-label={t('dashboard.filters.customRange')}
-                >
-                  <span className="inline-flex items-center gap-2 truncate">
-                    <AppIcon
-                      name="calendar"
-                      className="h-3.5 w-3.5 text-primary"
-                      aria-hidden="true"
-                    />
-                    <span className="truncate">{dateRangeButtonLabel}</span>
-                  </span>
-                  <AppIcon
-                    name="chevron-down"
-                    className={[
-                      'h-3.5 w-3.5 shrink-0 transition duration-fast',
-                      isDatePopoverOpen
-                        ? 'rotate-180 text-primary'
-                        : 'text-text-muted',
-                    ].join(' ')}
-                    aria-hidden="true"
-                  />
-                </button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-3">
-                <Calendar
-                  mode="range"
-                  selected={selectedDateRange}
-                  defaultMonth={
-                    selectedDateRange?.to ??
-                    selectedDateRange?.from ??
-                    new Date()
-                  }
-                  locale={calendarLocale}
-                  formatters={
-                    i18n.language === 'uz'
-                      ? {
-                          formatCaption: (date) =>
-                            formatUzMonthYear(date, false),
-                        }
-                      : undefined
-                  }
-                  onSelect={(range: DateRange | undefined) => {
-                    if (!range?.from) {
-                      setFilters((current) => ({
-                        ...current,
-                        customDateFrom: undefined,
-                        customDateTo: undefined,
-                      }));
-                      return;
-                    }
-
-                    const from = toIsoDate(range.from);
-                    const to = toIsoDate(range.to ?? range.from);
-
-                    setFilters((current) => ({
-                      ...current,
-                      customDateFrom: from,
-                      customDateTo: to,
-                    }));
-
-                    if (range.to) {
-                      setIsDatePopoverOpen(false);
-                    }
-                  }}
-                />
-                <div className="mt-2 flex items-center justify-between gap-2 border-t border-border-soft/70 pt-2">
-                  <button
-                    type="button"
-                    className="inline-flex h-8 items-center rounded-md px-2.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-text-secondary transition duration-fast hover:bg-surface-subtle hover:text-text-primary"
-                    onClick={() =>
-                      setFilters((current) => ({
-                        ...current,
-                        customDateFrom: undefined,
-                        customDateTo: undefined,
-                      }))
-                    }
-                  >
-                    {t('dashboard.filters.clearRange')}
-                  </button>
-                  <button
-                    type="button"
-                    className="inline-flex h-8 items-center rounded-md bg-primary px-3 text-[11px] font-semibold uppercase tracking-[0.08em] text-primary-foreground transition duration-fast hover:bg-primary-accent"
-                    onClick={() => setIsDatePopoverOpen(false)}
-                  >
-                    {t('common.save')}
-                  </button>
-                </div>
-              </PopoverContent>
-            </Popover>
-
-            <DashboardIntervalDropdown
-              value={filters.interval}
-              options={intervalOptions}
-              onChange={(interval) =>
-                setFilters((current) => ({
-                  ...current,
-                  interval,
-                }))
-              }
-              ariaLabel={t('dashboard.filters.intervalLabel')}
-            />
-          </div>
+        <header className="flex flex-wrap items-center justify-between gap-2">
+          <p className="m-0 rounded-pill bg-surface-subtle/80 px-3 py-1.5 text-sm text-text-secondary ring-1 ring-border-soft/45">
+            {rangeLabel} ({overview.date_range.timezone})
+          </p>
         </header>
 
         <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
@@ -772,6 +660,114 @@ function DashboardPage() {
               </p>
             </article>
           ))}
+        </section>
+
+        <section className="flex flex-wrap items-center justify-end gap-2">
+          <Popover open={isDatePopoverOpen} onOpenChange={setIsDatePopoverOpen}>
+            <PopoverTrigger asChild>
+              <button
+                type="button"
+                className="inline-flex h-8 min-w-[248px] items-center justify-between gap-2 rounded-pill border border-border-soft/70 bg-gradient-to-b from-surface-card to-surface-subtle/80 px-3.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-text-secondary shadow-[0_15px_26px_-22px_rgba(37,99,235,0.6)] transition duration-fast hover:border-primary/45 hover:text-text-primary"
+                aria-label={t('dashboard.filters.customRange')}
+              >
+                <span className="inline-flex items-center gap-2 truncate">
+                  <AppIcon
+                    name="calendar"
+                    className="h-3.5 w-3.5 text-primary"
+                    aria-hidden="true"
+                  />
+                  <span className="truncate">{dateRangeButtonLabel}</span>
+                </span>
+                <AppIcon
+                  name="chevron-down"
+                  className={[
+                    'h-3.5 w-3.5 shrink-0 transition duration-fast',
+                    isDatePopoverOpen
+                      ? 'rotate-180 text-primary'
+                      : 'text-text-muted',
+                  ].join(' ')}
+                  aria-hidden="true"
+                />
+              </button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-3">
+              <Calendar
+                mode="range"
+                selected={selectedDateRange}
+                defaultMonth={
+                  selectedDateRange?.to ??
+                  selectedDateRange?.from ??
+                  new Date()
+                }
+                locale={calendarLocale}
+                formatters={
+                  i18n.language === 'uz'
+                    ? {
+                        formatCaption: (date) =>
+                          formatUzMonthYear(date, false),
+                      }
+                    : undefined
+                }
+                onSelect={(range: DateRange | undefined) => {
+                  if (!range?.from) {
+                    setFilters((current) => ({
+                      ...current,
+                      customDateFrom: undefined,
+                      customDateTo: undefined,
+                    }));
+                    return;
+                  }
+
+                  const from = toIsoDate(range.from);
+                  const to = toIsoDate(range.to ?? range.from);
+
+                  setFilters((current) => ({
+                    ...current,
+                    customDateFrom: from,
+                    customDateTo: to,
+                  }));
+
+                  if (range.to) {
+                    setIsDatePopoverOpen(false);
+                  }
+                }}
+              />
+              <div className="mt-2 flex items-center justify-between gap-2 border-t border-border-soft/70 pt-2">
+                <button
+                  type="button"
+                  className="inline-flex h-8 items-center rounded-md px-2.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-text-secondary transition duration-fast hover:bg-surface-subtle hover:text-text-primary"
+                  onClick={() =>
+                    setFilters((current) => ({
+                      ...current,
+                      customDateFrom: undefined,
+                      customDateTo: undefined,
+                    }))
+                  }
+                >
+                  {t('dashboard.filters.clearRange')}
+                </button>
+                <button
+                  type="button"
+                  className="inline-flex h-8 items-center rounded-md bg-primary px-3 text-[11px] font-semibold uppercase tracking-[0.08em] text-primary-foreground transition duration-fast hover:bg-primary-accent"
+                  onClick={() => setIsDatePopoverOpen(false)}
+                >
+                  {t('common.save')}
+                </button>
+              </div>
+            </PopoverContent>
+          </Popover>
+
+          <DashboardIntervalDropdown
+            value={filters.interval}
+            options={intervalOptions}
+            onChange={(interval) =>
+              setFilters((current) => ({
+                ...current,
+                interval,
+              }))
+            }
+            ariaLabel={t('dashboard.filters.intervalLabel')}
+          />
         </section>
 
         <section className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_340px]">
@@ -823,7 +819,7 @@ function DashboardPage() {
                   <Line
                     type="monotone"
                     dataKey="orders"
-                    stroke="rgb(var(--color-info))"
+                    stroke={SOURCE_COLORS.instagram}
                     strokeWidth={2}
                     dot={false}
                   />
@@ -929,7 +925,7 @@ function DashboardPage() {
             <p className="mt-1 text-sm text-text-secondary">
               {t('dashboard.descriptions.leadStatus')}
             </p>
-            <div className="mt-4 grid gap-4 lg:grid-cols-[240px_minmax(0,1fr)]">
+            <div className="mt-4 grid gap-4 xl:grid-cols-[240px_minmax(0,1fr)]">
               <div className="relative grid place-items-center rounded-xl border border-border-soft/60 bg-surface-subtle/65 p-3">
                 <div className="h-[210px] w-[210px]">
                   <ChartContainer config={statusChartConfig} className="h-full w-full">
@@ -974,7 +970,7 @@ function DashboardPage() {
                 </div>
               </div>
 
-              <ul className="grid list-none gap-2 p-0">
+              <ul className="grid min-w-0 list-none gap-2 p-0">
                 {leadStatusPieData[0]?.key === 'empty' ? (
                   <li className="rounded-lg bg-surface-subtle/85 px-3 py-2.5 text-sm font-medium text-text-secondary">
                     {t('dashboard.sourceDataHint')}

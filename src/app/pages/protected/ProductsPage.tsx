@@ -59,6 +59,7 @@ const PAGE_SIZE = 8;
 const SERVICE_FETCH_SIZE = 500;
 const SEARCH_DEBOUNCE_MS = 350;
 const ALL_CURRENCIES_VALUE = 'all';
+const ALL_CATEGORIES_VALUE = 'all';
 const DEFAULT_ORDERING: ProductOrdering = '-created_at';
 const DEFAULT_CATEGORY_ORDERING: CategoryOrdering = '-created_at';
 
@@ -81,7 +82,13 @@ const labelClassName =
 const actionButtonClassName =
   'inline-flex h-8 w-8 items-center justify-center rounded-md bg-surface-card text-text-secondary shadow-sm ring-1 ring-border-soft/40 transition duration-fast hover:bg-surface-subtle hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-45';
 const warningRowClassName =
-  '!bg-warning-bg/30 shadow-[inset_0_0_0_1px_rgb(var(--color-warning)/0.28)] hover:!bg-warning-bg/40';
+  [
+    'bg-transparent',
+    '[&>td]:!bg-warning-bg/30 [&>td]:border-y [&>td]:border-warning/25',
+    '[&>td:first-child]:border-l [&>td:last-child]:border-r',
+    '[&>td:first-child]:rounded-l-lg [&>td:last-child]:rounded-r-lg',
+    'hover:[&>td]:!bg-warning-bg/40',
+  ].join(' ');
 
 function parseOrdering(ordering: ProductOrdering): Pick<
   TableQueryParams,
@@ -278,6 +285,7 @@ function ProductsPage() {
     },
   );
   const [currencyFilter, setCurrencyFilter] = useState(ALL_CURRENCIES_VALUE);
+  const [categoryFilter, setCategoryFilter] = useState(ALL_CATEGORIES_VALUE);
   const [activeFilter, setActiveFilter] = useState<ActiveFilter>('all');
   const [ordering, setOrdering] = useState<ProductOrdering>(DEFAULT_ORDERING);
   const [currentPage, setCurrentPage] = useState(1);
@@ -361,9 +369,19 @@ function ProductsPage() {
     [t],
   );
 
+  const categoryAllOption = useMemo<SelectOption>(
+    () => ({
+      value: ALL_CATEGORIES_VALUE,
+      label: t('products.allCategories', {
+        defaultValue: 'Barcha kategoriyalar',
+      }),
+    }),
+    [t],
+  );
+
   useEffect(() => {
     setCurrentPage(1);
-  }, [debouncedSearch, currencyFilter, activeFilter, ordering]);
+  }, [debouncedSearch, currencyFilter, categoryFilter, activeFilter, ordering]);
 
   useEffect(() => {
     setCategoryCurrentPage(1);
@@ -527,6 +545,8 @@ function ProductsPage() {
           page: currentPage,
           pageSize: PAGE_SIZE,
           search: debouncedSearch || undefined,
+          category:
+            categoryFilter === ALL_CATEGORIES_VALUE ? undefined : categoryFilter,
           currency:
             currencyFilter === ALL_CURRENCIES_VALUE ? undefined : currencyFilter,
           is_active:
@@ -567,7 +587,15 @@ function ProductsPage() {
     return () => {
       isActive = false;
     };
-  }, [activeFilter, currencyFilter, currentPage, debouncedSearch, ordering, reloadCursor]);
+  }, [
+    activeFilter,
+    categoryFilter,
+    currencyFilter,
+    currentPage,
+    debouncedSearch,
+    ordering,
+    reloadCursor,
+  ]);
 
   useEffect(() => {
     let isActive = true;
@@ -1196,6 +1224,7 @@ function ProductsPage() {
 
   const productActiveFilterCount =
     Number(currencyFilter !== ALL_CURRENCIES_VALUE) +
+    Number(categoryFilter !== ALL_CATEGORIES_VALUE) +
     Number(activeFilter !== 'all') +
     Number(ordering !== DEFAULT_ORDERING);
   const categoryActiveFilterCount =
@@ -1217,6 +1246,11 @@ function ProductsPage() {
       ? filtered
       : [{ value: DEFAULT_CURRENCY_CODE, label: DEFAULT_CURRENCY_CODE }];
   }, [currencyOptions]);
+
+  const productCategoryFilterOptions = useMemo<SelectOption[]>(
+    () => [categoryAllOption, ...categoryOptions],
+    [categoryAllOption, categoryOptions],
+  );
 
   const header = (
     <PageHeader
@@ -1324,6 +1358,18 @@ function ProductsPage() {
                   options={currencyOptions}
                   onChange={setCurrencyFilter}
                   disabled={isLoading}
+                />
+              </label>
+
+              <label className="grid min-w-[min(180px,100%)] flex-[1_1_180px] gap-1.5 min-[640px]:flex-[0_1_200px]">
+                <span className={labelClassName}>
+                  {t('products.form.category')}
+                </span>
+                <FilterSelect
+                  value={categoryFilter}
+                  options={productCategoryFilterOptions}
+                  onChange={setCategoryFilter}
+                  disabled={isLoading || isCategoryOptionsLoading}
                 />
               </label>
 
