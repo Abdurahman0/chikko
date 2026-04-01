@@ -44,6 +44,7 @@ export interface ChatMessage {
   sender_type: MessageSenderType;
   direction: MessageDirection;
   content: string;
+  image_urls: string[];
   external_message_id: string | null;
   metadata: Record<string, string | number | boolean | null> | null;
   is_read: boolean;

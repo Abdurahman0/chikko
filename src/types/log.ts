@@ -25,3 +25,7 @@ export interface LogListParams {
   sortBy?: string;
   sortDirection?: SortDirection;
 }
+
+export interface LogCleanupSettingsPatchInput {
+  retentionHours: number;
+}

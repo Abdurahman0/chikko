@@ -685,7 +685,8 @@ function ProductsPage() {
 
     if (orderedProductIdSet.has(productId)) {
       return t('products.deleteDialog.linkedOrderError', {
-        defaultValue: "Bu mahsulot buyurtmaga bog'langanligi sababli o'chirib bo'lmaydi.",
+        defaultValue:
+          "Bu mahsulot buyurtmalarda ishlatilgan. O'chirib bo'lmaydi, mahsulotni nofaol holatga o'tkazing.",
       });
     }
 
@@ -843,7 +844,7 @@ function ProductsPage() {
         setDeleteErrorMessage(
           t('products.deleteDialog.linkedOrderError', {
             defaultValue:
-              "Bu mahsulot buyurtmaga bog'langanligi sababli o'chirib bo'lmaydi.",
+              "Bu mahsulot buyurtmalarda ishlatilgan. O'chirib bo'lmaydi, mahsulotni nofaol holatga o'tkazing.",
           }),
         );
         return;

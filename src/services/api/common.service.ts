@@ -2,6 +2,7 @@ import { apiClient } from '../../lib/api-client';
 import type {
   AppLog,
   EntityId,
+  LogCleanupSettingsPatchInput,
   LogListParams,
   PaginatedResult,
   SystemHealth,
@@ -119,6 +120,54 @@ export async function getLogById(id: EntityId): Promise<AppLog | null> {
   return dto ? mapLogDtoToModel(dto) : null;
 }
 
+export async function getCleanupSettings(): Promise<AppLog | null> {
+  const { data } = await apiClient.get<unknown>('/api/common/logs/cleanup-settings/');
+  const dto = extractLogDto(data);
+  return dto ? mapLogDtoToModel(dto) : null;
+}
+
+export async function patchCleanupSettings(
+  input: LogCleanupSettingsPatchInput,
+): Promise<AppLog | null> {
+  const retentionHours = Math.max(1, Math.floor(input.retentionHours));
+  const retentionDays = Number((retentionHours / 24).toFixed(4));
+  const metadataObjectPayload = {
+    retention_hours: retentionHours,
+    retention_days: retentionDays,
+  };
+  const metadataStringPayload = JSON.stringify(metadataObjectPayload);
+
+  const payloadCandidates: Array<Record<string, unknown>> = [
+    {
+      message: `Delete logs after ${retentionHours} hours`,
+      metadata: metadataStringPayload,
+    },
+    {
+      metadata: metadataStringPayload,
+    },
+    {
+      metadata: metadataObjectPayload,
+    },
+  ];
+
+  let lastError: unknown = null;
+
+  for (const payload of payloadCandidates) {
+    try {
+      const { data } = await apiClient.patch<unknown>(
+        '/api/common/logs/cleanup-settings/',
+        payload,
+      );
+      const dto = extractLogDto(data);
+      return dto ? mapLogDtoToModel(dto) : null;
+    } catch (error) {
+      lastError = error;
+    }
+  }
+
+  throw lastError;
+}
+
 export const apiLogsService: LogsService = {
   async getHealth() {
     return getHealth();
@@ -130,5 +179,13 @@ export const apiLogsService: LogsService = {
 
   async getLogById(id) {
     return getLogById(id);
+  },
+
+  async getCleanupSettings() {
+    return getCleanupSettings();
+  },
+
+  async patchCleanupSettings(input) {
+    return patchCleanupSettings(input);
   },
 };

@@ -742,7 +742,10 @@
       "title": "{{name}} mahsulotini o'chirasizmi?",
       "description": "Bu amal mahsulotni katalogdan o'chiradi. Amalni bekor qilib bo'lmaydi.",
       "confirm": "Mahsulotni o'chirish",
-      "deleting": "O'chirilmoqda..."
+      "deleting": "O'chirilmoqda...",
+      "orderCheckInProgress": "Buyurtmalar bilan bog'liqlik tekshirilmoqda. Iltimos, biroz kuting.",
+      "linkedOrderError": "Bu mahsulot buyurtmalarda ishlatilgan. O'chirib bo'lmaydi, mahsulotni nofaol holatga o'tkazing.",
+      "deleteError": "Mahsulotni o'chirishda xatolik yuz berdi."
     }
   },
   "orders": {

@@ -129,6 +129,135 @@ function readMessageContent(dto: ChatMessageDto): string {
   return '';
 }
 
+const IMAGE_COLLECTION_KEYS = [
+  'image_urls',
+  'imageUrls',
+  'images',
+  'attachments',
+  'photos',
+  'media',
+  'files',
+  'payload',
+  'message',
+] as const;
+
+function isLikelyImageLink(value: string): boolean {
+  const normalized = value.trim().toLowerCase();
+  if (!normalized) {
+    return false;
+  }
+
+  if (
+    normalized.startsWith('https://') ||
+    normalized.startsWith('http://') ||
+    normalized.startsWith('data:image/') ||
+    normalized.startsWith('/') ||
+    normalized.startsWith('./') ||
+    normalized.startsWith('../')
+  ) {
+    return true;
+  }
+
+  return /\.(png|jpe?g|gif|webp|bmp|svg|avif)([?#].*)?$/.test(normalized);
+}
+
+function addImageUrl(
+  bucket: Set<string>,
+  value: unknown,
+) {
+  const normalized = readString(value);
+  if (!normalized || !isLikelyImageLink(normalized)) {
+    return;
+  }
+
+  bucket.add(normalized);
+}
+
+function collectImageUrls(
+  value: unknown,
+  bucket: Set<string>,
+  depth = 0,
+) {
+  if (depth > 6 || value == null) {
+    return;
+  }
+
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (!trimmed) {
+      return;
+    }
+
+    if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
+      try {
+        collectImageUrls(JSON.parse(trimmed) as unknown, bucket, depth + 1);
+        return;
+      } catch {
+        // Preserve non-JSON string candidates.
+      }
+    }
+
+    if (isLikelyImageLink(trimmed)) {
+      bucket.add(trimmed);
+    }
+    return;
+  }
+
+  if (Array.isArray(value)) {
+    value.forEach((item) => collectImageUrls(item, bucket, depth + 1));
+    return;
+  }
+
+  const record = toRecord(value);
+  if (!record) {
+    return;
+  }
+
+  const hasImageContext =
+    record.image_url !== undefined ||
+    record.imageUrl !== undefined ||
+    record.image_urls !== undefined ||
+    record.imageUrls !== undefined ||
+    record.images !== undefined ||
+    record.photo !== undefined ||
+    record.photos !== undefined ||
+    readString(record.type).toLowerCase().includes('image');
+
+  addImageUrl(bucket, record.image_url);
+  addImageUrl(bucket, record.imageUrl);
+  addImageUrl(bucket, record.image);
+
+  if (hasImageContext) {
+    addImageUrl(bucket, record.url);
+    addImageUrl(bucket, record.src);
+  }
+
+  IMAGE_COLLECTION_KEYS.forEach((key) => {
+    collectImageUrls(record[key], bucket, depth + 1);
+  });
+}
+
+function readMessageImageUrls(dto: ChatMessageDto): string[] {
+  const collected = new Set<string>();
+
+  collectImageUrls(dto.image_urls, collected);
+  collectImageUrls(dto.imageUrls, collected);
+  collectImageUrls(dto.images, collected);
+  collectImageUrls(dto.metadata, collected);
+  collectImageUrls(dto.message, collected);
+
+  const contentText = readString(dto.content);
+  if (contentText.startsWith('{') || contentText.startsWith('[')) {
+    try {
+      collectImageUrls(JSON.parse(contentText) as unknown, collected);
+    } catch {
+      // Ignore invalid JSON payload content.
+    }
+  }
+
+  return Array.from(collected);
+}
+
 function normalizeMetadataValue(
   value: unknown,
 ): string | number | boolean | null {
@@ -397,6 +526,7 @@ export function mapChatMessageDtoToModel(
     sender_type: resolveSenderType(dto.sender_type),
     direction: resolveDirection(dto.direction),
     content: readMessageContent(dto),
+    image_urls: readMessageImageUrls(dto),
     external_message_id: readString(dto.external_message_id) || null,
     metadata: mapMetadata(dto.metadata),
     is_read: readBoolean(dto.is_read),

@@ -328,6 +328,8 @@ function ChatPage() {
       return;
     }
 
+    setMessages([]);
+
     const cached = sessionCacheRef.current[activeSessionId];
     if (cached) {
       setActiveSession(cached);
@@ -367,6 +369,7 @@ function ChatPage() {
       sender_type: 'operator',
       direction: 'outgoing',
       content,
+      image_urls: [],
       external_message_id: null,
       metadata: null,
       is_read: true,

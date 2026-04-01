@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
-import { FiPause, FiPlay, FiSend, FiTrash2, FiUser } from 'react-icons/fi';
+import { FiImage, FiPause, FiPlay, FiSend, FiTrash2, FiUser } from 'react-icons/fi';
 import { useTranslation } from 'react-i18next';
 import { ru, uz } from 'date-fns/locale';
 import chatBackground from '../../../assets/chat-background.svg';
@@ -195,6 +195,45 @@ function splitTimeValue(value: string): { hour: string; minute: string } {
   };
 }
 
+function getAttachmentGridClassName(count: number): string {
+  if (count <= 1) {
+    return 'grid grid-cols-1 gap-2';
+  }
+
+  return 'grid grid-cols-2 gap-2';
+}
+
+function getAttachmentTileClassName(count: number, index: number): string {
+  const baseClassName =
+    'group relative overflow-hidden rounded-xl bg-surface-card/55 ring-1 ring-border-soft/45';
+
+  if (count === 1) {
+    return `${baseClassName} aspect-[4/3]`;
+  }
+
+  if (count === 2) {
+    return `${baseClassName} aspect-[4/3]`;
+  }
+
+  if (count === 3 && index === 0) {
+    return `${baseClassName} col-span-2 aspect-[16/9]`;
+  }
+
+  return `${baseClassName} aspect-square`;
+}
+
+function getAttachmentWrapperClassName(count: number): string {
+  if (count <= 1) {
+    return 'w-full max-w-[240px]';
+  }
+
+  if (count === 2) {
+    return 'w-full max-w-[290px]';
+  }
+
+  return 'w-full max-w-[330px]';
+}
+
 function ChatWorkspacePanel({
   session,
   messages,
@@ -217,6 +256,7 @@ function ChatWorkspacePanel({
   const [pauseDate, setPauseDate] = useState<Date | undefined>(undefined);
   const [pauseTimeInput, setPauseTimeInput] = useState('');
   const [pauseInputError, setPauseInputError] = useState<string | null>(null);
+  const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
   const messagesContainerRef = useRef<HTMLDivElement | null>(null);
   const lastScrollSignatureRef = useRef('');
 
@@ -233,6 +273,7 @@ function ChatWorkspacePanel({
     setPauseInputError(null);
     setPauseDate(defaults.date);
     setPauseTimeInput(defaults.time);
+    setPreviewImageUrl(null);
     lastScrollSignatureRef.current = '';
   }, [session?.id]);
 
@@ -248,12 +289,11 @@ function ChatWorkspacePanel({
       return;
     }
 
-    const shouldUseSmoothScroll = lastScrollSignatureRef.current.length > 0;
     lastScrollSignatureRef.current = signature;
 
     container.scrollTo({
       top: container.scrollHeight,
-      behavior: shouldUseSmoothScroll ? 'smooth' : 'auto',
+      behavior: 'auto',
     });
   }, [messages, session]);
 
@@ -548,6 +588,20 @@ function ChatWorkspacePanel({
             <div className="grid gap-3">
               {messages.map((message) => {
                 const outgoing = message.direction === 'outgoing';
+                const hasTextContent = message.content.trim().length > 0;
+                const imageUrls = message.image_urls;
+                const hasImages = imageUrls.length > 0;
+                const attachedImagesLabel =
+                  i18n.language === 'ru' ? 'Прикреплённые фото' : 'Biriktirilgan rasmlar';
+                const attachmentWrapperClassName = [
+                  'mt-2',
+                  getAttachmentWrapperClassName(imageUrls.length),
+                  outgoing ? 'ml-auto' : '',
+                ].join(' ');
+                const attachmentCardClassName = [
+                  'mt-2 w-fit max-w-full rounded-2xl p-2.5 ring-1',
+                  outgoing ? 'ml-auto bg-white/10 ring-white/25' : 'bg-background-subtle/90 ring-border-soft/55',
+                ].join(' ');
 
                 return (
                   <div
@@ -574,9 +628,48 @@ function ChatWorkspacePanel({
                       <p className="m-0 text-[11px] font-semibold uppercase tracking-[0.08em] opacity-80">
                         {senderLabelByValue[message.sender_type]}
                       </p>
-                      <p className="m-0 mt-1 whitespace-pre-wrap text-sm leading-6">
-                        {message.content}
-                      </p>
+                      {hasImages ? (
+                        <div className={attachmentCardClassName}>
+                          <p
+                            className={[
+                              'm-0 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.08em] whitespace-nowrap',
+                              outgoing ? 'text-white/85' : 'text-text-secondary',
+                            ].join(' ')}
+                          >
+                            <FiImage className="h-3 w-3" />
+                            {attachedImagesLabel}
+                          </p>
+                          <div
+                            className={`${attachmentWrapperClassName} ${getAttachmentGridClassName(imageUrls.length)}`}
+                          >
+                            {imageUrls.map((imageUrl, index) => (
+                              <div
+                                key={`${message.id}-image-${index}`}
+                                className={getAttachmentTileClassName(imageUrls.length, index)}
+                              >
+                                <button
+                                  type="button"
+                                  className="h-full w-full cursor-zoom-in"
+                                  onClick={() => setPreviewImageUrl(imageUrl)}
+                                  aria-label={attachedImagesLabel}
+                                >
+                                  <img
+                                    src={imageUrl}
+                                    alt={`${attachedImagesLabel} ${index + 1}`}
+                                    className="h-full w-full object-cover transition duration-fast group-hover:scale-[1.015]"
+                                    loading="lazy"
+                                  />
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ) : null}
+                      {hasTextContent ? (
+                        <p className="m-0 mt-1 whitespace-pre-wrap text-sm leading-6">
+                          {message.content}
+                        </p>
+                      ) : null}
                       <p
                         className={[
                           'm-0 mt-2 text-[11px]',
@@ -632,6 +725,37 @@ function ChatWorkspacePanel({
         isOpen={isProfilePanelOpen}
         onClose={() => setIsProfilePanelOpen(false)}
       />
+
+      {previewImageUrl ? (
+        <div
+          className="fixed inset-0 z-[180] flex items-center justify-center bg-background-overlay/86 p-3 backdrop-blur-[3px] min-[640px]:p-6"
+          onClick={(event) => {
+            event.stopPropagation();
+            setPreviewImageUrl(null);
+          }}
+          role="presentation"
+        >
+          <div
+            className="relative flex w-full max-w-[980px] items-center justify-center rounded-2xl bg-surface-card/95 p-2 shadow-xl ring-1 ring-border-soft/55 min-[640px]:p-3"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <img
+              src={previewImageUrl}
+              alt={i18n.language === 'ru' ? 'Прикреплённое фото' : 'Biriktirilgan rasm'}
+              className="max-h-[82vh] w-full rounded-xl object-contain"
+            />
+
+            <button
+              type="button"
+              className="absolute right-3 top-3 inline-flex h-9 w-9 items-center justify-center rounded-lg bg-surface-subtle/92 text-text-primary shadow-sm transition duration-fast hover:bg-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20"
+              onClick={() => setPreviewImageUrl(null)}
+              aria-label={i18n.language === 'ru' ? 'Закрыть' : 'Yopish'}
+            >
+              <AppIcon name="close" className="h-4.5 w-4.5" aria-hidden="true" />
+            </button>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

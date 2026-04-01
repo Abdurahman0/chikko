@@ -42,6 +42,7 @@ import type {
   SessionListParams,
   TableQueryParams,
   ManagedUser,
+  LogCleanupSettingsPatchInput,
   LogListParams,
   SystemHealth,
   UserListParams,
@@ -331,6 +332,8 @@ export interface LogsService {
   getHealth(): Promise<SystemHealth>;
   listLogs(params?: LogListParams): Promise<PaginatedResult<AppLog>>;
   getLogById(id: EntityId): Promise<AppLog | null>;
+  getCleanupSettings(): Promise<AppLog | null>;
+  patchCleanupSettings(input: LogCleanupSettingsPatchInput): Promise<AppLog | null>;
 }
 
 export interface UserService {
