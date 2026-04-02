@@ -42,6 +42,33 @@ function readBoolean(value: unknown): boolean {
   return Boolean(value);
 }
 
+function readBooleanStrict(value: unknown): boolean | undefined {
+  if (typeof value === 'boolean') {
+    return value;
+  }
+
+  if (typeof value === 'number') {
+    if (value === 1) {
+      return true;
+    }
+    if (value === 0) {
+      return false;
+    }
+  }
+
+  if (typeof value === 'string') {
+    const normalized = value.trim().toLowerCase();
+    if (normalized === 'true' || normalized === '1') {
+      return true;
+    }
+    if (normalized === 'false' || normalized === '0') {
+      return false;
+    }
+  }
+
+  return undefined;
+}
+
 function readNumber(value: unknown): number | null {
   if (typeof value === 'number' && Number.isFinite(value)) {
     return value;
@@ -491,6 +518,12 @@ export function mapConversationDtoToModel(dto: ConversationDto): Conversation {
     !lastMessagePayload.is_read
       ? 1
       : 0;
+  const topLevelOperatorNeeded = readBooleanStrict(dto.operator_needed ?? dto.operatorNeeded);
+  const stateOperatorNeeded = readBooleanStrict(
+    stateData?.operator_needed ?? stateData?.operatorNeeded,
+  );
+  const operatorNeededDefined =
+    topLevelOperatorNeeded !== undefined || stateOperatorNeeded !== undefined;
 
   return {
     id: sessionId,
@@ -501,6 +534,8 @@ export function mapConversationDtoToModel(dto: ConversationDto): Conversation {
     assigned_operator: mapUserSummary(dto.assigned_operator),
     ai_paused_until: readString(dto.ai_paused_until) || null,
     is_operator_active: readBoolean(dto.is_operator_active),
+    operator_needed: topLevelOperatorNeeded ?? stateOperatorNeeded ?? false,
+    operator_needed_defined: operatorNeededDefined,
     last_message_at: readString(dto.last_message_at) || null,
     state: resolveConversationState(dto, stateData),
     state_data: stateData,

@@ -34,9 +34,18 @@ function applySessionUpdate(
     }
 
     matched = true;
+
+    const resolvedOperatorNeeded =
+      nextSession.operator_needed_defined === false || nextSession.operator_needed_defined == null
+        ? session.operator_needed
+        : nextSession.operator_needed;
+
     return {
       ...session,
       ...nextSession,
+      operator_needed: resolvedOperatorNeeded,
+      operator_needed_defined:
+        session.operator_needed_defined === true || nextSession.operator_needed_defined === true,
     };
   });
 
@@ -404,6 +413,7 @@ function ChatPage() {
               assigned_operator: null,
               ai_paused_until: null,
               is_operator_active: false,
+              operator_needed: false,
               last_message_at: null,
               state: 'open',
               last_message: null,

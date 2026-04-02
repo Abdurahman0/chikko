@@ -27,6 +27,8 @@ export interface Conversation {
   assigned_operator: UserSummary | null;
   ai_paused_until: TimestampString | null;
   is_operator_active: boolean;
+  operator_needed: boolean;
+  operator_needed_defined?: boolean;
   last_message_at: TimestampString | null;
   state: ConversationState;
   state_data?: Record<string, unknown> | null;

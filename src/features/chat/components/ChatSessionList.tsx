@@ -1,5 +1,5 @@
 import { FaInstagram, FaTelegramPlane } from 'react-icons/fa';
-import { FiEdit3, FiGlobe } from 'react-icons/fi';
+import { FiAlertTriangle, FiEdit3, FiGlobe } from 'react-icons/fi';
 import { EmptyState, LoadingState } from '../../../components/shared/page';
 import type { Conversation, EntityId } from '../../../types/domain';
 
@@ -117,6 +117,20 @@ function ChatSessionList({
   hasError,
   onSelectSession,
 }: ChatSessionListProps) {
+  const prioritizedSessions: Conversation[] = [];
+  const regularSessions: Conversation[] = [];
+
+  sessions.forEach((session) => {
+    if (session.operator_needed) {
+      prioritizedSessions.push(session);
+      return;
+    }
+
+    regularSessions.push(session);
+  });
+
+  const visibleSessions = [...prioritizedSessions, ...regularSessions];
+
   if (isLoading) {
     return (
       <LoadingState
@@ -146,7 +160,7 @@ function ChatSessionList({
 
   return (
     <div className="grid w-full min-w-0 gap-2 pb-1 pr-1">
-      {sessions.map((session) => {
+      {visibleSessions.map((session) => {
         const isSelected = selectedSessionId === session.id;
         const unreadCount = unreadBySessionId[session.id] ?? 0;
         const aiPaused = hasAiPause(session);
@@ -224,6 +238,12 @@ function ChatSessionList({
               <span className="inline-flex min-h-6 items-center rounded-pill bg-surface-card px-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-text-secondary ring-1 ring-border-soft/45">
                 {sessionStateLabel[session.state]}
               </span>
+              {session.operator_needed ? (
+                <span className="inline-flex min-h-6 items-center gap-1 rounded-pill bg-warning-bg px-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-warning ring-1 ring-warning/30">
+                  <FiAlertTriangle className="h-3 w-3" aria-hidden="true" />
+                  Operator Kerak
+                </span>
+              ) : null}
               {aiPaused ? (
                 <span className="inline-flex min-h-6 items-center rounded-pill bg-warning-bg px-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-warning">
                   AI to'xtatilgan
