@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ru, uz } from 'date-fns/locale';
 import { type DateRange } from 'react-day-picker';
+import { DataTable, type DataTableColumn } from '../../../components/shared/data';
 import AppIcon from '../../../components/shared/icons/AppIcon';
 import { PageLayout } from '../../../components/shared/page';
 import { Calendar } from '../../../components/ui/calendar';
@@ -30,6 +31,7 @@ import type {
   DashboardInterval,
   DashboardOverview,
   DashboardOverviewParams,
+  DashboardTopProduct,
 } from '../../../services';
 import type { LeadStatus } from '../../../types/domain';
 import {
@@ -79,6 +81,12 @@ const CHIP_TONE_CLASS_NAMES = {
   info: 'bg-info-bg text-info',
   neutral: 'bg-neutral-bg text-neutral',
 } as const;
+
+const tablePrimaryTextClassName =
+  'block max-w-[180px] truncate text-sm font-semibold leading-[1.35] text-text-primary min-[640px]:max-w-[320px]';
+
+const tableSecondaryTextClassName =
+  'block max-w-[180px] truncate text-[12px] leading-[1.45] text-text-secondary min-[640px]:max-w-[320px]';
 
 type ChipTone = keyof typeof CHIP_TONE_CLASS_NAMES;
 
@@ -576,6 +584,41 @@ function DashboardPage() {
       label: getChannelLabel(t, item.key, item.label),
     }),
   );
+  const topProducts = overview.breakdowns.top_products.slice(0, 15);
+  const topProductColumns: DataTableColumn<DashboardTopProduct>[] = [
+    {
+      key: 'product',
+      label: t('dashboard.topProducts.columns.product'),
+      render: (item) => (
+        <div className="grid gap-0.5">
+          <span className={tablePrimaryTextClassName}>{item.label}</span>
+          <span className={tableSecondaryTextClassName}>
+            {item.product_id ?? item.key}
+          </span>
+        </div>
+      ),
+    },
+    {
+      key: 'sold',
+      label: t('dashboard.topProducts.columns.sold'),
+      align: 'right',
+      render: (item) => (
+        <span className="block text-right text-sm font-semibold text-text-primary">
+          {formatCount(item.count, locale)}
+        </span>
+      ),
+    },
+    {
+      key: 'revenue',
+      label: t('dashboard.topProducts.columns.revenue'),
+      align: 'right',
+      render: (item) => (
+        <span className="block text-right text-sm font-semibold text-text-primary">
+          {formatAmount(item.revenue ?? '0', locale)}
+        </span>
+      ),
+    },
+  ];
   const metricCards = [
     {
       label: t('dashboard.metrics.leads'),
@@ -1101,6 +1144,34 @@ function DashboardPage() {
                   })}
                 </ul>
               </div>
+            </div>
+          </article>
+        </section>
+
+        <section>
+          <article className="rounded-xl bg-surface-card p-5 shadow-sm ring-1 ring-border-soft/40 transition duration-base hover:shadow-md hover:ring-border-soft/60">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h2 className="m-0 text-[1.14rem] font-semibold text-text-primary">
+                {t('dashboard.sections.topProducts')}
+              </h2>
+              <p className="m-0 text-[12px] font-medium text-text-muted">
+                {t('dashboard.topProducts.hint')}
+              </p>
+            </div>
+            <p className="mt-1 text-sm text-text-secondary">
+              {t('dashboard.descriptions.topProducts')}
+            </p>
+
+            <div className="mt-4">
+              <DataTable
+                data={topProducts}
+                columns={topProductColumns}
+                rowKey={(item, index) =>
+                  item.product_id ?? item.key ?? `top-product-${index}`
+                }
+                emptyTitle={t('dashboard.topProducts.empty')}
+                emptyDescription={t('dashboard.descriptions.topProducts')}
+              />
             </div>
           </article>
         </section>

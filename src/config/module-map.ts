@@ -182,12 +182,38 @@ export const moduleMap: AppModule[] = [
       'Priority is ahead of payments and basic products because it is central to the operational sales flow.',
   },
   {
+    id: 'couriers',
+    label: 'Couriers',
+    description: 'Courier directory and delivery assignment flow.',
+    category: 'operational',
+    priority: 'medium',
+    priorityOrder: 4,
+    allowedRoles: ['developer', 'admin', 'operator'],
+    accessStrategy: 'permission-based',
+    pages: [
+      {
+        id: 'couriers-list',
+        label: 'Courier Workspace',
+        kind: 'list',
+        path: '/couriers',
+      },
+      {
+        id: 'couriers-order-detail',
+        label: 'Courier Order Detail',
+        kind: 'detail',
+        path: '/couriers/orders/:courierOrderId',
+      },
+    ],
+    notes:
+      'Operational module for delivery agents and courier-order lifecycle updates.',
+  },
+  {
     id: 'payments',
     label: 'Payments',
     description: 'Transactions, balances, and payment states.',
     category: 'operational',
     priority: 'medium',
-    priorityOrder: 4,
+    priorityOrder: 5,
     allowedRoles: ['developer', 'admin', 'operator'],
     accessStrategy: 'permission-based',
     pages: [
@@ -219,7 +245,7 @@ export const moduleMap: AppModule[] = [
     description: 'Conversations and inbox handling.',
     category: 'operational',
     priority: 'medium',
-    priorityOrder: 6,
+    priorityOrder: 7,
     allowedRoles: ['developer', 'admin', 'operator'],
     accessStrategy: 'permission-based',
     pages: [
@@ -245,7 +271,7 @@ export const moduleMap: AppModule[] = [
     description: 'Alerts and workflow updates.',
     category: 'operational',
     priority: 'medium',
-    priorityOrder: 8,
+    priorityOrder: 9,
     allowedRoles: ['developer', 'admin', 'operator'],
     accessStrategy: 'permission-based',
     pages: [
@@ -271,7 +297,7 @@ export const moduleMap: AppModule[] = [
     description: 'Account settings and preferences.',
     category: 'personal',
     priority: 'low',
-    priorityOrder: 9,
+    priorityOrder: 10,
     allowedRoles: ['developer', 'admin', 'operator'],
     accessStrategy: 'static-role-based',
     pages: [
@@ -297,7 +323,7 @@ export const moduleMap: AppModule[] = [
     description: 'User access and account management.',
     category: 'system',
     priority: 'low',
-    priorityOrder: 10,
+    priorityOrder: 11,
     allowedRoles: ['developer', 'admin', 'operator'],
     accessStrategy: 'permission-based',
     pages: [
@@ -317,7 +343,7 @@ export const moduleMap: AppModule[] = [
     description: 'Connected apps and external channels.',
     category: 'system',
     priority: 'low',
-    priorityOrder: 11,
+    priorityOrder: 12,
     allowedRoles: ['developer', 'admin', 'operator'],
     accessStrategy: 'permission-based',
     pages: [
@@ -337,7 +363,7 @@ export const moduleMap: AppModule[] = [
     description: 'AI agent setup and guardrails.',
     category: 'intelligence',
     priority: 'low',
-    priorityOrder: 12,
+    priorityOrder: 13,
     allowedRoles: ['developer'],
     accessStrategy: 'static-role-based',
     pages: [
@@ -369,7 +395,7 @@ export const moduleMap: AppModule[] = [
     description: 'Audit trail and system events.',
     category: 'system',
     priority: 'low',
-    priorityOrder: 13,
+    priorityOrder: 14,
     allowedRoles: ['developer'],
     accessStrategy: 'static-role-based',
     pages: [

@@ -2,6 +2,7 @@ import type { AppServices } from './core';
 import {
   apiAISettingsService,
   apiConversationService,
+  apiCourierService,
   apiCustomerService,
   apiDashboardService,
   apiIntegrationsService,
@@ -17,6 +18,7 @@ import {
 
 export const services: AppServices = {
   dashboard: apiDashboardService,
+  couriers: apiCourierService,
   leads: apiLeadService,
   customers: apiCustomerService,
   products: apiProductService,

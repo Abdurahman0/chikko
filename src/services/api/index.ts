@@ -1,4 +1,5 @@
 export * from './conversation-service';
+export * from './couriers.service';
 export * from './customer-service';
 export * from './dashboard-service';
 export * from './auth.service';

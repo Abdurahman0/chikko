@@ -33,6 +33,7 @@ interface ProductFormState {
   currency: string;
   stockQuantity: string;
   minimalStock: string;
+  isPromoted: boolean;
   isActive: boolean;
   categoryId: string;
 }
@@ -133,6 +134,7 @@ function createInitialState(
       currency: product.currency,
       stockQuantity: String(product.stockQuantity ?? 0),
       minimalStock: String(product.minimalStock ?? 0),
+      isPromoted: product.isPromoted,
       isActive: product.isActive,
       categoryId:
         normalizeString(product.categoryId) ||
@@ -148,6 +150,7 @@ function createInitialState(
     currency: fallbackCurrency,
     stockQuantity: '0',
     minimalStock: '0',
+    isPromoted: false,
     isActive: true,
     categoryId: '',
   };
@@ -412,6 +415,7 @@ function ProductFormPanel({
       currency: form.currency,
       stockQuantity: Math.floor(parsedStock),
       minimalStock: Math.floor(parsedMinimalStock),
+      isPromoted: form.isPromoted,
       isActive: form.isActive,
     }, {
       newImages,
@@ -676,6 +680,24 @@ function ProductFormPanel({
               checked={form.isActive}
               onChange={(nextValue) =>
                 setForm((current) => ({ ...current, isActive: nextValue }))
+              }
+              disabled={isSubmitting}
+            />
+          </div>
+
+          <div className="flex items-center justify-between gap-4 rounded-xl bg-surface-card px-4 py-4 ring-1 ring-border-soft/35">
+            <div className="grid gap-0.5">
+              <p className="m-0 text-sm font-semibold text-text-primary">
+                {t('products.form.promotedProduct')}
+              </p>
+              <p className="m-0 text-[12px] text-text-secondary">
+                {t('products.form.promotedProductHint')}
+              </p>
+            </div>
+            <Switch
+              checked={form.isPromoted}
+              onChange={(nextValue) =>
+                setForm((current) => ({ ...current, isPromoted: nextValue }))
               }
               disabled={isSubmitting}
             />

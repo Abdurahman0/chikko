@@ -58,6 +58,7 @@ export interface Product extends AuditInfo {
   currency: CurrencyCode;
   stockQuantity?: number;
   minimalStock?: number;
+  isPromoted: boolean;
   isActive: boolean;
   embedding?: number[] | null;
   metadata?: Record<string, string | number | boolean | null> | null;
@@ -75,6 +76,7 @@ export interface ProductMutationInput {
   currency: CurrencyCode;
   stockQuantity: number;
   minimalStock: number;
+  isPromoted: boolean;
   isActive: boolean;
 }
 

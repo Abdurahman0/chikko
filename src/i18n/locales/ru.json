@@ -59,6 +59,10 @@
       "title": "Заказы",
       "description": "Управление заказами."
     },
+    "couriers": {
+      "title": "Курьеры",
+      "description": "Управление профилями курьеров и назначениями доставки."
+    },
     "payments": {
       "title": "Платежи",
       "description": "Статус платежей и транзакции."
@@ -108,6 +112,7 @@
       "customers": "Клиенты",
       "products": "Каталог",
       "orders": "Заказы",
+      "couriers": "Доставка",
       "payments": "Транзакции",
       "chat": "Сообщения",
       "notifications": "Оповещения",
@@ -234,17 +239,28 @@
       "orderStatus": "Статус заказа",
       "paymentStatus": "Статус платежа",
       "chatChannels": "Каналы чата",
-      "performance": "Ключевые показатели"
+      "performance": "Ключевые показатели",
+      "topProducts": "Топ товары"
     },
     "descriptions": {
       "trend": "Динамика лидов, клиентов и заказов за выбранный период.",
       "source": "Самые активные каналы по объёму лидов.",
-      "leadStatus": "Распределение статусов по воронке."
+      "leadStatus": "Распределение статусов по воронке.",
+      "topProducts": "Список самых продаваемых товаров по объёму продаж."
     },
     "performance": {
       "leadConversionRate": "Коэффициент конверсии лидов",
       "orderCompletionRate": "Коэффициент завершения заказов",
       "averageOrderValue": "Средняя стоимость заказа"
+    },
+    "topProducts": {
+      "hint": "Смотрите строки товаров для подробностей",
+      "empty": "Топ товары пока недоступны.",
+      "columns": {
+        "product": "Товар",
+        "sold": "Продано",
+        "revenue": "Выручка"
+      }
     },
     "noLeads": "Лидов нет",
     "filters": {
@@ -607,6 +623,9 @@
     "activeFilters": "активных",
     "catalogTitle": "Каталог товаров",
     "catalogHint": "Нажмите на строку, чтобы посмотреть детали",
+    "promotedCatalogTitle": "Рекламные товары",
+    "promotedCatalogHint": "Список товаров, отмеченных для рекламы",
+    "promotedCountLabel": "рекламных товаров",
     "categoriesCatalogTitle": "Каталог категорий",
     "categoriesCatalogHint": "Выберите действие для редактирования категории",
     "loadingTitle": "Загрузка товаров",
@@ -638,6 +657,7 @@
       "actions": "Действия"
     },
     "noDescription": "Нет описания",
+    "promotedBadge": "Реклама",
     "actions": {
       "edit": "Редактировать",
       "delete": "Удалить"
@@ -720,6 +740,8 @@
       "currency": "Валюта",
       "activeProduct": "Активный товар",
       "activeProductHint": "Включите или выключите отображение товара в операциях.",
+      "promotedProduct": "Рекламный товар",
+      "promotedProductHint": "Включите, чтобы показывать товар в рекламном блоке.",
       "currentImages": "Текущие изображения",
       "images": "Изображения",
       "removeImage": "Удалить изображение",
@@ -873,6 +895,163 @@
       "description": "Это действие удалит заказ из списка и не может быть отменено.",
       "confirm": "Удалить заказ",
       "deleting": "Удаление..."
+    }
+  },
+  "couriers": {
+    "title": "Курьеры",
+    "subtitle": "Управляйте профилями курьеров и назначениями доставки в одном окне.",
+    "tabs": {
+      "couriers": "Курьеры",
+      "orders": "Заказы курьеров"
+    },
+    "newCourier": "Новый курьер",
+    "records": "записей",
+    "activeFilters": "активных фильтров",
+    "courierDetailOpen": "Детали курьера открыты",
+    "orderDetailOpen": "Детали заказа открыты",
+    "searchCourierPlaceholder": "Поиск по имени курьера, username, телефону или telegram ID...",
+    "searchOrderPlaceholder": "Поиск по заказу, курьеру, статусу или причине...",
+    "filters": {
+      "status": "Статус",
+      "courier": "Курьер",
+      "orderBy": "Сортировка"
+    },
+    "status": {
+      "all": "Все",
+      "active": "Активные",
+      "inactive": "Неактивные"
+    },
+    "orderStatus": {
+      "all": "Все статусы",
+      "pending": "В ожидании",
+      "assigned": "Назначен",
+      "in_transit": "В пути",
+      "delivered": "Доставлен"
+    },
+    "ordering": {
+      "updatedNewest": "Обновлено (сначала новые)",
+      "updatedOldest": "Обновлено (сначала старые)",
+      "createdNewest": "Добавлено (сначала новые)",
+      "createdOldest": "Добавлено (сначала старые)",
+      "nameAsc": "Имя (A-Z)",
+      "nameDesc": "Имя (Z-A)",
+      "statusAsc": "Статус (A-Z)",
+      "statusDesc": "Статус (Z-A)"
+    },
+    "courierListTitle": "Каталог курьеров",
+    "courierListHint": "Нажмите на строку, чтобы открыть профиль.",
+    "courierLoadingTitle": "Загрузка курьеров",
+    "courierLoadingDescription": "Получение списка курьеров и их статусов.",
+    "courierErrorTitle": "Курьеры недоступны",
+    "courierErrorDescription": "Не удалось загрузить курьеров из текущего сервиса.",
+    "courierEmptyTitle": "Подходящий курьер не найден",
+    "courierEmptyDescription": "Измените поиск или фильтры и попробуйте снова.",
+    "orderListTitle": "Заказы курьеров",
+    "orderListHint": "Откройте строку для обновления.",
+    "orderLoadingTitle": "Загрузка заказов курьеров",
+    "orderLoadingDescription": "Получение назначений доставки и статусов.",
+    "orderErrorTitle": "Заказы курьеров недоступны",
+    "orderErrorDescription": "Не удалось загрузить заказы курьеров из текущего сервиса.",
+    "orderEmptyTitle": "Подходящий заказ курьера не найден",
+    "orderEmptyDescription": "Измените поиск или фильтры и попробуйте снова.",
+    "columns": {
+      "courier": "Курьер",
+      "phone": "Телефон",
+      "telegramId": "Telegram ID",
+      "status": "Статус",
+      "updated": "Обновлён",
+      "actions": "Действия",
+      "order": "Заказ",
+      "cancelReason": "Причина отмены"
+    },
+    "actions": {
+      "edit": "Редактировать",
+      "delete": "Удалить",
+      "open": "Открыть",
+      "setActive": "Активировать",
+      "setInactive": "Деактивировать",
+      "savePatch": "Сохранить",
+      "replacePut": "Заменить",
+      "repostOffer": "Переотправить предложение"
+    },
+    "form": {
+      "eyebrow": "Форма курьера",
+      "titleCreate": "Добавить курьера",
+      "titleEdit": "Редактировать курьера",
+      "close": "Закрыть форму курьера",
+      "firstName": "Имя",
+      "telegramUserId": "Telegram ID пользователя",
+      "username": "Username",
+      "phone": "Телефон",
+      "isActive": "Активный курьер",
+      "isActiveHint": "Неактивные курьеры исключаются из назначений.",
+      "metadata": "Метаданные (JSON)",
+      "firstNameRequired": "Имя обязательно.",
+      "metadataObjectError": "Метаданные должны быть JSON object.",
+      "metadataJsonError": "Метаданные должны быть валидным JSON.",
+      "createSubmit": "Добавить курьера",
+      "editSubmit": "Сохранить изменения",
+      "creating": "Добавление...",
+      "saving": "Сохранение...",
+      "saveError": "Не удалось сохранить курьера."
+    },
+    "deleteDialog": {
+      "eyebrow": "Удаление курьера",
+      "title": "Удалить курьера {{name}}",
+      "description": "Это действие необратимо. Запись курьера будет удалена.",
+      "confirm": "Да, удалить",
+      "deleting": "Удаление..."
+    },
+    "detail": {
+      "ariaLabel": "Детали курьера",
+      "title": "Профиль курьера",
+      "close": "Закрыть детали курьера",
+      "loadingTitle": "Загрузка деталей курьера",
+      "loadingDescription": "Получение профиля выбранного курьера.",
+      "errorTitle": "Курьер недоступен",
+      "errorDescription": "Не удалось загрузить выбранного курьера.",
+      "contact": "Контакт",
+      "metadata": "Метаданные",
+      "created": "Создан",
+      "updated": "Обновлён",
+      "noMetadata": "Метаданные отсутствуют."
+    },
+    "orderDetail": {
+      "ariaLabel": "Детали заказа курьера",
+      "title": "Заказ курьера",
+      "close": "Закрыть детали заказа курьера",
+      "loadingTitle": "Загрузка заказа курьера",
+      "loadingDescription": "Получение деталей назначения заказа.",
+      "errorTitle": "Заказ курьера недоступен",
+      "errorDescription": "Не удалось загрузить выбранный заказ курьера.",
+      "orderSummaryTitle": "Детали заказа",
+      "orderSummaryDescription": "Контакт, адрес и состав заказа.",
+      "orderId": "ID заказа",
+      "status": "Статус",
+      "awaitingCancelReason": "Ожидается причина отмены",
+      "cancelReason": "Причина отмены",
+      "contactName": "Имя контакта",
+      "contactPhone": "Телефон контакта",
+      "shippingAddress": "Адрес доставки",
+      "totalAmount": "Общая сумма",
+      "items": "Товары заказа",
+      "itemColumns": {
+        "product": "Товар",
+        "quantity": "Количество",
+        "unitPrice": "Цена за единицу",
+        "lineTotal": "Итог по строке"
+      },
+      "noItems": "Товары в заказе отсутствуют.",
+      "metadata": "Метаданные (JSON)",
+      "acceptedAt": "Принят",
+      "inTransitAt": "В пути",
+      "deliveredAt": "Доставлен",
+      "updated": "Обновлён",
+      "replacing": "Замена...",
+      "reposting": "Переотправка...",
+      "orderIdRequired": "Для PUT требуется ID заказа.",
+      "saveError": "Не удалось обновить заказ курьера.",
+      "repostError": "Не удалось переотправить предложение."
     }
   },
   "payments": {

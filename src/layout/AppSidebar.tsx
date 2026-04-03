@@ -23,6 +23,7 @@ const navigationItemMeta: Record<
   customers: { caption: 'Accounts' },
   products: { caption: 'Catalog' },
   orders: { caption: 'Fulfillment' },
+  couriers: { caption: 'Delivery' },
   payments: { caption: 'Transactions' },
   chat: { caption: 'Inbox' },
   notifications: { caption: 'Alerts', label: 'Alerts' },

@@ -21,6 +21,7 @@ import {
   FiSettings,
   FiShoppingBag,
   FiSun,
+  FiTruck,
   FiTrendingDown,
   FiTrendingUp,
   FiUser,
@@ -39,6 +40,7 @@ export type AppIconName =
   | 'customers'
   | 'products'
   | 'orders'
+  | 'couriers'
   | 'payments'
   | 'chat'
   | 'notifications'
@@ -77,6 +79,7 @@ const ICON_MAP: Record<AppIconName, IconType> = {
   customers: FiUsers,
   products: FiBox,
   orders: FiShoppingBag,
+  couriers: FiTruck,
   payments: FiCreditCard,
   chat: FiMessageSquare,
   notifications: FiBell,

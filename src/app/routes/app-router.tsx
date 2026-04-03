@@ -18,6 +18,7 @@ const pageRegistry: Record<RoutedPageId, ComponentType> = {
   ),
   'ai-settings': lazyRoute(() => import('../pages/protected/AiSettingsPage'), 'ai-settings'),
   chat: lazyRoute(() => import('../pages/protected/ChatPage'), 'chat'),
+  couriers: lazyRoute(() => import('../pages/protected/CouriersPage'), 'couriers'),
   customers: lazyRoute(() => import('../pages/protected/CustomersPage'), 'customers'),
   dashboard: lazyRoute(() => import('../pages/protected/DashboardPage'), 'dashboard'),
   integrations: lazyRoute(

@@ -70,12 +70,21 @@ function mapBreakdownItems(value: unknown): DashboardBreakdownItem[] {
 function mapTopProducts(value: unknown): DashboardTopProduct[] {
   return toArray(value).map((item, index) => {
     const itemRecord = toRecord(item) ?? {};
-    const key = readString(itemRecord.key) || `product-${index}`;
+    const productId =
+      readString(itemRecord.product_id) ||
+      readString(itemRecord.productId) ||
+      readString(itemRecord.key) ||
+      `product-${index}`;
+    const quantity = readCount(
+      itemRecord.quantity !== undefined ? itemRecord.quantity : itemRecord.count,
+    );
+    const label = readString(itemRecord.name) || readString(itemRecord.label) || productId;
 
     return {
-      key,
-      label: readString(itemRecord.label) || key,
-      count: readCount(itemRecord.count),
+      product_id: productId,
+      key: productId,
+      label,
+      count: quantity,
       revenue: readDecimalString(itemRecord.revenue),
     };
   });

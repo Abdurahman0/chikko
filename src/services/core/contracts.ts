@@ -3,6 +3,14 @@ import type {
   AISettingMutationInput,
   AISettingPatchInput,
   AISettingsListParams,
+  Courier,
+  CourierListParams,
+  CourierMutationInput,
+  CourierOrder,
+  CourierOrderListParams,
+  CourierOrderMutationInput,
+  CourierOrderPatchInput,
+  CourierPatchInput,
   IntegrationConfig,
   IntegrationConfigListParams,
   IntegrationConfigMutationInput,
@@ -53,6 +61,7 @@ import type {
 
 export type ServiceModuleKey =
   | 'dashboard'
+  | 'couriers'
   | 'leads'
   | 'customers'
   | 'products'
@@ -81,6 +90,7 @@ export interface DashboardBreakdownItem {
 }
 
 export interface DashboardTopProduct {
+  product_id?: string;
   key: string;
   label: string;
   count: number;
@@ -178,6 +188,51 @@ export interface LeadService {
   patchLead(id: EntityId, input: LeadPatchInput): Promise<Lead | null>;
   delete(id: EntityId): Promise<boolean>;
   deleteLead(id: EntityId): Promise<boolean>;
+}
+
+export interface CourierService {
+  list(params?: CourierListParams): Promise<PaginatedResult<Courier>>;
+  getById(id: EntityId): Promise<Courier | null>;
+  create(input: CourierMutationInput): Promise<Courier>;
+  update(id: EntityId, input: CourierMutationInput): Promise<Courier | null>;
+  patch(id: EntityId, input: CourierPatchInput): Promise<Courier | null>;
+  delete(id: EntityId): Promise<boolean>;
+  listOrders(params?: CourierOrderListParams): Promise<PaginatedResult<CourierOrder>>;
+  getOrderById(id: EntityId): Promise<CourierOrder | null>;
+  updateOrder(
+    id: EntityId,
+    input: CourierOrderMutationInput,
+  ): Promise<CourierOrder | null>;
+  patchOrder(
+    id: EntityId,
+    input: CourierOrderPatchInput,
+  ): Promise<CourierOrder | null>;
+  repostOrder(
+    id: EntityId,
+    input?: CourierOrderPatchInput,
+  ): Promise<CourierOrder | null>;
+  listCouriers(params?: CourierListParams): Promise<PaginatedResult<Courier>>;
+  getCourierById(id: EntityId): Promise<Courier | null>;
+  createCourier(input: CourierMutationInput): Promise<Courier>;
+  updateCourier(id: EntityId, input: CourierMutationInput): Promise<Courier | null>;
+  patchCourier(id: EntityId, input: CourierPatchInput): Promise<Courier | null>;
+  deleteCourier(id: EntityId): Promise<boolean>;
+  listCourierOrders(
+    params?: CourierOrderListParams,
+  ): Promise<PaginatedResult<CourierOrder>>;
+  getCourierOrderById(id: EntityId): Promise<CourierOrder | null>;
+  updateCourierOrder(
+    id: EntityId,
+    input: CourierOrderMutationInput,
+  ): Promise<CourierOrder | null>;
+  patchCourierOrder(
+    id: EntityId,
+    input: CourierOrderPatchInput,
+  ): Promise<CourierOrder | null>;
+  repostCourierOrder(
+    id: EntityId,
+    input?: CourierOrderPatchInput,
+  ): Promise<CourierOrder | null>;
 }
 
 export interface CustomerService {
@@ -350,6 +405,7 @@ export interface UserService {
 
 export interface AppServices {
   dashboard: DashboardService;
+  couriers: CourierService;
   leads: LeadService;
   customers: CustomerService;
   products: ProductService;

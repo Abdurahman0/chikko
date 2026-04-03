@@ -39,7 +39,7 @@ import type {
 } from '../../../types/domain';
 
 type ActiveFilter = 'all' | 'active' | 'inactive';
-type CatalogView = 'products' | 'categories';
+type CatalogView = 'products' | 'promoted' | 'categories';
 type ProductOrdering =
   | '-created_at'
   | 'created_at'
@@ -280,7 +280,7 @@ function ProductsPage() {
     {
       deserialize: (value) => {
         const parsed = JSON.parse(value);
-        return parsed === 'categories' ? 'categories' : 'products';
+        return parsed === 'categories' || parsed === 'promoted' ? parsed : 'products';
       },
     },
   );
@@ -381,7 +381,7 @@ function ProductsPage() {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [debouncedSearch, currencyFilter, categoryFilter, activeFilter, ordering]);
+  }, [catalogView, debouncedSearch, currencyFilter, categoryFilter, activeFilter, ordering]);
 
   useEffect(() => {
     setCategoryCurrentPage(1);
@@ -551,6 +551,7 @@ function ProductsPage() {
             currencyFilter === ALL_CURRENCIES_VALUE ? undefined : currencyFilter,
           is_active:
             activeFilter === 'all' ? undefined : activeFilter === 'active',
+          is_promoted: catalogView === 'promoted' ? true : undefined,
           ordering,
           ...sortConfig,
         });
@@ -589,6 +590,7 @@ function ProductsPage() {
     };
   }, [
     activeFilter,
+    catalogView,
     categoryFilter,
     currencyFilter,
     currentPage,
@@ -994,6 +996,11 @@ function ProductsPage() {
                   {t('products.lowStockWarning', { defaultValue: 'Kam zaxira' })}
                 </span>
               ) : null}
+              {product.isPromoted ? (
+                <span className="inline-flex items-center gap-1 rounded-pill bg-primary/12 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-text-accent">
+                  {t('products.promotedBadge')}
+                </span>
+              ) : null}
             </div>
           </div>
           );
@@ -1232,11 +1239,9 @@ function ProductsPage() {
     Number(categoryActiveFilter !== 'all') +
     Number(categoryOrdering !== DEFAULT_CATEGORY_ORDERING);
   const activeFilterCount =
-    catalogView === 'products' ? productActiveFilterCount : categoryActiveFilterCount;
+    catalogView === 'categories' ? categoryActiveFilterCount : productActiveFilterCount;
   const activeTotalItems =
-    catalogView === 'products'
-      ? paginationMeta.totalItems
-      : categoryPaginationMeta.totalItems;
+    catalogView === 'categories' ? categoryPaginationMeta.totalItems : paginationMeta.totalItems;
 
   const formCurrencyOptions = useMemo<SelectOption[]>(() => {
     const filtered = currencyOptions.filter(
@@ -1279,9 +1284,11 @@ function ProductsPage() {
           <span className="inline-flex min-h-8 items-center gap-2 rounded-pill bg-primary/12 px-3 text-[12px] font-semibold text-text-accent">
             <AppIcon name="products" className="h-3.5 w-3.5" aria-hidden="true" />
             {activeTotalItems}{' '}
-            {catalogView === 'products'
-              ? t('products.title').toLowerCase()
-              : t('products.categoriesCountLabel')}
+            {catalogView === 'categories'
+              ? t('products.categoriesCountLabel')
+              : catalogView === 'promoted'
+                ? t('products.promotedCountLabel')
+                : t('products.title').toLowerCase()}
           </span>
         </div>
       }
@@ -1344,7 +1351,7 @@ function ProductsPage() {
             </div>
           }
         >
-          {catalogView === 'products' ? (
+          {catalogView !== 'categories' ? (
             <>
               <SearchInput
                 value={search}
@@ -1453,15 +1460,29 @@ function ProductsPage() {
                 >
                   {t('products.categoriesCatalogTitle')}
                 </button>
+                <button
+                  type="button"
+                  className={[
+                    'rounded-lg px-3 py-1.5 text-sm font-semibold transition duration-fast',
+                    catalogView === 'promoted'
+                      ? 'bg-surface-card text-text-primary shadow-sm ring-1 ring-border-soft/45'
+                      : 'text-text-secondary hover:text-text-primary',
+                  ].join(' ')}
+                  onClick={() => setCatalogView('promoted')}
+                >
+                  {t('products.promotedCatalogTitle')}
+                </button>
               </div>
               <span className="text-[12px] font-medium text-text-muted">
-                {catalogView === 'products'
-                  ? t('products.catalogHint')
-                  : t('products.categoriesCatalogHint')}
+                {catalogView === 'categories'
+                  ? t('products.categoriesCatalogHint')
+                  : catalogView === 'promoted'
+                    ? t('products.promotedCatalogHint')
+                    : t('products.catalogHint')}
               </span>
             </div>
 
-            {catalogView === 'products' ? (
+            {catalogView !== 'categories' ? (
             <DataTable
               data={products}
               columns={productColumns}
@@ -1496,7 +1517,7 @@ function ProductsPage() {
           </div>
         </PageCard>
 
-        {catalogView === 'products' && !isLoading && paginationMeta.totalItems > 0 ? (
+        {catalogView !== 'categories' && !isLoading && paginationMeta.totalItems > 0 ? (
           <Pagination
             currentPage={Math.min(currentPage, paginationMeta.totalPages)}
             totalPages={paginationMeta.totalPages}
@@ -1517,7 +1538,7 @@ function ProductsPage() {
         ) : null}
       </PageSection>
 
-      {catalogView === 'products' && selectedProductId ? (
+      {catalogView !== 'categories' && selectedProductId ? (
         <ProductDetailPanel
           productId={selectedProductId}
           isDeleteDisabled={isDeleteBlocked(selectedProductId)}

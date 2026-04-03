@@ -59,6 +59,10 @@
       "title": "Buyurtmalar",
       "description": "Buyurtmalarni boshqarish."
     },
+    "couriers": {
+      "title": "Kuryerlar",
+      "description": "Kuryer profillari va yetkazib berish tayinlovlarini boshqarish."
+    },
     "payments": {
       "title": "To'lovlar",
       "description": "To'lov holati va tranzaksiyalar."
@@ -108,6 +112,7 @@
       "customers": "Mijozlar",
       "products": "Katalog",
       "orders": "Buyurtmalar",
+      "couriers": "Yetkazib berish",
       "payments": "Tranzaksiyalar",
       "chat": "Xabarlar",
       "notifications": "Ogohlantirishlar",
@@ -234,17 +239,28 @@
       "orderStatus": "Buyurtma holati",
       "paymentStatus": "To'lov holati",
       "chatChannels": "Chat kanallari",
-      "performance": "Asosiy ko'rsatkichlar"
+      "performance": "Asosiy ko'rsatkichlar",
+      "topProducts": "Top mahsulotlar"
     },
     "descriptions": {
       "trend": "Tanlangan davr bo'yicha lidlar, mijozlar va buyurtmalar dinamikasi.",
       "source": "Lidlar hajmi bo'yicha eng faol kanallar.",
-      "leadStatus": "Jarayon bo'ylab holatlar taqsimoti."
+      "leadStatus": "Jarayon bo'ylab holatlar taqsimoti.",
+      "topProducts": "Sotuv hajmi bo'yicha eng ko'p sotilgan mahsulotlar ro'yxati."
     },
     "performance": {
       "leadConversionRate": "Lid konversiya darajasi",
       "orderCompletionRate": "Buyurtma yakunlanish darajasi",
       "averageOrderValue": "O'rtacha buyurtma qiymati"
+    },
+    "topProducts": {
+      "hint": "Tafsilotlar uchun mahsulotlar qatorini ko'ring",
+      "empty": "Top mahsulotlar hali mavjud emas.",
+      "columns": {
+        "product": "Mahsulot",
+        "sold": "Sotilgan",
+        "revenue": "Tushum"
+      }
     },
     "noLeads": "Lidlar yo'q",
     "filters": {
@@ -607,6 +623,9 @@
     "activeFilters": "faol",
     "catalogTitle": "Mahsulotlar katalogi",
     "catalogHint": "Tafsilotlarni ko'rish uchun satrni bosing",
+    "promotedCatalogTitle": "Reklamadagi mahsulotlar",
+    "promotedCatalogHint": "Reklamada ko'rsatilayotgan mahsulotlar ro'yxati",
+    "promotedCountLabel": "reklamadagi mahsulotlar",
     "categoriesCatalogTitle": "Categoriyalar katalogi",
     "categoriesCatalogHint": "Kategoriyani tahrirlash uchun amallarni tanlang",
     "loadingTitle": "Mahsulotlar yuklanmoqda",
@@ -638,6 +657,7 @@
       "actions": "Amallar"
     },
     "noDescription": "Tavsif yo'q",
+    "promotedBadge": "Reklama",
     "actions": {
       "edit": "Tahrirlash",
       "delete": "O'chirish"
@@ -720,6 +740,8 @@
       "currency": "Valyuta",
       "activeProduct": "Faol mahsulot",
       "activeProductHint": "Mahsulot operatsiyalarda ko'rinishini yoqing yoki o'chiring.",
+      "promotedProduct": "Reklamadagi mahsulot",
+      "promotedProductHint": "Reklama blokida ko'rsatish uchun yoqing.",
       "currentImages": "Joriy rasmlar",
       "images": "Rasmlar",
       "removeImage": "Rasmni olib tashlash",
@@ -873,6 +895,163 @@
       "description": "Bu amal buyurtmani ro'yxatdan o'chiradi va ortga qaytarib bo'lmaydi.",
       "confirm": "Buyurtmani o'chirish",
       "deleting": "O'chirilmoqda..."
+    }
+  },
+  "couriers": {
+    "title": "Kuryerlar",
+    "subtitle": "Kuryer profillari va yetkazib berish tayinlovlarini bitta oynada boshqaring.",
+    "tabs": {
+      "couriers": "Kuryerlar",
+      "orders": "Kuryer buyurtmalari"
+    },
+    "newCourier": "Yangi kuryer",
+    "records": "yozuv",
+    "activeFilters": "faol filtr",
+    "courierDetailOpen": "Kuryer tafsiloti ochiq",
+    "orderDetailOpen": "Buyurtma tafsiloti ochiq",
+    "searchCourierPlaceholder": "Kuryer nomi, username, telefon yoki telegram ID bo'yicha qidiring...",
+    "searchOrderPlaceholder": "Buyurtma, kuryer, holat yoki izoh bo'yicha qidiring...",
+    "filters": {
+      "status": "Holat",
+      "courier": "Kuryer",
+      "orderBy": "Saralash"
+    },
+    "status": {
+      "all": "Barchasi",
+      "active": "Faol",
+      "inactive": "Nofaol"
+    },
+    "orderStatus": {
+      "all": "Barcha holatlar",
+      "pending": "Kutilmoqda",
+      "assigned": "Biriktirilgan",
+      "in_transit": "Yo'lda",
+      "delivered": "Yetkazilgan"
+    },
+    "ordering": {
+      "updatedNewest": "Yangilangan (yangi)",
+      "updatedOldest": "Yangilangan (eski)",
+      "createdNewest": "Qo'shilgan (yangi)",
+      "createdOldest": "Qo'shilgan (eski)",
+      "nameAsc": "Nomi (A-Z)",
+      "nameDesc": "Nomi (Z-A)",
+      "statusAsc": "Holat (A-Z)",
+      "statusDesc": "Holat (Z-A)"
+    },
+    "courierListTitle": "Kuryerlar katalogi",
+    "courierListHint": "Profilni ko'rish uchun satrni bosing.",
+    "courierLoadingTitle": "Kuryerlar yuklanmoqda",
+    "courierLoadingDescription": "Kuryer ro'yxati va holatlari olinmoqda.",
+    "courierErrorTitle": "Kuryerlar mavjud emas",
+    "courierErrorDescription": "Joriy xizmatdan kuryerlarni yuklab bo'lmadi.",
+    "courierEmptyTitle": "Mos kuryer topilmadi",
+    "courierEmptyDescription": "Qidiruv yoki filtrlarni o'zgartirib ko'ring.",
+    "orderListTitle": "Kuryer buyurtmalari",
+    "orderListHint": "Yangilash uchun satrni oching.",
+    "orderLoadingTitle": "Kuryer buyurtmalari yuklanmoqda",
+    "orderLoadingDescription": "Yetkazib berish tayinlovlari va holatlar olinmoqda.",
+    "orderErrorTitle": "Kuryer buyurtmalari mavjud emas",
+    "orderErrorDescription": "Joriy xizmatdan kuryer buyurtmalarini yuklab bo'lmadi.",
+    "orderEmptyTitle": "Mos kuryer buyurtmasi topilmadi",
+    "orderEmptyDescription": "Qidiruv yoki filtrlarni o'zgartirib qayta urinib ko'ring.",
+    "columns": {
+      "courier": "Kuryer",
+      "phone": "Telefon",
+      "telegramId": "Telegram ID",
+      "status": "Holat",
+      "updated": "Yangilangan",
+      "actions": "Amallar",
+      "order": "Buyurtma",
+      "cancelReason": "Bekor qilish sababi"
+    },
+    "actions": {
+      "edit": "Tahrirlash",
+      "delete": "O'chirish",
+      "open": "Ochish",
+      "setActive": "Faollashtirish",
+      "setInactive": "Nofaollashtirish",
+      "savePatch": "Saqlash",
+      "replacePut": "Almashtirish",
+      "repostOffer": "Taklifni qayta yuborish"
+    },
+    "form": {
+      "eyebrow": "Kuryer formasi",
+      "titleCreate": "Kuryer qo'shish",
+      "titleEdit": "Kuryerni tahrirlash",
+      "close": "Kuryer formasini yopish",
+      "firstName": "Ism",
+      "telegramUserId": "Telegram foydalanuvchi ID",
+      "username": "Username",
+      "phone": "Telefon",
+      "isActive": "Faol kuryer",
+      "isActiveHint": "Nofaol kuryerlar tayinlovlardan chiqariladi.",
+      "metadata": "Metadata (JSON)",
+      "firstNameRequired": "Ism majburiy.",
+      "metadataObjectError": "Metadata JSON object bo'lishi kerak.",
+      "metadataJsonError": "Metadata to'g'ri JSON bo'lishi kerak.",
+      "createSubmit": "Kuryer qo'shish",
+      "editSubmit": "O'zgarishlarni saqlash",
+      "creating": "Qo'shilmoqda...",
+      "saving": "Saqlanmoqda...",
+      "saveError": "Kuryerni saqlab bo'lmadi."
+    },
+    "deleteDialog": {
+      "eyebrow": "Kuryerni o'chirish",
+      "title": "{{name}} kuryerini o'chirish",
+      "description": "Bu amal qaytarilmaydi. Kuryer yozuvi o'chiriladi.",
+      "confirm": "Ha, o'chirish",
+      "deleting": "O'chirilmoqda..."
+    },
+    "detail": {
+      "ariaLabel": "Kuryer tafsilotlari",
+      "title": "Kuryer profili",
+      "close": "Kuryer tafsilotlarini yopish",
+      "loadingTitle": "Kuryer tafsilotlari yuklanmoqda",
+      "loadingDescription": "Tanlangan kuryer profili olinmoqda.",
+      "errorTitle": "Kuryer mavjud emas",
+      "errorDescription": "Tanlangan kuryerni yuklab bo'lmadi.",
+      "contact": "Kontakt",
+      "metadata": "Metadata",
+      "created": "Qo'shilgan",
+      "updated": "Yangilangan",
+      "noMetadata": "Metadata mavjud emas."
+    },
+    "orderDetail": {
+      "ariaLabel": "Kuryer buyurtmasi tafsilotlari",
+      "title": "Kuryer buyurtmasi",
+      "close": "Kuryer buyurtmasi tafsilotlarini yopish",
+      "loadingTitle": "Kuryer buyurtmasi yuklanmoqda",
+      "loadingDescription": "Buyurtma tayinlovi tafsilotlari olinmoqda.",
+      "errorTitle": "Kuryer buyurtmasi mavjud emas",
+      "errorDescription": "Tanlangan kuryer buyurtmasini yuklab bo'lmadi.",
+      "orderSummaryTitle": "Buyurtma tafsilotlari",
+      "orderSummaryDescription": "Kontakt, manzil va buyurtma tarkibi.",
+      "orderId": "Buyurtma ID",
+      "status": "Holat",
+      "awaitingCancelReason": "Bekor qilish sababi kutilmoqda",
+      "cancelReason": "Bekor qilish sababi",
+      "contactName": "Kontakt ismi",
+      "contactPhone": "Kontakt telefoni",
+      "shippingAddress": "Yetkazib berish manzili",
+      "totalAmount": "Jami summa",
+      "items": "Buyurtma mahsulotlari",
+      "itemColumns": {
+        "product": "Mahsulot",
+        "quantity": "Soni",
+        "unitPrice": "Birlik narx",
+        "lineTotal": "Qator jami"
+      },
+      "noItems": "Buyurtma mahsulotlari mavjud emas.",
+      "metadata": "Metadata (JSON)",
+      "acceptedAt": "Qabul qilingan vaqt",
+      "inTransitAt": "Yo'lda",
+      "deliveredAt": "Yetkazilgan vaqt",
+      "updated": "Yangilangan",
+      "replacing": "Almashtirilmoqda...",
+      "reposting": "Qayta yuborilmoqda...",
+      "orderIdRequired": "PUT uchun buyurtma ID majburiy.",
+      "saveError": "Kuryer buyurtmasini yangilab bo'lmadi.",
+      "repostError": "Taklifni qayta yuborib bo'lmadi."
     }
   },
   "payments": {
