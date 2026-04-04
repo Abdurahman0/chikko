@@ -1,4 +1,8 @@
 import type {
+  Agent,
+  AgentListParams,
+  AgentMutationInput,
+  AgentPatchInput,
   AISetting,
   AISettingMutationInput,
   AISettingPatchInput,
@@ -61,6 +65,7 @@ import type {
 
 export type ServiceModuleKey =
   | 'dashboard'
+  | 'agents'
   | 'couriers'
   | 'leads'
   | 'customers'
@@ -235,6 +240,21 @@ export interface CourierService {
   ): Promise<CourierOrder | null>;
 }
 
+export interface AgentService {
+  list(params?: AgentListParams): Promise<PaginatedResult<Agent>>;
+  getById(id: EntityId): Promise<Agent | null>;
+  create(input: AgentMutationInput): Promise<Agent>;
+  update(id: EntityId, input: AgentMutationInput): Promise<Agent | null>;
+  patch(id: EntityId, input: AgentPatchInput): Promise<Agent | null>;
+  delete(id: EntityId): Promise<boolean>;
+  listAgents(params?: AgentListParams): Promise<PaginatedResult<Agent>>;
+  getAgentById(id: EntityId): Promise<Agent | null>;
+  createAgent(input: AgentMutationInput): Promise<Agent>;
+  updateAgent(id: EntityId, input: AgentMutationInput): Promise<Agent | null>;
+  patchAgent(id: EntityId, input: AgentPatchInput): Promise<Agent | null>;
+  deleteAgent(id: EntityId): Promise<boolean>;
+}
+
 export interface CustomerService {
   list(params?: TableQueryParams): Promise<PaginatedResult<Customer>>;
   getById(id: EntityId): Promise<Customer | null>;
@@ -405,6 +425,7 @@ export interface UserService {
 
 export interface AppServices {
   dashboard: DashboardService;
+  agents: AgentService;
   couriers: CourierService;
   leads: LeadService;
   customers: CustomerService;

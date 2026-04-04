@@ -24,6 +24,7 @@ const navigationItemMeta: Record<
   products: { caption: 'Catalog' },
   orders: { caption: 'Fulfillment' },
   couriers: { caption: 'Delivery' },
+  agents: { caption: 'Agents' },
   payments: { caption: 'Transactions' },
   chat: { caption: 'Inbox' },
   notifications: { caption: 'Alerts', label: 'Alerts' },

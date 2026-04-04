@@ -3,6 +3,8 @@ import type { AppUser } from '../types/domain';
 
 export const PERMISSION_CODES = [
   'can_chat',
+  'can_manage_agents',
+  'can_manage_couriers',
   'can_manage_customers',
   'can_manage_products',
   'can_manage_integrations',
@@ -13,6 +15,8 @@ export const PERMISSION_CODES = [
   'can_update_orders',
   'can_view_customers',
   'can_view_dashboard',
+  'can_view_agents',
+  'can_view_couriers',
   'can_view_leads',
   'can_view_logs',
   'can_view_notifications',

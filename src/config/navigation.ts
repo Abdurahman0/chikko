@@ -18,6 +18,7 @@ export type NavigationIconKey =
   | 'products'
   | 'orders'
   | 'couriers'
+  | 'agents'
   | 'payments'
   | 'chat'
   | 'notifications'
@@ -132,12 +133,19 @@ const navigationBlueprints: NavigationItemBlueprint[] = [
     group: 'operations',
     sortOrder: 5,
     iconKey: 'couriers',
-    permissionKey: 'can_view_orders',
+    permissionKey: 'can_view_couriers',
+  },
+  {
+    routeId: 'agents',
+    group: 'operations',
+    sortOrder: 6,
+    iconKey: 'agents',
+    permissionKey: 'can_view_agents',
   },
   {
     routeId: 'payments',
     group: 'operations',
-    sortOrder: 6,
+    sortOrder: 7,
     iconKey: 'payments',
     permissionKey: 'can_view_payments',
   },

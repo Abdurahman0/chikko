@@ -6,6 +6,7 @@ export type * from './product';
 export type * from './payment';
 export type * from './order';
 export type * from './courier';
+export type * from './agent';
 export type * from './chat';
 export type * from './notification';
 export type * from './ai-setting';

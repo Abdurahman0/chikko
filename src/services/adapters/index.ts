@@ -1,5 +1,6 @@
 export * from './conversation-adapter';
 export * from './common.adapter';
+export * from './agents.adapter';
 export * from './couriers.adapter';
 export * from './customer-adapter';
 export * from './dashboard-adapter';

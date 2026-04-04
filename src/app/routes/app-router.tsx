@@ -17,6 +17,7 @@ const pageRegistry: Record<RoutedPageId, ComponentType> = {
     'access-denied',
   ),
   'ai-settings': lazyRoute(() => import('../pages/protected/AiSettingsPage'), 'ai-settings'),
+  agents: lazyRoute(() => import('../pages/protected/AgentsPage'), 'agents'),
   chat: lazyRoute(() => import('../pages/protected/ChatPage'), 'chat'),
   couriers: lazyRoute(() => import('../pages/protected/CouriersPage'), 'couriers'),
   customers: lazyRoute(() => import('../pages/protected/CustomersPage'), 'customers'),

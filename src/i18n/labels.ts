@@ -66,6 +66,10 @@ const USER_STATUS_KEYS: Record<UserStatus, string> = {
 
 const USER_PERMISSION_LABEL_KEYS: Record<string, string> = {
   can_view_dashboard: 'labels.permissions.can_view_dashboard',
+  can_view_agents: 'labels.permissions.can_view_agents',
+  can_manage_agents: 'labels.permissions.can_manage_agents',
+  can_view_couriers: 'labels.permissions.can_view_couriers',
+  can_manage_couriers: 'labels.permissions.can_manage_couriers',
   can_view_leads: 'labels.permissions.can_view_leads',
   can_manage_leads: 'labels.permissions.can_manage_leads',
   can_view_customers: 'labels.permissions.can_view_customers',
@@ -86,6 +90,10 @@ const USER_PERMISSION_LABEL_KEYS: Record<string, string> = {
 
 const USER_PERMISSION_DESCRIPTION_KEYS: Record<string, string> = {
   can_view_dashboard: 'labels.permissionDescriptions.can_view_dashboard',
+  can_view_agents: 'labels.permissionDescriptions.can_view_agents',
+  can_manage_agents: 'labels.permissionDescriptions.can_manage_agents',
+  can_view_couriers: 'labels.permissionDescriptions.can_view_couriers',
+  can_manage_couriers: 'labels.permissionDescriptions.can_manage_couriers',
   can_view_leads: 'labels.permissionDescriptions.can_view_leads',
   can_manage_leads: 'labels.permissionDescriptions.can_manage_leads',
   can_view_customers: 'labels.permissionDescriptions.can_view_customers',

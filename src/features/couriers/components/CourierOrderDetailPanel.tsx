@@ -18,6 +18,7 @@ import type {
 interface CourierOrderDetailPanelProps {
   orderId: EntityId;
   refreshToken?: number;
+  canManageCouriers: boolean;
   onClose: () => void;
   onUpdated: (order: CourierOrder) => void;
 }
@@ -75,6 +76,7 @@ function resolveCourierOrderTitle(
 function CourierOrderDetailPanel({
   orderId,
   refreshToken = 0,
+  canManageCouriers,
   onClose,
   onUpdated,
 }: CourierOrderDetailPanelProps) {
@@ -163,6 +165,11 @@ function CourierOrderDetailPanel({
   }
 
   async function handlePatch() {
+    if (!canManageCouriers) {
+      setActionError(t('couriers.orderDetail.readOnlyHint'));
+      return;
+    }
+
     const result = buildPatchPayload();
     if (!result.payload) {
       setActionError(result.error ?? t('couriers.orderDetail.saveError'));
@@ -185,6 +192,11 @@ function CourierOrderDetailPanel({
   }
 
   async function handleRepost() {
+    if (!canManageCouriers) {
+      setActionError(t('couriers.orderDetail.readOnlyHint'));
+      return;
+    }
+
     const result = buildPatchPayload();
     if (!result.payload) {
       setActionError(result.error ?? t('couriers.orderDetail.repostError'));
@@ -406,6 +418,7 @@ function CourierOrderDetailPanel({
                           : current,
                       )
                     }
+                    disabled={!canManageCouriers}
                   />
                 </div>
                 <div className="flex items-center justify-between gap-3 rounded-lg bg-surface-subtle px-3 py-2.5">
@@ -420,6 +433,7 @@ function CourierOrderDetailPanel({
                       )
                     }
                     ariaLabel={t('couriers.orderDetail.awaitingCancelReason')}
+                    disabled={!canManageCouriers}
                   />
                 </div>
                 <div className="grid gap-1.5">
@@ -436,6 +450,7 @@ function CourierOrderDetailPanel({
                         current ? { ...current, cancelReason: event.target.value } : current,
                       )
                     }
+                    disabled={!canManageCouriers}
                   />
                 </div>
               </div>
@@ -460,31 +475,37 @@ function CourierOrderDetailPanel({
               </p>
             ) : null}
 
-            <div className="flex flex-wrap items-center gap-2">
-              <button
-                type="button"
-                className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-primary px-4 text-sm font-semibold text-primary-foreground disabled:opacity-60"
-                onClick={() => {
-                  void handlePatch();
-                }}
-                disabled={isSaving || isReposting}
-              >
-                {isSaving ? t('couriers.form.saving') : t('couriers.actions.savePatch')}
-              </button>
-              <button
-                type="button"
-                className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-info px-4 text-sm font-semibold text-white disabled:opacity-60"
-                onClick={() => {
-                  void handleRepost();
-                }}
-                disabled={isSaving || isReposting}
-              >
-                <FiRepeat className="h-4 w-4" />{' '}
-                {isReposting
-                  ? t('couriers.orderDetail.reposting')
-                  : t('couriers.actions.repostOffer')}
-              </button>
-            </div>
+            {canManageCouriers ? (
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-primary px-4 text-sm font-semibold text-primary-foreground disabled:opacity-60"
+                  onClick={() => {
+                    void handlePatch();
+                  }}
+                  disabled={isSaving || isReposting}
+                >
+                  {isSaving ? t('couriers.form.saving') : t('couriers.actions.savePatch')}
+                </button>
+                <button
+                  type="button"
+                  className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-info px-4 text-sm font-semibold text-white disabled:opacity-60"
+                  onClick={() => {
+                    void handleRepost();
+                  }}
+                  disabled={isSaving || isReposting}
+                >
+                  <FiRepeat className="h-4 w-4" />{' '}
+                  {isReposting
+                    ? t('couriers.orderDetail.reposting')
+                    : t('couriers.actions.repostOffer')}
+                </button>
+              </div>
+            ) : (
+              <p className="m-0 rounded-lg bg-surface-subtle/90 px-3 py-2.5 text-sm text-text-secondary">
+                {t('couriers.orderDetail.readOnlyHint')}
+              </p>
+            )}
           </div>
         ) : null}
       </aside>

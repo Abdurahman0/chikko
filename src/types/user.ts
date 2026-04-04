@@ -26,6 +26,10 @@ export interface AppUser extends AuditInfo {
 
 export type UserPermissionCode =
   | 'can_view_dashboard'
+  | 'can_view_agents'
+  | 'can_manage_agents'
+  | 'can_view_couriers'
+  | 'can_manage_couriers'
   | 'can_view_leads'
   | 'can_manage_leads'
   | 'can_view_customers'

@@ -1,6 +1,6 @@
 ﻿{
   "common": {
-    "appName": "chikko",
+    "appName": "Chikko",
     "loading": "Загрузка...",
     "save": "Сохранить",
     "cancel": "Отмена",
@@ -63,6 +63,10 @@
       "title": "Курьеры",
       "description": "Управление профилями курьеров и назначениями доставки."
     },
+    "agents": {
+      "title": "Агенты",
+      "description": "Управление профилями агентов и закреплёнными товарами."
+    },
     "payments": {
       "title": "Платежи",
       "description": "Статус платежей и транзакции."
@@ -113,6 +117,7 @@
       "products": "Каталог",
       "orders": "Заказы",
       "couriers": "Доставка",
+      "agents": "Агенты",
       "payments": "Транзакции",
       "chat": "Сообщения",
       "notifications": "Оповещения",
@@ -133,7 +138,7 @@
   },
   "auth": {
     "login": {
-      "eyebrow": "chikko crm",
+      "eyebrow": "Chikko CRM",
       "subtitle": "Платформа управления CRM",
       "emailLabel": "Email или телефон",
       "emailPlaceholder": "developer@example.com",
@@ -145,7 +150,7 @@
       "signingIn": "Вход...",
       "hidePassword": "Скрыть пароль",
       "showPassword": "Показать пароль",
-      "footerRights": "(c) 2026 chikko. Все права защищены.",
+      "footerRights": "© 2026 Chikko. Все права защищены.",
       "footerPowered": "Разработчик"
     },
     "accessDenied": {
@@ -1014,7 +1019,8 @@
       "metadata": "Метаданные",
       "created": "Создан",
       "updated": "Обновлён",
-      "noMetadata": "Метаданные отсутствуют."
+      "noMetadata": "Метаданные отсутствуют.",
+      "readOnlyHint": "Режим только для чтения. Для редактирования требуется право управления курьерами."
     },
     "orderDetail": {
       "ariaLabel": "Детали заказа курьера",
@@ -1051,7 +1057,108 @@
       "reposting": "Переотправка...",
       "orderIdRequired": "Для PUT требуется ID заказа.",
       "saveError": "Не удалось обновить заказ курьера.",
-      "repostError": "Не удалось переотправить предложение."
+      "repostError": "Не удалось переотправить предложение.",
+      "readOnlyHint": "Режим только для чтения. Для обновления требуется право управления курьерами."
+    }
+  },
+  "agents": {
+    "eyebrow": "Центр агентов",
+    "title": "Агенты",
+    "subtitle": "Управляйте профилями агентов, статусом активности и закреплёнными товарами в одном окне.",
+    "newAgent": "Новый агент",
+    "records": "записей",
+    "activeFilters": "активных фильтров",
+    "detailOpen": "Детали агента открыты",
+    "searchPlaceholder": "Поиск по имени агента, телефону, telegram chat ID или username...",
+    "boardTitle": "Список агентов",
+    "boardHint": "Нажмите на строку, чтобы открыть детали.",
+    "emptyTitle": "Подходящий агент не найден",
+    "emptyDescription": "Измените поиск или фильтры и попробуйте снова.",
+    "errorTitle": "Агенты недоступны",
+    "errorDescription": "Не удалось загрузить агентов из текущего сервиса.",
+    "loadingTitle": "Загрузка агентов",
+    "loadingDescription": "Получение записей агентов и закреплённых товаров.",
+    "productsCount": "{{count}} товаров",
+    "noProducts": "Товары не закреплены",
+    "filters": {
+      "status": "Статус",
+      "products": "Товар",
+      "allProducts": "Все товары",
+      "selectedProducts": "Выбрано: {{count}}",
+      "orderBy": "Сортировка"
+    },
+    "status": {
+      "all": "Все",
+      "active": "Активные",
+      "inactive": "Неактивные"
+    },
+    "ordering": {
+      "updatedNewest": "Обновлено (сначала новые)",
+      "updatedOldest": "Обновлено (сначала старые)",
+      "createdNewest": "Добавлено (сначала новые)",
+      "createdOldest": "Добавлено (сначала старые)",
+      "nameAsc": "Имя (A-Z)",
+      "nameDesc": "Имя (Z-A)"
+    },
+    "columns": {
+      "agent": "Агент",
+      "phone": "Телефон",
+      "telegramChatId": "Telegram chat ID",
+      "telegramUsername": "Telegram username",
+      "products": "Товары",
+      "status": "Статус",
+      "updated": "Обновлён",
+      "actions": "Действия"
+    },
+    "actions": {
+      "edit": "Редактировать",
+      "delete": "Удалить",
+      "setActive": "Активировать",
+      "setInactive": "Деактивировать"
+    },
+    "form": {
+      "eyebrow": "Форма агента",
+      "titleCreate": "Добавить агента",
+      "titleEdit": "Редактировать агента",
+      "close": "Закрыть форму агента",
+      "fullName": "Полное имя",
+      "phone": "Телефон",
+      "telegramChatId": "Telegram chat ID",
+      "telegramUsername": "Telegram username",
+      "isActive": "Активный агент",
+      "isActiveHint": "Неактивные агенты не используются в новых назначениях.",
+      "products": "Закреплённые товары",
+      "productsHint": "Выберите товары, с которыми работает агент.",
+      "noProducts": "Активные товары не найдены. Сначала добавьте товары.",
+      "fullNameRequired": "Полное имя обязательно.",
+      "createSubmit": "Добавить агента",
+      "editSubmit": "Сохранить изменения",
+      "creating": "Добавление...",
+      "saving": "Сохранение...",
+      "saveError": "Не удалось сохранить агента."
+    },
+    "detail": {
+      "ariaLabel": "Детали агента",
+      "title": "Профиль агента",
+      "close": "Закрыть детали агента",
+      "loadingTitle": "Загрузка деталей агента",
+      "loadingDescription": "Получение профиля выбранного агента.",
+      "errorTitle": "Агент недоступен",
+      "errorDescription": "Не удалось загрузить выбранного агента.",
+      "products": "Закреплённые товары",
+      "noProducts": "Закреплённые товары отсутствуют.",
+      "metadata": "Метаданные",
+      "noMetadata": "Метаданные отсутствуют.",
+      "created": "Создан",
+      "updated": "Обновлён",
+      "readOnlyHint": "Режим только для чтения. Для редактирования требуется право управления агентами."
+    },
+    "deleteDialog": {
+      "eyebrow": "Удаление агента",
+      "title": "Удалить агента {{name}}",
+      "description": "Это действие необратимо. Запись агента будет удалена.",
+      "confirm": "Да, удалить",
+      "deleting": "Удаление..."
     }
   },
   "payments": {
@@ -1571,6 +1678,10 @@
     },
     "permissions": {
       "can_view_dashboard": "Просмотр dashboard",
+      "can_view_agents": "Просмотр агентов",
+      "can_manage_agents": "Управление агентами",
+      "can_view_couriers": "Просмотр курьеров",
+      "can_manage_couriers": "Управление курьерами",
       "can_view_leads": "Просмотр лидов",
       "can_manage_leads": "Управление лидами",
       "can_view_customers": "Просмотр клиентов",
@@ -1590,6 +1701,10 @@
     },
     "permissionDescriptions": {
       "can_view_dashboard": "Разрешает просматривать статистику dashboard.",
+      "can_view_agents": "Разрешает просматривать список агентов и их детали.",
+      "can_manage_agents": "Разрешает добавлять, редактировать и удалять агентов.",
+      "can_view_couriers": "Разрешает просматривать курьеров и заказы курьеров.",
+      "can_manage_couriers": "Разрешает управлять курьерами и заказами курьеров.",
       "can_view_leads": "Разрешает просматривать список лидов и их детали.",
       "can_manage_leads": "Разрешает добавлять, редактировать и удалять лиды.",
       "can_view_customers": "Разрешает просматривать данные клиентов.",

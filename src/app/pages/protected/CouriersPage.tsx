@@ -19,6 +19,7 @@ import {
   PageLayout,
   PageSection,
 } from '../../../components/shared/page';
+import { useAuth } from '../../../auth';
 import { formatLocalizedDate } from '../../../i18n/date-format';
 import { usePersistentState } from '../../../lib/persistent-state';
 import { services } from '../../../services';
@@ -110,6 +111,8 @@ function extractErrorMessage(error: unknown, fallback: string): string {
 
 function CouriersPage() {
   const { t, i18n } = useTranslation();
+  const { hasPermission } = useAuth();
+  const canManageCouriers = hasPermission('can_manage_couriers');
   const locale = i18n.language === 'ru' ? 'ru-RU' : 'uz-UZ';
 
   const [workspaceTab, setWorkspaceTab] = useState<WorkspaceTab>('couriers');
@@ -322,6 +325,10 @@ function CouriersPage() {
   }, [orders, selectedOrderId]);
 
   async function handleSaveCourier(payload: CourierMutationInput) {
+    if (!canManageCouriers) {
+      return;
+    }
+
     setIsCourierSaving(true);
     setCourierFormError(null);
     try {
@@ -353,7 +360,7 @@ function CouriersPage() {
   }
 
   async function handleConfirmDeleteCourier() {
-    if (!courierToDelete) {
+    if (!canManageCouriers || !courierToDelete) {
       return;
     }
 
@@ -373,6 +380,10 @@ function CouriersPage() {
 
   const handleToggleCourierActive = useCallback(
     async (courier: Courier): Promise<Courier | null> => {
+      if (!canManageCouriers) {
+        return null;
+      }
+
       const updated = await services.couriers.patch(courier.id, {
         isActive: !courier.isActive,
       });
@@ -389,7 +400,7 @@ function CouriersPage() {
 
       return updated;
     },
-    [],
+    [canManageCouriers],
   );
 
   const handleOrderUpdated = useCallback((updated: CourierOrder) => {
@@ -456,87 +467,97 @@ function CouriersPage() {
   );
 
   const courierColumns = useMemo<DataTableColumn<Courier>[]>(
-    () => [
-      {
-        key: 'courier',
-        label: t('couriers.columns.courier'),
-        render: (courier) => (
-          <div className="grid gap-0.5">
-            <span className={tablePrimaryTextClassName}>{getCourierName(courier)}</span>
-            <span className={tableSecondaryTextClassName}>
-              {courier.username ? `@${courier.username}` : courier.telegramUserId || t('common.na')}
+    () => {
+      const baseColumns: DataTableColumn<Courier>[] = [
+        {
+          key: 'courier',
+          label: t('couriers.columns.courier'),
+          render: (courier) => (
+            <div className="grid gap-0.5">
+              <span className={tablePrimaryTextClassName}>{getCourierName(courier)}</span>
+              <span className={tableSecondaryTextClassName}>
+                {courier.username ? `@${courier.username}` : courier.telegramUserId || t('common.na')}
+              </span>
+            </div>
+          ),
+        },
+        {
+          key: 'phone',
+          label: t('couriers.columns.phone'),
+          render: (courier) => (
+            <span className={tablePrimaryTextClassName}>{courier.phone || t('common.na')}</span>
+          ),
+        },
+        {
+          key: 'status',
+          label: t('couriers.columns.status'),
+          render: (courier) => (
+            <StatusBadge
+              status={courier.isActive ? 'active' : 'inactive'}
+              tone={courier.isActive ? 'success' : 'neutral'}
+              label={courier.isActive ? t('common.active') : t('common.inactive')}
+            />
+          ),
+        },
+        {
+          key: 'updatedAt',
+          label: t('couriers.columns.updated'),
+          render: (courier) => (
+            <span className={tablePrimaryTextClassName}>
+              {formatLocalizedDate(courier.updatedAt, i18n.language, {
+                locale,
+                withYear: true,
+                shortMonth: true,
+                fallback: t('common.na'),
+              })}
             </span>
-          </div>
-        ),
-      },
-      {
-        key: 'phone',
-        label: t('couriers.columns.phone'),
-        render: (courier) => (
-          <span className={tablePrimaryTextClassName}>{courier.phone || t('common.na')}</span>
-        ),
-      },
-      {
-        key: 'status',
-        label: t('couriers.columns.status'),
-        render: (courier) => (
-          <StatusBadge
-            status={courier.isActive ? 'active' : 'inactive'}
-            tone={courier.isActive ? 'success' : 'neutral'}
-            label={courier.isActive ? t('common.active') : t('common.inactive')}
-          />
-        ),
-      },
-      {
-        key: 'updatedAt',
-        label: t('couriers.columns.updated'),
-        render: (courier) => (
-          <span className={tablePrimaryTextClassName}>
-            {formatLocalizedDate(courier.updatedAt, i18n.language, {
-              locale,
-              withYear: true,
-              shortMonth: true,
-              fallback: t('common.na'),
-            })}
-          </span>
-        ),
-      },
-      {
-        key: 'actions',
-        label: t('couriers.columns.actions'),
-        align: 'right',
-        render: (courier) => (
-          <div className="flex items-center justify-end gap-1.5">
-            <button
-              type="button"
-              className={actionButtonClassName}
-              onClick={(event) => {
-                event.stopPropagation();
-                setCourierFormMode('edit');
-                setEditingCourier(courier);
-                setCourierFormError(null);
-                setIsCourierFormOpen(true);
-              }}
-              aria-label={`${t('couriers.actions.edit')} ${getCourierName(courier)}`}
-            >
-              <FiEdit2 className="h-3.5 w-3.5" />
-            </button>
-            <button
-              type="button"
-              className={actionButtonClassName}
-              onClick={(event) => {
-                event.stopPropagation();
-                setCourierToDelete(courier);
-              }}
-              aria-label={`${t('couriers.actions.delete')} ${getCourierName(courier)}`}
-            >
-              <FiTrash2 className="h-3.5 w-3.5" />
-            </button>
-          </div>
-        ),
-      },
-    ],
-    [i18n.language, locale, t],
+          ),
+        },
+      ];
+
+      if (!canManageCouriers) {
+        return baseColumns;
+      }
+
+      return [
+        ...baseColumns,
+        {
+          key: 'actions',
+          label: t('couriers.columns.actions'),
+          align: 'right',
+          render: (courier) => (
+            <div className="flex items-center justify-end gap-1.5">
+              <button
+                type="button"
+                className={actionButtonClassName}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  setCourierFormMode('edit');
+                  setEditingCourier(courier);
+                  setCourierFormError(null);
+                  setIsCourierFormOpen(true);
+                }}
+                aria-label={`${t('couriers.actions.edit')} ${getCourierName(courier)}`}
+              >
+                <FiEdit2 className="h-3.5 w-3.5" />
+              </button>
+              <button
+                type="button"
+                className={actionButtonClassName}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  setCourierToDelete(courier);
+                }}
+                aria-label={`${t('couriers.actions.delete')} ${getCourierName(courier)}`}
+              >
+                <FiTrash2 className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          ),
+        },
+      ];
+    },
+    [canManageCouriers, i18n.language, locale, t],
   );
 
   const orderColumns = useMemo<DataTableColumn<CourierOrder>[]>(
@@ -595,19 +616,21 @@ function CouriersPage() {
       actions={
         <div className="flex w-full flex-wrap items-center gap-2 min-[768px]:w-auto">
           {workspaceTab === 'couriers' ? (
-            <button
-              type="button"
-              className="inline-flex min-h-9 items-center gap-2 rounded-lg bg-primary px-3.5 text-sm font-semibold text-primary-foreground"
-              onClick={() => {
-                setCourierFormMode('create');
-                setEditingCourier(null);
-                setCourierFormError(null);
-                setIsCourierFormOpen(true);
-              }}
-            >
-              <AppIcon name="plus" className="h-4 w-4" aria-hidden="true" />
-              {t('couriers.newCourier')}
-            </button>
+            canManageCouriers ? (
+              <button
+                type="button"
+                className="inline-flex min-h-9 items-center gap-2 rounded-lg bg-primary px-3.5 text-sm font-semibold text-primary-foreground"
+                onClick={() => {
+                  setCourierFormMode('create');
+                  setEditingCourier(null);
+                  setCourierFormError(null);
+                  setIsCourierFormOpen(true);
+                }}
+              >
+                <AppIcon name="plus" className="h-4 w-4" aria-hidden="true" />
+                {t('couriers.newCourier')}
+              </button>
+            ) : null
           ) : null}
           <span className="inline-flex min-h-8 items-center gap-2 rounded-pill bg-primary/12 px-3 text-[12px] font-semibold text-text-accent">
             <AppIcon
@@ -800,6 +823,7 @@ function CouriersPage() {
         <CourierDetailPanel
           courierId={selectedCourierId}
           refreshToken={courierDetailRefreshToken}
+          canManageCouriers={canManageCouriers}
           onClose={() => setSelectedCourierId(null)}
           onEdit={(courier) => {
             setCourierFormMode('edit');
@@ -819,6 +843,7 @@ function CouriersPage() {
         <CourierOrderDetailPanel
           orderId={selectedOrderId}
           refreshToken={orderDetailRefreshToken}
+          canManageCouriers={canManageCouriers}
           onClose={() => setSelectedOrderId(null)}
           onUpdated={handleOrderUpdated}
         />

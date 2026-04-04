@@ -2,7 +2,6 @@ import * as React from 'react';
 import {
   ResponsiveContainer,
   Tooltip as RechartsTooltip,
-  type TooltipProps,
 } from 'recharts';
 
 type ChartConfig = Record<
@@ -69,9 +68,16 @@ function ChartContainer({
   );
 }
 
-type ChartTooltipProps = TooltipProps<number, string>;
+type ChartTooltipProps = React.ComponentProps<typeof RechartsTooltip>;
 
-const ChartTooltip = RechartsTooltip;
+function ChartTooltip({ wrapperStyle, ...props }: ChartTooltipProps) {
+  return (
+    <RechartsTooltip
+      wrapperStyle={{ zIndex: 60, ...wrapperStyle }}
+      {...props}
+    />
+  );
+}
 
 interface ChartTooltipEntry {
   color?: string;

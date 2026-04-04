@@ -1,6 +1,6 @@
 {
   "common": {
-    "appName": "chikko",
+    "appName": "Chikko",
     "loading": "Yuklanmoqda...",
     "save": "Saqlash",
     "cancel": "Bekor qilish",
@@ -63,6 +63,10 @@
       "title": "Kuryerlar",
       "description": "Kuryer profillari va yetkazib berish tayinlovlarini boshqarish."
     },
+    "agents": {
+      "title": "Agentlar",
+      "description": "Agent profillari va biriktirilgan mahsulotlarni boshqarish."
+    },
     "payments": {
       "title": "To'lovlar",
       "description": "To'lov holati va tranzaksiyalar."
@@ -113,6 +117,7 @@
       "products": "Katalog",
       "orders": "Buyurtmalar",
       "couriers": "Yetkazib berish",
+      "agents": "Agentlar",
       "payments": "Tranzaksiyalar",
       "chat": "Xabarlar",
       "notifications": "Ogohlantirishlar",
@@ -133,7 +138,7 @@
   },
   "auth": {
     "login": {
-      "eyebrow": "chikko crm",
+      "eyebrow": "Chikko CRM",
       "subtitle": "CRM boshqaruv platformasi",
       "emailLabel": "Email yoki telefon",
       "emailPlaceholder": "developer@example.com",
@@ -145,7 +150,7 @@
       "signingIn": "Kirilmoqda...",
       "hidePassword": "Parolni yashirish",
       "showPassword": "Parolni ko'rsatish",
-      "footerRights": "(c) 2026 chikko. Barcha huquqlar himoyalangan.",
+      "footerRights": "© 2026 Chikko. Barcha huquqlar himoyalangan.",
       "footerPowered": "Ishlab chiquvchi"
     },
     "accessDenied": {
@@ -1014,7 +1019,8 @@
       "metadata": "Metadata",
       "created": "Qo'shilgan",
       "updated": "Yangilangan",
-      "noMetadata": "Metadata mavjud emas."
+      "noMetadata": "Metadata mavjud emas.",
+      "readOnlyHint": "Faqat ko'rish rejimi. Tahrirlash amallari uchun kuryerlarni boshqarish ruxsati kerak."
     },
     "orderDetail": {
       "ariaLabel": "Kuryer buyurtmasi tafsilotlari",
@@ -1051,7 +1057,108 @@
       "reposting": "Qayta yuborilmoqda...",
       "orderIdRequired": "PUT uchun buyurtma ID majburiy.",
       "saveError": "Kuryer buyurtmasini yangilab bo'lmadi.",
-      "repostError": "Taklifni qayta yuborib bo'lmadi."
+      "repostError": "Taklifni qayta yuborib bo'lmadi.",
+      "readOnlyHint": "Faqat ko'rish rejimi. Yangilash amallari uchun kuryerlarni boshqarish ruxsati kerak."
+    }
+  },
+  "agents": {
+    "eyebrow": "Agentlar markazi",
+    "title": "Agentlar",
+    "subtitle": "Agent profillari, faol holati va mahsulot biriktirishlarini yagona oynada boshqaring.",
+    "newAgent": "Yangi agent",
+    "records": "yozuv",
+    "activeFilters": "faol filtr",
+    "detailOpen": "Agent tafsiloti ochiq",
+    "searchPlaceholder": "Agent ismi, telefoni, telegram chat ID yoki username bo'yicha qidiring...",
+    "boardTitle": "Agentlar ro'yxati",
+    "boardHint": "Tafsilotlarni ko'rish uchun satrni bosing.",
+    "emptyTitle": "Mos agent topilmadi",
+    "emptyDescription": "Qidiruv yoki filtrlarni o'zgartirib qayta urinib ko'ring.",
+    "errorTitle": "Agentlar mavjud emas",
+    "errorDescription": "Joriy xizmatdan agentlarni yuklab bo'lmadi.",
+    "loadingTitle": "Agentlar yuklanmoqda",
+    "loadingDescription": "Agent yozuvlari va biriktirilgan mahsulotlar olinmoqda.",
+    "productsCount": "{{count}} ta mahsulot",
+    "noProducts": "Mahsulot biriktirilmagan",
+    "filters": {
+      "status": "Holat",
+      "products": "Mahsulot",
+      "allProducts": "Barcha mahsulotlar",
+      "selectedProducts": "{{count}} ta tanlangan",
+      "orderBy": "Saralash"
+    },
+    "status": {
+      "all": "Barchasi",
+      "active": "Faol",
+      "inactive": "Nofaol"
+    },
+    "ordering": {
+      "updatedNewest": "Yangilangan (yangi)",
+      "updatedOldest": "Yangilangan (eski)",
+      "createdNewest": "Qo'shilgan (yangi)",
+      "createdOldest": "Qo'shilgan (eski)",
+      "nameAsc": "Ism (A-Z)",
+      "nameDesc": "Ism (Z-A)"
+    },
+    "columns": {
+      "agent": "Agent",
+      "phone": "Telefon",
+      "telegramChatId": "Telegram chat ID",
+      "telegramUsername": "Telegram username",
+      "products": "Mahsulotlar",
+      "status": "Holat",
+      "updated": "Yangilangan",
+      "actions": "Amallar"
+    },
+    "actions": {
+      "edit": "Tahrirlash",
+      "delete": "O'chirish",
+      "setActive": "Faollashtirish",
+      "setInactive": "Nofaollashtirish"
+    },
+    "form": {
+      "eyebrow": "Agent formasi",
+      "titleCreate": "Agent qo'shish",
+      "titleEdit": "Agentni tahrirlash",
+      "close": "Agent formasini yopish",
+      "fullName": "To'liq ism",
+      "phone": "Telefon",
+      "telegramChatId": "Telegram chat ID",
+      "telegramUsername": "Telegram username",
+      "isActive": "Faol agent",
+      "isActiveHint": "Nofaol agentlar yangi biriktirishlarda ishlatilmaydi.",
+      "products": "Biriktirilgan mahsulotlar",
+      "productsHint": "Agent bilan ishlaydigan mahsulotlarni tanlang.",
+      "noProducts": "Faol mahsulotlar topilmadi. Avval mahsulot qo'shing.",
+      "fullNameRequired": "To'liq ism majburiy.",
+      "createSubmit": "Agent qo'shish",
+      "editSubmit": "O'zgarishlarni saqlash",
+      "creating": "Qo'shilmoqda...",
+      "saving": "Saqlanmoqda...",
+      "saveError": "Agentni saqlab bo'lmadi."
+    },
+    "detail": {
+      "ariaLabel": "Agent tafsilotlari",
+      "title": "Agent profili",
+      "close": "Agent tafsilotlarini yopish",
+      "loadingTitle": "Agent tafsilotlari yuklanmoqda",
+      "loadingDescription": "Tanlangan agent profili olinmoqda.",
+      "errorTitle": "Agent mavjud emas",
+      "errorDescription": "Tanlangan agentni yuklab bo'lmadi.",
+      "products": "Biriktirilgan mahsulotlar",
+      "noProducts": "Biriktirilgan mahsulotlar mavjud emas.",
+      "metadata": "Metadata",
+      "noMetadata": "Metadata mavjud emas.",
+      "created": "Qo'shilgan",
+      "updated": "Yangilangan",
+      "readOnlyHint": "Faqat ko'rish rejimi. Tahrirlash amallari uchun agentlarni boshqarish ruxsati kerak."
+    },
+    "deleteDialog": {
+      "eyebrow": "Agentni o'chirish",
+      "title": "{{name}} agentini o'chirish",
+      "description": "Bu amal qaytarilmaydi. Agent yozuvi o'chiriladi.",
+      "confirm": "Ha, o'chirish",
+      "deleting": "O'chirilmoqda..."
     }
   },
   "payments": {
@@ -1571,6 +1678,10 @@
     },
     "permissions": {
       "can_view_dashboard": "Dashboardni ko'rish",
+      "can_view_agents": "Agentlarni ko'rish",
+      "can_manage_agents": "Agentlarni boshqarish",
+      "can_view_couriers": "Kuryerlarni ko'rish",
+      "can_manage_couriers": "Kuryerlarni boshqarish",
       "can_view_leads": "Lidlarni ko'rish",
       "can_manage_leads": "Lidlarni boshqarish",
       "can_view_customers": "Mijozlarni ko'rish",
@@ -1590,6 +1701,10 @@
     },
     "permissionDescriptions": {
       "can_view_dashboard": "Dashboard statistikalarini ko'rishga ruxsat beradi.",
+      "can_view_agents": "Agentlar ro'yxati va tafsilotlarini ko'rishga ruxsat beradi.",
+      "can_manage_agents": "Agentlarni qo'shish, tahrirlash va o'chirishga ruxsat beradi.",
+      "can_view_couriers": "Kuryerlar va kuryer buyurtmalarini ko'rishga ruxsat beradi.",
+      "can_manage_couriers": "Kuryerlar va kuryer buyurtmalarini boshqarishga ruxsat beradi.",
       "can_view_leads": "Lidlar ro'yxati va tafsilotlarini ko'rishga ruxsat beradi.",
       "can_manage_leads": "Lidlarni qo'shish, tahrirlash va o'chirishga ruxsat beradi.",
       "can_view_customers": "Mijozlar ma'lumotlarini ko'rishga ruxsat beradi.",

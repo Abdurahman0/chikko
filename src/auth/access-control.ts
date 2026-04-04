@@ -5,11 +5,12 @@ import type { AuthenticatedUser, PermissionCode } from './types';
 
 const ROUTE_REQUIRED_PERMISSIONS: Partial<Record<AppRouteId, PermissionCode>> = {
   dashboard: 'can_view_dashboard',
+  agents: 'can_view_agents',
   leads: 'can_view_leads',
   customers: 'can_view_customers',
   products: 'can_view_products',
   orders: 'can_view_orders',
-  couriers: 'can_view_orders',
+  couriers: 'can_view_couriers',
   payments: 'can_view_payments',
   chat: 'can_chat',
   notifications: 'can_view_notifications',
@@ -20,6 +21,8 @@ const ROUTE_REQUIRED_PERMISSIONS: Partial<Record<AppRouteId, PermissionCode>> = 
 };
 
 const IMPLIED_PERMISSIONS: Partial<Record<PermissionCode, PermissionCode[]>> = {
+  can_view_agents: ['can_manage_agents'],
+  can_view_couriers: ['can_manage_couriers'],
   can_view_leads: ['can_manage_leads'],
   can_view_customers: ['can_manage_customers'],
   can_view_products: ['can_manage_products'],
@@ -36,6 +39,7 @@ const PUBLIC_ROUTE_IDS = new Set<AppRouteId>([
 
 const MODULE_PATH_BY_ROUTE_ID: Record<string, string> = {
   dashboard: routePaths.dashboard,
+  agents: routePaths.agents,
   leads: routePaths.leads,
   customers: routePaths.customers,
   products: routePaths.products,

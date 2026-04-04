@@ -164,7 +164,7 @@ function LoginPage() {
               className="mt-2 text-[2.2rem] font-extrabold leading-none tracking-[-0.038em]"
               style={{ color: '#1e47b7' }}
             >
-              chikko
+              Chikko
             </h1>
             <p className="mt-3 text-[0.98rem] leading-relaxed" style={{ color: '#67768e' }}>
               {t('auth.login.subtitle')}
@@ -301,7 +301,14 @@ function LoginPage() {
           <p>{t('auth.login.footerRights')}</p>
           <p className="mt-1.5">
             {t('auth.login.footerPowered')}{' '}
-            <span style={{ color: '#1f4ec4', fontWeight: 700 }}>Cognilabs</span>
+            <a
+              href="https://www.cognilabs.org"
+              target="_blank"
+              rel="noreferrer"
+              style={{ color: '#1f4ec4', fontWeight: 700 }}
+            >
+              Cognilabs
+            </a>
           </p>
         </footer>
       </section>

@@ -208,6 +208,26 @@ export const moduleMap: AppModule[] = [
       'Operational module for delivery agents and courier-order lifecycle updates.',
   },
   {
+    id: 'agents',
+    label: 'Agents',
+    description: 'Agent profiles and product assignment management.',
+    category: 'operational',
+    priority: 'medium',
+    priorityOrder: 5,
+    allowedRoles: ['developer', 'admin', 'operator'],
+    accessStrategy: 'permission-based',
+    pages: [
+      {
+        id: 'agents-list',
+        label: 'Agent Workspace',
+        kind: 'list',
+        path: '/agents',
+      },
+    ],
+    notes:
+      'Operational module for managing internal agents and their assigned products.',
+  },
+  {
     id: 'payments',
     label: 'Payments',
     description: 'Transactions, balances, and payment states.',
