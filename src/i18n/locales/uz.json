@@ -796,6 +796,36 @@
     "totalLowHigh": "Jami (past-yuqori)",
     "searchPlaceholder": "Kontakt, telefon, manzil yoki ID bo'yicha qidiring...",
     "records": "yozuv",
+    "views": {
+      "orders": "Buyurtmalar",
+      "reviews": "Sharhlar"
+    },
+    "reviews": {
+      "boardTitle": "Sharhlar ro'yxati",
+      "emptyTitle": "Sharhlar topilmadi",
+      "emptyDescription": "Hali hech qanday sharh qoldirilmagan.",
+      "submittedNewest": "Yuborilgan (yangi)",
+      "submittedOldest": "Yuborilgan (eski)",
+      "searchPlaceholder": "Sharh yoki mijoz bo'yicha qidiring...",
+      "records": "yozuv",
+      "columns": {
+        "reviewer": "Sharhlovchi",
+        "comment": "Sharh",
+        "source": "Manba",
+        "submittedAt": "Yuborilgan sana",
+        "actions": "Amallar"
+      },
+      "actions": {
+        "delete": "Sharhni o'chirish"
+      },
+      "deleteDialog": {
+        "eyebrow": "Sharhni o'chirish",
+        "title": "\"{{id}}\" uchun sharhni o'chirish",
+        "description": "Ushbu amalni qaytarib bo'lmaydi. Sharh butunlay o'chiriladi.",
+        "deleting": "O'chirilmoqda...",
+        "confirm": "Sharhni o'chirish"
+      }
+    },
     "activeFilters": "faol filtr",
     "detailOpen": "Tafsilot ochiq",
     "itemsSuffix": "pozitsiya",

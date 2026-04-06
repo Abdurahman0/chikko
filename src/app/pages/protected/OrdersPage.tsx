@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { FiEdit2, FiRefreshCw, FiTrash2 } from 'react-icons/fi';
+import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { formatCurrencyAmount } from '../../../constants';
 import {
@@ -22,6 +23,8 @@ import {
 } from '../../../components/shared/page';
 import { ORDER_STATUSES } from '../../../constants';
 import OrderDeleteDialog from '../../../features/orders/components/OrderDeleteDialog';
+import ReviewDeleteDialog from '../../../features/orders/components/ReviewDeleteDialog';
+import ReviewDetailPanel from '../../../features/orders/components/ReviewDetailPanel';
 import OrderDetailPanel from '../../../features/orders/components/OrderDetailPanel';
 import OrderFormPanel from '../../../features/orders/components/OrderFormPanel';
 import { formatLocalizedDate } from '../../../i18n/date-format';
@@ -30,6 +33,7 @@ import { usePersistentState } from '../../../lib/persistent-state';
 import { services } from '../../../services';
 import type {
   Customer,
+  Lead,
   EntityId,
   Order,
   OrderMutationInput,
@@ -40,7 +44,12 @@ import type {
   SelectOption,
   TableQueryParams,
 } from '../../../types/domain';
+import type { 
+  OrderReview, 
+  OrderReviewListParams,
+} from '../../../types/order';
 
+type OrdersView = 'orders' | 'reviews';
 type AiFilter = 'all' | 'yes' | 'no';
 type OrderOrdering =
   | '-updated_at'
@@ -57,6 +66,7 @@ const ALL_STATUS_VALUE = 'all';
 const ALL_SOURCE_VALUE = 'all';
 const ALL_AI_VALUE = 'all';
 const DEFAULT_ORDERING: OrderOrdering = '-updated_at';
+const DEFAULT_REVIEW_ORDERING = '-submitted_at';
 
 const ORDER_SOURCES: readonly OrderSource[] = ['manual', 'telegram', 'instagram'];
 
@@ -236,6 +246,7 @@ function getSourceBadgeClassName(source: OrderSource): string {
 function OrdersPage() {
   const { t, i18n } = useTranslation();
   const locale = i18n.language === 'ru' ? 'ru-RU' : 'uz-UZ';
+  const navigate = useNavigate();
 
   const [search, setSearch] = usePersistentState('orders:search', '');
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -251,6 +262,7 @@ function OrdersPage() {
   );
 
   const [customers, setCustomers] = useState<Customer[]>([]);
+  const [leads, setLeads] = useState<Lead[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
 
   const [selectedOrderId, setSelectedOrderId] = useState<EntityId | null>(null);
@@ -272,6 +284,25 @@ function OrdersPage() {
   const [orderToDelete, setOrderToDelete] = useState<Order | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
+  const [currentView, setCurrentView] = usePersistentState<OrdersView>(
+    'orders:view',
+    'orders',
+  );
+
+  // Review states
+  const [reviews, setReviews] = useState<OrderReview[]>([]);
+  const [reviewPagination, setReviewPagination] = useState<PaginationMeta>(
+    DEFAULT_PAGINATION_META,
+  );
+  const [reviewSearch, setReviewSearch] = usePersistentState('orders:reviews:search', '');
+  const [reviewDebouncedSearch, setReviewDebouncedSearch] = useState('');
+  const [reviewSourceFilter, setReviewSourceFilter] = useState<string>(ALL_SOURCE_VALUE);
+  const [reviewOrdering, setReviewOrdering] = useState<string>(DEFAULT_REVIEW_ORDERING);
+  const [currentReviewPage, setCurrentReviewPage] = useState(1);
+  const [isReviewLoading, setIsReviewLoading] = useState(false);
+  const [reviewToDelete, setReviewToDelete] = useState<OrderReview | null>(null);
+  const [selectedReviewId, setSelectedReviewId] = useState<EntityId | null>(null);
+
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
       setDebouncedSearch(search.trim());
@@ -283,6 +314,16 @@ function OrdersPage() {
   }, [search]);
 
   useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      setReviewDebouncedSearch(reviewSearch.trim());
+    }, SEARCH_DEBOUNCE_MS);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [reviewSearch]);
+
+  useEffect(() => {
     setCurrentPage(1);
   }, [debouncedSearch, statusFilter, sourceFilter, aiFilter, ordering]);
 
@@ -291,7 +332,7 @@ function OrdersPage() {
 
     async function loadFormReferences() {
       try {
-        const [customersResponse, productsResponse] = await Promise.all([
+        const [customersResponse, productsResponse, leadsResponse] = await Promise.all([
           services.customers.list({
             page: 1,
             pageSize: SERVICE_FETCH_SIZE,
@@ -301,6 +342,11 @@ function OrdersPage() {
             page: 1,
             pageSize: SERVICE_FETCH_SIZE,
             ordering: 'name',
+          }),
+          services.leads.list({
+            page: 1,
+            pageSize: SERVICE_FETCH_SIZE,
+            ordering: '-updated_at',
           }),
         ]);
 
@@ -314,6 +360,7 @@ function OrdersPage() {
           ),
         );
         setProducts(productsResponse.items);
+        setLeads(leadsResponse.items);
       } catch {
         if (!isActive) {
           return;
@@ -321,6 +368,7 @@ function OrdersPage() {
 
         setCustomers([]);
         setProducts([]);
+        setLeads([]);
       }
     }
 
@@ -403,6 +451,48 @@ function OrdersPage() {
       setSelectedOrderId(null);
     }
   }, [orders, selectedOrderId]);
+
+  useEffect(() => {
+    if (currentView !== 'reviews') return;
+
+    let isActive = true;
+
+    async function loadReviews() {
+      setIsReviewLoading(true);
+      try {
+        const result = await services.orders.listOrderReviews({
+          page: currentReviewPage,
+          pageSize: PAGE_SIZE,
+          search: reviewDebouncedSearch || undefined,
+          source: reviewSourceFilter === ALL_SOURCE_VALUE ? undefined : reviewSourceFilter,
+          ordering: reviewOrdering,
+        });
+
+        if (!isActive) return;
+
+        setReviews(result.items);
+        setReviewPagination(result.meta);
+      } catch {
+        if (!isActive) return;
+        setReviews([]);
+      } finally {
+        if (isActive) setIsReviewLoading(false);
+      }
+    }
+
+    void loadReviews();
+
+    return () => {
+      isActive = false;
+    };
+  }, [
+    currentView,
+    currentReviewPage,
+    reviewDebouncedSearch,
+    reviewSourceFilter,
+    reviewOrdering,
+    reloadCursor,
+  ]);
 
   function openCreateForm() {
     setFormMode('create');
@@ -496,6 +586,21 @@ function OrdersPage() {
     }
   }
 
+  async function handleConfirmDeleteReview() {
+    if (!reviewToDelete) return;
+    setIsDeleting(true);
+
+    try {
+      await services.orders.deleteOrderReview(reviewToDelete.id);
+      setReviewToDelete(null);
+      setReloadCursor((current) => current + 1);
+    } catch {
+      // Error handling
+    } finally {
+      setIsDeleting(false);
+    }
+  }
+
   const handleRecalculate = useCallback(async (
     orderId: EntityId,
     payload?: OrderMutationInput,
@@ -570,6 +675,25 @@ function OrdersPage() {
     [t],
   );
 
+  const reviewSourceOptions = useMemo<SelectOption[]>(
+    () => [
+      { value: ALL_SOURCE_VALUE, label: t('orders.allSources') },
+      ...ORDER_SOURCES.map((source) => ({
+        value: source,
+        label: getChannelLabel(t, source),
+      })),
+    ],
+    [t],
+  );
+
+  const reviewOrderingOptions = useMemo<SelectOption[]>(
+    () => [
+      { value: '-submitted_at', label: t('orders.reviews.submittedNewest') },
+      { value: 'submitted_at', label: t('orders.reviews.submittedOldest') },
+    ],
+    [t],
+  );
+
   const columns = useMemo<DataTableColumn<Order>[]>(() => {
     return [
       {
@@ -592,7 +716,13 @@ function OrdersPage() {
         render: (order) => (
           <div className="grid gap-0.5">
             <span className={tablePrimaryTextClassName}>
-              {order.customer?.fullName ?? order.contactName}
+              {order.customer ? (
+                order.customer.fullName
+              ) : order.lead ? (
+                `${order.lead.fullName} (Lead)`
+              ) : (
+                order.contactName || t('common.na')
+              )}
             </span>
             <span className={tableSecondaryTextClassName}>
               {order.contactPhone}
@@ -692,11 +822,127 @@ function OrdersPage() {
     ];
   }, [i18n.language, locale, t]);
 
+  const reviewColumns = useMemo<DataTableColumn<OrderReview>[]>(() => {
+    return [
+      {
+        key: 'reviewer',
+        label: t('orders.reviews.columns.reviewer'),
+        render: (review) => {
+          const customerName = review.customer ? (customers.find(c => c.id === review.customer)?.fullName || review.customer) : null;
+          const leadName = review.lead ? (leads.find(l => l.id === review.lead)?.fullName || review.lead) : null;
+
+          return (
+            <div className="grid gap-0.5">
+              <span className={tablePrimaryTextClassName}>
+                {review.orderDetail.contactName || t('common.na')}
+              </span>
+              <span className={tableSecondaryTextClassName}>
+                {review.customer ? (
+                  customerName
+                ) : review.lead ? (
+                  `${leadName} (Lead)`
+                ) : (
+                  t('common.na')
+                )}
+              </span>
+            </div>
+          );
+        },
+      },
+      {
+        key: 'comment',
+        label: t('orders.reviews.columns.comment'),
+        render: (review) => (
+          <span className="block max-w-[300px] truncate text-sm text-text-primary">
+            {review.comment}
+          </span>
+        ),
+      },
+      {
+        key: 'source',
+        label: t('orders.reviews.columns.source'),
+        render: (review) => (
+          <span
+            className={[
+              'inline-flex min-h-7 items-center rounded-pill px-2.5 text-[11px] font-semibold uppercase tracking-[0.08em]',
+              getSourceBadgeClassName(review.source as OrderSource),
+            ].join(' ')}
+          >
+            {getChannelLabel(t, review.source as OrderSource)}
+          </span>
+        ),
+      },
+      {
+        key: 'submittedAt',
+        label: t('orders.reviews.columns.submittedAt'),
+        render: (review) => (
+          <span className={tablePrimaryTextClassName}>
+            {formatLocalizedDate(review.submittedAt, i18n.language, {
+              locale,
+              withYear: true,
+              shortMonth: true,
+              fallback: t('common.na'),
+            })}
+          </span>
+        ),
+      },
+      {
+        key: 'actions',
+        label: t('orders.reviews.columns.actions'),
+        align: 'right',
+        render: (review) => (
+          <div className="flex items-center justify-end gap-1.5">
+            <button
+              type="button"
+              className={actionButtonClassName}
+              onClick={(event) => {
+                event.stopPropagation();
+                setReviewToDelete(review);
+              }}
+              aria-label={t('orders.reviews.actions.delete')}
+            >
+              <FiTrash2 className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        ),
+      },
+    ];
+  }, [i18n.language, locale, t]);
+
   const activeFilterCount =
     Number(statusFilter !== ALL_STATUS_VALUE) +
     Number(sourceFilter !== ALL_SOURCE_VALUE) +
     Number(aiFilter !== ALL_AI_VALUE) +
     Number(ordering !== DEFAULT_ORDERING);
+
+  const viewSwitcher = (
+    <div className="inline-flex items-center rounded-lg bg-surface-subtle p-1 ring-1 ring-border-soft/40">
+      <button
+        type="button"
+        className={[
+          'inline-flex min-h-8 items-center gap-2 rounded-md px-3 text-[12px] font-semibold transition duration-fast',
+          currentView === 'orders'
+            ? 'bg-surface-card text-text-primary shadow-sm ring-1 ring-border-soft/60'
+            : 'text-text-muted hover:text-text-secondary',
+        ].join(' ')}
+        onClick={() => setCurrentView('orders')}
+      >
+        {t('orders.views.orders')}
+      </button>
+      <button
+        type="button"
+        className={[
+          'inline-flex min-h-8 items-center gap-2 rounded-md px-3 text-[12px] font-semibold transition duration-fast',
+          currentView === 'reviews'
+            ? 'bg-surface-card text-text-primary shadow-sm ring-1 ring-border-soft/60'
+            : 'text-text-muted hover:text-text-secondary',
+        ].join(' ')}
+        onClick={() => setCurrentView('reviews')}
+      >
+        {t('orders.views.reviews')}
+      </button>
+    </div>
+  );
 
   const header = (
     <PageHeader
@@ -705,17 +951,28 @@ function OrdersPage() {
       subtitle={t('orders.subtitle')}
       actions={
         <div className="flex w-full flex-wrap items-center gap-2 min-[768px]:w-auto">
-          <button
-            type="button"
-            className="inline-flex min-h-9 items-center gap-2 rounded-lg bg-primary px-3.5 text-sm font-semibold text-primary-foreground transition duration-fast hover:bg-primary-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35"
-            onClick={openCreateForm}
-          >
-            <AppIcon name="plus" className="h-4 w-4" aria-hidden="true" />
-            {t('orders.newOrder')}
-          </button>
+          {currentView === 'orders' && (
+            <button
+              type="button"
+              className="inline-flex min-h-9 items-center gap-2 rounded-lg bg-primary px-3.5 text-sm font-semibold text-primary-foreground transition duration-fast hover:bg-primary-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35"
+              onClick={openCreateForm}
+            >
+              <AppIcon name="plus" className="h-4 w-4" aria-hidden="true" />
+              {t('orders.newOrder')}
+            </button>
+          )}
           <span className="inline-flex min-h-8 items-center gap-2 rounded-pill bg-primary/12 px-3 text-[12px] font-semibold text-text-accent">
-            <AppIcon name="orders" className="h-3.5 w-3.5" aria-hidden="true" />
-            {paginationMeta.totalItems} {t('orders.title').toLowerCase()}
+            <AppIcon
+              name={currentView === 'orders' ? 'orders' : 'chat'}
+              className="h-3.5 w-3.5"
+              aria-hidden="true"
+            />
+            {currentView === 'orders'
+              ? paginationMeta.totalItems
+              : reviewPagination.totalItems}{' '}
+            {currentView === 'orders'
+              ? t('orders.title').toLowerCase()
+              : t('orders.views.reviews').toLowerCase()}
           </span>
         </div>
       }
@@ -781,85 +1038,159 @@ function OrdersPage() {
             </div>
           }
         >
-          <SearchInput
-            value={search}
-            onChange={setSearch}
-            placeholder={t('orders.searchPlaceholder')}
-          />
+          {currentView === 'orders' ? (
+            <>
+              <SearchInput
+                value={search}
+                onChange={setSearch}
+                placeholder={t('orders.searchPlaceholder')}
+              />
 
-          <label className="grid min-w-[min(180px,100%)] flex-[1_1_180px] gap-1.5 min-[640px]:flex-[0_1_180px]">
-            <span className={labelClassName}>{t('orders.status')}</span>
-            <FilterSelect
-              value={statusFilter}
-              options={statusOptions}
-              onChange={setStatusFilter}
-              disabled={isLoading}
-            />
-          </label>
+              <label className="grid min-w-[min(180px,100%)] flex-[1_1_180px] gap-1.5 min-[640px]:flex-[0_1_180px]">
+                <span className={labelClassName}>{t('orders.status')}</span>
+                <FilterSelect
+                  value={statusFilter}
+                  options={statusOptions}
+                  onChange={setStatusFilter}
+                  disabled={isLoading}
+                />
+              </label>
 
-          <label className="grid min-w-[min(180px,100%)] flex-[1_1_180px] gap-1.5 min-[640px]:flex-[0_1_180px]">
-            <span className={labelClassName}>{t('orders.source')}</span>
-            <FilterSelect
-              value={sourceFilter}
-              options={sourceOptions}
-              onChange={setSourceFilter}
-              disabled={isLoading}
-            />
-          </label>
+              <label className="grid min-w-[min(180px,100%)] flex-[1_1_180px] gap-1.5 min-[640px]:flex-[0_1_180px]">
+                <span className={labelClassName}>{t('orders.source')}</span>
+                <FilterSelect
+                  value={sourceFilter}
+                  options={sourceOptions}
+                  onChange={setSourceFilter}
+                  disabled={isLoading}
+                />
+              </label>
 
-          <label className="grid min-w-[min(170px,100%)] flex-[1_1_170px] gap-1.5 min-[640px]:flex-[0_1_170px]">
-            <span className={labelClassName}>{t('orders.aiGenerated')}</span>
-            <FilterSelect
-              value={aiFilter}
-              options={aiFilterOptions}
-              onChange={(value) => setAiFilter(value as AiFilter)}
-              disabled={isLoading}
-            />
-          </label>
+              <label className="grid min-w-[min(170px,100%)] flex-[1_1_170px] gap-1.5 min-[640px]:flex-[0_1_170px]">
+                <span className={labelClassName}>{t('orders.aiGenerated')}</span>
+                <FilterSelect
+                  value={aiFilter}
+                  options={aiFilterOptions}
+                  onChange={(value) => setAiFilter(value as AiFilter)}
+                  disabled={isLoading}
+                />
+              </label>
 
-          <label className="grid min-w-[min(180px,100%)] flex-[1_1_180px] gap-1.5 min-[640px]:flex-[0_1_200px]">
-            <span className={labelClassName}>{t('orders.orderBy')}</span>
-            <FilterSelect
-              value={ordering}
-              options={orderingOptions}
-              onChange={(value) => setOrdering(value as OrderOrdering)}
-              disabled={isLoading}
-            />
-          </label>
+              <label className="grid min-w-[min(180px,100%)] flex-[1_1_180px] gap-1.5 min-[640px]:flex-[0_1_200px]">
+                <span className={labelClassName}>{t('orders.orderBy')}</span>
+                <FilterSelect
+                  value={ordering}
+                  options={orderingOptions}
+                  onChange={(value) => setOrdering(value as OrderOrdering)}
+                  disabled={isLoading}
+                />
+              </label>
+            </>
+          ) : (
+            <>
+              <SearchInput
+                value={reviewSearch}
+                onChange={setReviewSearch}
+                placeholder={t('orders.reviews.searchPlaceholder')}
+              />
+
+              <label className="grid min-w-[min(180px,100%)] flex-[1_1_180px] gap-1.5 min-[640px]:flex-[0_1_180px]">
+                <span className={labelClassName}>{t('orders.source')}</span>
+                <FilterSelect
+                  value={reviewSourceFilter}
+                  options={reviewSourceOptions}
+                  onChange={setReviewSourceFilter}
+                  disabled={isReviewLoading}
+                />
+              </label>
+
+              <label className="grid min-w-[min(180px,100%)] flex-[1_1_180px] gap-1.5 min-[640px]:flex-[0_1_200px]">
+                <span className={labelClassName}>{t('orders.orderBy')}</span>
+                <FilterSelect
+                  value={reviewOrdering}
+                  options={reviewOrderingOptions}
+                  onChange={setReviewOrdering}
+                  disabled={isReviewLoading}
+                />
+              </label>
+            </>
+          )}
         </FilterBar>
 
-        <PageCard>
-          <div className="grid gap-3">
-            <div className="flex flex-wrap items-center justify-between gap-2 px-1">
-              <h2 className="m-0 text-[1rem] font-semibold text-text-primary">
-                {t('orders.boardTitle')}
-              </h2>
-              <span className="text-[12px] font-medium text-text-muted">
-                {t('orders.boardHint')}
-              </span>
-            </div>
+        {currentView === 'orders' ? (
+          <>
+            <PageCard>
+              <div className="grid gap-3">
+                <div className="flex flex-wrap items-center justify-between gap-4 px-1">
+                  <div className="flex flex-wrap items-center gap-4">
+                    <h2 className="m-0 text-[1rem] font-semibold text-text-primary">
+                      {t('orders.boardTitle')}
+                    </h2>
+                    {viewSwitcher}
+                  </div>
+                  <span className="text-[12px] font-medium text-text-muted">
+                    {t('orders.boardHint')}
+                  </span>
+                </div>
 
-            <DataTable
-              data={orders}
-              columns={columns}
-              rowKey="id"
-              selectedRowKey={selectedOrderId}
-              loading={isLoading}
-              onRowClick={(order) => setSelectedOrderId(order.id)}
-              emptyTitle={t('orders.emptyTitle')}
-              emptyDescription={t('orders.emptyDescription')}
-            />
-          </div>
-        </PageCard>
+                <DataTable
+                  data={orders}
+                  columns={columns}
+                  rowKey="id"
+                  selectedRowKey={selectedOrderId ?? undefined}
+                  loading={isLoading}
+                  onRowClick={(order) => setSelectedOrderId(order.id)}
+                  emptyTitle={t('orders.emptyTitle')}
+                  emptyDescription={t('orders.emptyDescription')}
+                />
+              </div>
+            </PageCard>
 
-        {!isLoading && paginationMeta.totalItems > 0 ? (
-          <Pagination
-            currentPage={Math.min(currentPage, paginationMeta.totalPages)}
-            totalPages={paginationMeta.totalPages}
-            totalItems={paginationMeta.totalItems}
-            onPageChange={setCurrentPage}
-          />
-        ) : null}
+            {!isLoading && paginationMeta.totalItems > 0 ? (
+              <Pagination
+                currentPage={Math.min(currentPage, paginationMeta.totalPages)}
+                totalPages={paginationMeta.totalPages}
+                totalItems={paginationMeta.totalItems}
+                onPageChange={setCurrentPage}
+              />
+            ) : null}
+          </>
+        ) : (
+          <>
+            <PageCard>
+              <div className="grid gap-3">
+                <div className="flex flex-wrap items-center justify-between gap-4 px-1">
+                  <div className="flex flex-wrap items-center gap-4">
+                    <h2 className="m-0 text-[1rem] font-semibold text-text-primary">
+                      {t('orders.reviews.boardTitle')}
+                    </h2>
+                    {viewSwitcher}
+                  </div>
+                </div>
+
+                <DataTable
+                  data={reviews}
+                  columns={reviewColumns}
+                  rowKey="id"
+                  selectedRowKey={selectedReviewId ?? undefined}
+                  loading={isReviewLoading}
+                  onRowClick={(review) => setSelectedReviewId(review.id)}
+                  emptyTitle={t('orders.reviews.emptyTitle')}
+                  emptyDescription={t('orders.reviews.emptyDescription')}
+                />
+              </div>
+            </PageCard>
+
+            {!isReviewLoading && reviewPagination.totalItems > 0 ? (
+              <Pagination
+                currentPage={Math.min(currentReviewPage, reviewPagination.totalPages)}
+                totalPages={reviewPagination.totalPages}
+                totalItems={reviewPagination.totalItems}
+                onPageChange={setCurrentReviewPage}
+              />
+            ) : null}
+          </>
+        )}
       </PageSection>
 
       {selectedOrderId ? (
@@ -883,7 +1214,7 @@ function OrdersPage() {
       {isFormOpen ? (
         <OrderFormPanel
           mode={formMode}
-          order={editingOrder}
+          order={editingOrder || undefined}
           customers={customers}
           products={products}
           statusOptions={statusOptions.filter(
@@ -893,7 +1224,7 @@ function OrdersPage() {
             (option) => option.value !== ALL_SOURCE_VALUE,
           )}
           isSubmitting={isSaving}
-          errorMessage={formErrorMessage}
+          errorMessage={formErrorMessage || undefined}
           onClose={() => {
             if (!isSaving) {
               setIsFormOpen(false);
@@ -920,6 +1251,30 @@ function OrdersPage() {
           }}
         />
       ) : null}
+
+      {reviewToDelete ? (
+        <ReviewDeleteDialog
+          review={reviewToDelete}
+          isDeleting={isDeleting}
+          onCancel={() => {
+            if (!isDeleting) {
+              setReviewToDelete(null);
+            }
+          }}
+          onConfirm={() => {
+            void handleConfirmDeleteReview();
+          }}
+        />
+      ) : null}
+
+      {selectedReviewId && (
+        <ReviewDetailPanel
+          review={reviews.find(r => r.id === selectedReviewId)!}
+          onClose={() => setSelectedReviewId(null)}
+          customerName={reviews.find(r => r.id === selectedReviewId)?.customer ? customers.find(c => c.id === reviews.find(r => r.id === selectedReviewId)!.customer)?.fullName : undefined}
+          leadName={reviews.find(r => r.id === selectedReviewId)?.lead ? leads.find(l => l.id === reviews.find(r => r.id === selectedReviewId)!.lead)?.fullName : undefined}
+        />
+      )}
     </PageLayout>
   );
 }

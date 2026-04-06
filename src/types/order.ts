@@ -93,3 +93,59 @@ export interface OrderSummary {
   contactPhone: string;
   updatedAt: TimestampString;
 }
+
+export interface ReviewOrderItem {
+  id: EntityId;
+  product: string;
+  quantity: number;
+  unitPrice: number;
+  lineTotal: number;
+}
+
+export interface ReviewOrderDetail {
+  id: EntityId;
+  status: OrderStatus;
+  totalAmount: number;
+  contactName: string;
+  contactPhone: string;
+  shippingAddress: string;
+  createdAt: TimestampString;
+  items: ReviewOrderItem[];
+}
+
+export interface OrderReview extends AuditInfo {
+  id: EntityId;
+  order: EntityId;
+  orderDetail: ReviewOrderDetail;
+  customer?: EntityId;
+  lead?: EntityId;
+  sessionExternalId?: string;
+  comment: string;
+  requestedAt: TimestampString;
+  submittedAt: TimestampString;
+  source: string;
+  metadata?: string;
+}
+
+export interface OrderReviewMutationInput {
+  order: EntityId;
+  customer?: EntityId;
+  lead?: EntityId;
+  sessionExternalId?: string;
+  comment: string;
+  source: string;
+  metadata?: string;
+}
+
+export interface OrderReviewPatchInput extends Partial<OrderReviewMutationInput> {}
+
+export interface OrderReviewListParams {
+  page?: number;
+  pageSize?: number;
+  customer?: EntityId;
+  lead?: EntityId;
+  ordering?: string;
+  search?: string;
+  source?: string;
+  submittedAt?: TimestampString;
+}

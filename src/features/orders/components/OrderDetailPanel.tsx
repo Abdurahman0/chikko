@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { FiEdit2, FiRefreshCw, FiTrash2 } from 'react-icons/fi';
+import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { StatusBadge } from '../../../components/shared/data';
 import AppIcon from '../../../components/shared/icons/AppIcon';
@@ -80,6 +81,7 @@ function OrderDetailPanel({
   onRecalculate,
 }: OrderDetailPanelProps) {
   const { t, i18n } = useTranslation();
+  const navigate = useNavigate();
   const language = i18n.language;
   const locale = i18n.language === 'ru' ? 'ru-RU' : 'uz-UZ';
   const [order, setOrder] = useState<Order | null>(null);
@@ -260,7 +262,14 @@ function OrderDetailPanel({
                   </div>
 
                   <div className="grid gap-2.5 sm:grid-cols-2">
-                    <div className="rounded-lg bg-surface-subtle/80 p-3">
+                    <div 
+                      className={`rounded-lg bg-surface-subtle/80 p-3 transition-colors ${order.customer ? 'cursor-pointer hover:bg-surface-muted/90' : ''}`}
+                      onClick={() => {
+                        if (order.customer) {
+                          navigate('/customers', { state: { selectedCustomerId: order.customer.id }});
+                        }
+                      }}
+                    >
                       <p className={labelClassName}>{t('orders.columns.customerContact')}</p>
                       <p className={`mt-1 ${valueClassName}`}>
                         {order.customer?.fullName ?? order.contactName}
@@ -278,13 +287,27 @@ function OrderDetailPanel({
                         {order.shippingAddress || t('common.na')}
                       </p>
                     </div>
-                    <div className="rounded-lg bg-surface-subtle/80 p-3">
+                    <div 
+                      className={`rounded-lg bg-surface-subtle/80 p-3 transition-colors ${order.customer ? 'cursor-pointer hover:bg-surface-muted/90' : ''}`}
+                      onClick={() => {
+                        if (order.customer) {
+                          navigate('/customers', { state: { selectedCustomerId: order.customer.id }});
+                        }
+                      }}
+                    >
                       <p className={labelClassName}>{t('orders.detail.customer')}</p>
                       <p className={`mt-1 ${valueClassName}`}>
                         {order.customer?.fullName ?? t('orders.detail.noCustomer')}
                       </p>
                     </div>
-                    <div className="rounded-lg bg-surface-subtle/80 p-3">
+                    <div 
+                      className={`rounded-lg bg-surface-subtle/80 p-3 transition-colors ${order.lead ? 'cursor-pointer hover:bg-surface-muted/90' : ''}`}
+                      onClick={() => {
+                        if (order.lead) {
+                          navigate('/leads', { state: { selectedLeadId: order.lead.id }});
+                        }
+                      }}
+                    >
                       <p className={labelClassName}>{t('orders.detail.lead')}</p>
                       <p className={`mt-1 ${valueClassName}`}>
                         {resolvedLeadName ?? t('orders.detail.noLead')}

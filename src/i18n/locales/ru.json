@@ -1,4 +1,4 @@
-﻿{
+{
   "common": {
     "appName": "Chikko",
     "loading": "Загрузка...",
@@ -796,6 +796,36 @@
     "totalLowHigh": "Сумма (по возрастанию)",
     "searchPlaceholder": "Поиск по контакту, телефону, адресу или ID...",
     "records": "записей",
+    "views": {
+      "orders": "Заказы",
+      "reviews": "Отзывы"
+    },
+    "reviews": {
+      "boardTitle": "Список отзывов",
+      "emptyTitle": "Отзывы не найдены",
+      "emptyDescription": "Отзывов пока нет.",
+      "submittedNewest": "Прислано (сначала новые)",
+      "submittedOldest": "Прислано (сначала старые)",
+      "searchPlaceholder": "Поиск по отзыву или клиенту...",
+      "records": "записей",
+      "columns": {
+        "reviewer": "Автор отзыва",
+        "comment": "Отзыв",
+        "source": "Источник",
+        "submittedAt": "Дата отправки",
+        "actions": "Действия"
+      },
+      "actions": {
+        "delete": "Удалить отзыв"
+      },
+      "deleteDialog": {
+        "eyebrow": "Удаление отзыва",
+        "title": "Удалить отзыв для \"{{id}}\"",
+        "description": "Это действие необратимо. Отзыв будет полностью удалён.",
+        "deleting": "Удаление...",
+        "confirm": "Удалить отзыв"
+      }
+    },
     "activeFilters": "активных фильтров",
     "detailOpen": "Детали открыты",
     "itemsSuffix": "позиций",

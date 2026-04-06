@@ -246,11 +246,15 @@ export function mapProductCategoryDtoToModel(
 ): ProductCategory {
   const nowIso = new Date().toISOString();
 
+  const imageUrl = readString(dto.image_url) || readString(dto.image) || undefined;
+
   return {
     id: readString(dto.id) || `product-category-${nowIso}`,
     name: readString(dto.name),
     code: readString(dto.code),
     description: readString(dto.description) || undefined,
+    image: readString(dto.image) || null,
+    imageUrl,
     isActive: readBoolean(dto.is_active),
     createdAt: readString(dto.created_at, nowIso),
     updatedAt: readString(dto.updated_at, nowIso),

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Switch } from '../../../components/shared/data';
 import type { ProductCategory } from '../../../types/domain';
@@ -14,6 +14,7 @@ interface ProductCategoryFormDialogProps {
     code: string;
     description: string;
     isActive: boolean;
+    image?: File | null;
   }) => void;
 }
 
@@ -40,21 +41,48 @@ function ProductCategoryFormDialog({
   const [description, setDescription] = useState('');
   const [isActive, setIsActive] = useState(true);
   const [fieldError, setFieldError] = useState<string | null>(null);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (mode === 'edit' && category) {
       setName(category.name);
       setDescription(category.description ?? '');
       setIsActive(category.isActive);
+      setImageFile(null);
+      setImagePreview(category.imageUrl ?? null);
       return;
     }
 
     setName('');
     setDescription('');
     setIsActive(true);
+    setImageFile(null);
+    setImagePreview(null);
   }, [mode, category]);
 
   const code = useMemo(() => name.trim().toLocaleLowerCase(), [name]);
+
+  function handleImageChange(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0] ?? null;
+    setImageFile(file);
+
+    if (file) {
+      const objectUrl = URL.createObjectURL(file);
+      setImagePreview(objectUrl);
+    } else {
+      setImagePreview(mode === 'edit' && category?.imageUrl ? category.imageUrl : null);
+    }
+  }
+
+  function handleRemoveImage() {
+    setImageFile(null);
+    setImagePreview(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  }
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -71,6 +99,7 @@ function ProductCategoryFormDialog({
       code: normalizedName.toLocaleLowerCase(),
       description: description.trim(),
       isActive,
+      image: imageFile,
     });
   }
 
@@ -148,6 +177,53 @@ function ProductCategoryFormDialog({
               placeholder={t('products.categoryForm.descriptionPlaceholder')}
               disabled={isSubmitting}
             />
+          </div>
+
+          {/* Image upload */}
+          <div className="grid gap-1.5">
+            <span className={labelClassName}>
+              {t('products.categoryForm.image', { defaultValue: 'Rasm' })}
+            </span>
+            <div className="flex items-center gap-3">
+              {imagePreview ? (
+                <div className="relative shrink-0">
+                  <img
+                    src={imagePreview}
+                    alt={name || 'Category'}
+                    className="h-16 w-16 rounded-lg object-cover ring-1 ring-border-soft/45"
+                  />
+                  <button
+                    type="button"
+                    className="absolute -right-1.5 -top-1.5 inline-flex h-5 w-5 items-center justify-center rounded-full bg-danger text-white text-[10px] font-bold shadow-sm transition hover:brightness-90"
+                    onClick={handleRemoveImage}
+                    disabled={isSubmitting}
+                    aria-label={t('common.remove', { defaultValue: "O'chirish" })}
+                  >
+                    ✕
+                  </button>
+                </div>
+              ) : null}
+              <label
+                className={[
+                  'inline-flex cursor-pointer items-center gap-2 rounded-lg border border-dashed border-border-soft/60 px-3.5 py-2.5 text-sm font-medium text-text-secondary transition duration-fast',
+                  'hover:border-primary/50 hover:text-text-primary',
+                  isSubmitting ? 'pointer-events-none opacity-60' : '',
+                ].join(' ')}
+              >
+                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                {t('products.categoryForm.uploadImage', { defaultValue: 'Rasm yuklash' })}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleImageChange}
+                  disabled={isSubmitting}
+                />
+              </label>
+            </div>
           </div>
 
           <div className="flex items-center justify-between gap-4 rounded-xl bg-surface-card px-4 py-4 ring-1 ring-border-soft/35">

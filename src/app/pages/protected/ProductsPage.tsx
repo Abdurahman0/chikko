@@ -869,6 +869,7 @@ function ProductsPage() {
     code: string;
     description: string;
     isActive: boolean;
+    image?: File | null;
   }) {
     setIsCategorySaving(true);
     setCategoryErrorMessage(null);
@@ -880,6 +881,7 @@ function ProductsPage() {
           code: payload.code,
           description: payload.description,
           isActive: payload.isActive,
+          image: payload.image,
         });
       } else {
         if (!editingCategory) {
@@ -891,6 +893,7 @@ function ProductsPage() {
           code: payload.code,
           description: payload.description,
           isActive: payload.isActive,
+          image: payload.image,
         });
       }
 
@@ -1138,11 +1141,25 @@ function ProductsPage() {
         key: 'name',
         label: t('products.categoryColumns.name'),
         render: (category) => (
-          <div className="grid gap-0.5">
-            <span className={tablePrimaryTextClassName}>{category.name}</span>
-            <span className={tableSecondaryTextClassName}>
-              {category.description || t('products.categoryNoDescription')}
-            </span>
+          <div className="flex items-center gap-2.5">
+            {category.imageUrl ? (
+              <img
+                src={category.imageUrl}
+                alt={category.name}
+                className="h-10 w-10 shrink-0 rounded-md object-cover ring-1 ring-border-soft/45"
+                loading="lazy"
+              />
+            ) : (
+              <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-surface-subtle text-text-muted ring-1 ring-border-soft/45">
+                <FiImage className="h-4 w-4" />
+              </span>
+            )}
+            <div className="grid gap-0.5">
+              <span className={tablePrimaryTextClassName}>{category.name}</span>
+              <span className={tableSecondaryTextClassName}>
+                {category.description || t('products.categoryNoDescription')}
+              </span>
+            </div>
           </div>
         ),
       },

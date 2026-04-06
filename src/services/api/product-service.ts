@@ -111,22 +111,25 @@ function toMutationPayload(
 
 function toCategoryMutationPayload(
   input: ProductCategoryMutationInput | ProductCategoryPatchInput,
-): Record<string, unknown> {
-  const payload: Record<string, unknown> = {};
+): FormData {
+  const formData = new FormData();
 
   if (input.name !== undefined) {
-    payload.name = input.name;
+    formData.append('name', input.name);
   }
   if (input.code !== undefined) {
-    payload.code = input.code;
+    formData.append('code', input.code);
   }
   if (input.description !== undefined) {
-    payload.description = input.description;
+    formData.append('description', input.description);
   }
   if (input.isActive !== undefined) {
-    payload.is_active = input.isActive;
+    formData.append('is_active', String(input.isActive));
   }
-  return payload;
+  if (input.image !== undefined && input.image !== null) {
+    formData.append('image', input.image);
+  }
+  return formData;
 }
 
 function toImageUploadFormData(payload: FormData | File[]): FormData {
@@ -229,8 +232,6 @@ export const apiProductService: ProductService = {
   async listProductCategories(params?: ProductCategoryListParams) {
     const { data } = await apiClient.get<unknown>('/api/products/categories/', {
       params: {
-        page: params?.page,
-        page_size: params?.pageSize,
         search: params?.search,
         ordering: params?.ordering,
         is_active: params?.isActive ?? params?.is_active,
@@ -238,10 +239,9 @@ export const apiProductService: ProductService = {
     });
 
     const items = mapProductCategoryListDtoToItems(data);
-    const payload = toRecord(data);
-    const totalItemsHint = readNumber(payload?.count);
 
-    return toPaginatedResult(items, params, totalItemsHint);
+    // The new API returns a plain array; simulate pagination client-side.
+    return toPaginatedResult(items, params);
   },
 
   async getProductCategoryById(id) {

@@ -7,6 +7,8 @@ export interface ProductCategory extends AuditInfo {
   name: string;
   code: string;
   description?: string;
+  image?: string | null;
+  imageUrl?: string;
   isActive: boolean;
 }
 
@@ -23,6 +25,7 @@ export interface ProductCategoryMutationInput {
   name: string;
   code: string;
   description?: string;
+  image?: File | null;
   isActive?: boolean;
 }
 

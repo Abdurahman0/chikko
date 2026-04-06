@@ -5,13 +5,20 @@ import type {
   OrderItemMutationInput,
   OrderMutationInput,
   OrderPatchInput,
+  OrderReview,
+  OrderReviewListParams,
+  OrderReviewMutationInput,
+  OrderReviewPatchInput,
   PaginatedResult,
   TableQueryParams,
 } from '../../types/domain';
 import {
   mapOrderDtoToModel,
   mapOrderListDtoToItems,
+  mapOrderReviewDtoToModel,
+  mapOrderReviewListDtoToItems,
   type OrderDto,
+  type OrderReviewDto,
 } from '../adapters/orders.adapter';
 import type { OrderService } from '../core/contracts';
 
@@ -42,11 +49,11 @@ function isUuidLike(value: string): boolean {
   );
 }
 
-function toPaginatedResult(
-  allItems: Order[],
-  params?: TableQueryParams,
+function toPaginatedResult<T>(
+  allItems: T[],
+  params?: { page?: number; pageSize?: number },
   totalItemsHint?: number | null,
-): PaginatedResult<Order> {
+): PaginatedResult<T> {
   const page = Math.max(1, params?.page ?? 1);
   const pageSize = Math.max(1, params?.pageSize ?? 10);
   const start = (page - 1) * pageSize;
@@ -138,6 +145,36 @@ function toOrderPayload(
   const items = normalizeItems(input.items);
   if (items !== undefined) {
     payload.items = items;
+  }
+
+  return payload;
+}
+
+function toOrderReviewPayload(
+  input: OrderReviewMutationInput | OrderReviewPatchInput,
+): Record<string, unknown> {
+  const payload: Record<string, unknown> = {};
+
+  if (input.order !== undefined) {
+    payload.order = input.order;
+  }
+  if (input.customer !== undefined) {
+    payload.customer = input.customer;
+  }
+  if (input.lead !== undefined) {
+    payload.lead = input.lead;
+  }
+  if (input.sessionExternalId !== undefined) {
+    payload.session_external_id = input.sessionExternalId;
+  }
+  if (input.comment !== undefined) {
+    payload.comment = input.comment;
+  }
+  if (input.source !== undefined) {
+    payload.source = input.source;
+  }
+  if (input.metadata !== undefined) {
+    payload.metadata = input.metadata;
   }
 
   return payload;
@@ -264,15 +301,67 @@ export async function recalculateOrder(
   return getOrderById(id);
 }
 
-export const apiOrderService: OrderService & {
-  listOrders: typeof listOrders;
-  getOrderById: typeof getOrderById;
-  createOrder: typeof createOrder;
-  updateOrder: typeof updateOrder;
-  patchOrder: typeof patchOrder;
-  deleteOrder: typeof deleteOrder;
-  recalculateOrder: typeof recalculateOrder;
-} = {
+export async function listOrderReviews(
+  params?: OrderReviewListParams,
+): Promise<PaginatedResult<OrderReview>> {
+  const { data } = await apiClient.get<unknown>('/api/orders/reviews/', {
+    params: {
+      customer: params?.customer,
+      lead: params?.lead,
+      ordering: params?.ordering,
+      search: params?.search,
+      source: params?.source,
+      submitted_at: params?.submittedAt,
+    },
+  });
+
+  const items = mapOrderReviewListDtoToItems(data);
+  return toPaginatedResult(items, params);
+}
+
+export async function getOrderReviewById(id: EntityId): Promise<OrderReview | null> {
+  const { data } = await apiClient.get<OrderReviewDto>(`/api/orders/reviews/${id}/`);
+  return mapOrderReviewDtoToModel(data);
+}
+
+export async function createOrderReview(
+  payload: OrderReviewMutationInput,
+): Promise<OrderReview> {
+  const { data } = await apiClient.post<OrderReviewDto>(
+    '/api/orders/reviews/',
+    toOrderReviewPayload(payload),
+  );
+  return mapOrderReviewDtoToModel(data);
+}
+
+export async function updateOrderReview(
+  id: EntityId,
+  payload: OrderReviewMutationInput,
+): Promise<OrderReview | null> {
+  const { data } = await apiClient.put<OrderReviewDto>(
+    `/api/orders/reviews/${id}/`,
+    toOrderReviewPayload(payload),
+  );
+  return mapOrderReviewDtoToModel(data);
+}
+
+export async function patchOrderReview(
+  id: EntityId,
+  payload: OrderReviewPatchInput,
+): Promise<OrderReview | null> {
+  const { data } = await apiClient.patch<OrderReviewDto>(
+    `/api/orders/reviews/${id}/`,
+    toOrderReviewPayload(payload),
+  );
+  return mapOrderReviewDtoToModel(data);
+}
+
+export async function deleteOrderReview(id: EntityId): Promise<boolean> {
+  await apiClient.delete(`/api/orders/reviews/${id}/`);
+  return true;
+}
+
+export const apiOrderService: OrderService = {
   async list(params) {
     return listOrders(params);
   },
@@ -301,11 +390,28 @@ export const apiOrderService: OrderService & {
     return recalculateOrder(id, input);
   },
 
-  listOrders,
-  getOrderById,
-  createOrder,
-  updateOrder,
-  patchOrder,
-  deleteOrder,
-  recalculateOrder,
+  async listOrderReviews(params) {
+    return listOrderReviews(params);
+  },
+
+  async getOrderReviewById(id) {
+    return getOrderReviewById(id);
+  },
+
+  async createOrderReview(input) {
+    return createOrderReview(input);
+  },
+
+  async updateOrderReview(id, input) {
+    return updateOrderReview(id, input);
+  },
+
+  async patchOrderReview(id, input) {
+    return patchOrderReview(id, input);
+  },
+
+  async deleteOrderReview(id) {
+    return deleteOrderReview(id);
+  },
 };
+

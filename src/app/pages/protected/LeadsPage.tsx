@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { FiEdit2, FiTrash2 } from 'react-icons/fi';
+import { useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
   DataTable,
@@ -267,6 +268,17 @@ function LeadsPage() {
   const [leadToDelete, setLeadToDelete] = useState<Lead | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
+  const location = useLocation();
+
+  useEffect(() => {
+    const state = location.state as { selectedLeadId?: string } | null;
+    if (state?.selectedLeadId && isUuidLike(state.selectedLeadId)) {
+      setSelectedLeadId(state.selectedLeadId);
+      // Consume the state so it doesn't trigger on refresh
+      window.history.replaceState(null, '');
+    }
+  }, [location]);
+
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
       setDebouncedSearch(search.trim());
@@ -488,19 +500,6 @@ function LeadsPage() {
     sourceFilter,
     statusFilter,
   ]);
-
-  useEffect(() => {
-    if (selectedLeadId === null) {
-      return;
-    }
-
-    const isSelectedLeadVisible = leadsWithOperatorNames.some(
-      (lead) => lead.id === selectedLeadId,
-    );
-    if (!isSelectedLeadVisible) {
-      setSelectedLeadId(null);
-    }
-  }, [leadsWithOperatorNames, selectedLeadId]);
 
   const operatorSelectOptions = useMemo<SelectOption[]>(
     () => [

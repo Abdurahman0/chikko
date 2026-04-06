@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { FiEdit2, FiTrash2 } from 'react-icons/fi';
+import { useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
   DataTable,
@@ -143,6 +144,17 @@ function CustomersPage() {
 
   const [customerToDelete, setCustomerToDelete] = useState<Customer | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  const location = useLocation();
+
+  useEffect(() => {
+    const state = location.state as { selectedCustomerId?: string } | null;
+    if (state?.selectedCustomerId && isUuidLike(state.selectedCustomerId)) {
+      setSelectedCustomerId(state.selectedCustomerId);
+      // Consume the state so it doesn't trigger on refresh
+      window.history.replaceState(null, '');
+    }
+  }, [location]);
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
@@ -458,19 +470,6 @@ function CustomersPage() {
       isActive = false;
     };
   }, [assignedOperatorFilter, currentPage, debouncedSearch, ordering, reloadCursor]);
-
-  useEffect(() => {
-    if (selectedCustomerId === null) {
-      return;
-    }
-
-    const isSelectedCustomerVisible = customersWithResolvedNames.some(
-      (customer) => customer.id === selectedCustomerId,
-    );
-    if (!isSelectedCustomerVisible) {
-      setSelectedCustomerId(null);
-    }
-  }, [customersWithResolvedNames, selectedCustomerId]);
 
   function openCreateForm() {
     setFormMode('create');

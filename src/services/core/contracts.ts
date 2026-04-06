@@ -38,6 +38,10 @@ import type {
   Order,
   OrderMutationInput,
   OrderPatchInput,
+  OrderReview,
+  OrderReviewListParams,
+  OrderReviewMutationInput,
+  OrderReviewPatchInput,
   PaginatedResult,
   Payment,
   PaymentListParams,
@@ -311,6 +315,20 @@ export interface OrderService {
     id: EntityId,
     input?: OrderMutationInput | OrderPatchInput,
   ): Promise<Order | null>;
+  listOrderReviews(
+    params?: OrderReviewListParams,
+  ): Promise<PaginatedResult<OrderReview>>;
+  getOrderReviewById(id: EntityId): Promise<OrderReview | null>;
+  createOrderReview(input: OrderReviewMutationInput): Promise<OrderReview>;
+  updateOrderReview(
+    id: EntityId,
+    input: OrderReviewMutationInput,
+  ): Promise<OrderReview | null>;
+  patchOrderReview(
+    id: EntityId,
+    input: OrderReviewPatchInput,
+  ): Promise<OrderReview | null>;
+  deleteOrderReview(id: EntityId): Promise<boolean>;
 }
 
 export interface PaymentService {

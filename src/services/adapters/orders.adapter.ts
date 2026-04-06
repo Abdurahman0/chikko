@@ -6,13 +6,17 @@ import type {
   Order,
   OrderItem,
   OrderPaymentStatus,
+  OrderReview,
   OrderSource,
   OrderStatus,
   ProductSummary,
+  ReviewOrderDetail,
+  ReviewOrderItem,
 } from '../../types/domain';
 
 export type OrderDto = Record<string, unknown>;
 export type OrderItemDto = Record<string, unknown>;
+export type OrderReviewDto = Record<string, unknown>;
 
 const ALLOWED_ORDER_STATUSES: readonly OrderStatus[] = [
   'draft',
@@ -465,4 +469,73 @@ export function mapOrderListDtoToItems(value: unknown): Order[] {
     .map((item) => toRecord(item))
     .filter((item): item is OrderDto => item !== null)
     .map((item) => mapOrderDtoToModel(item));
+}
+function parseReviewOrderDetail(value: unknown): ReviewOrderDetail {
+  const payload = toRecord(value);
+  const items = Array.isArray(payload?.items) ? payload.items : [];
+  
+  return {
+    id: readString(payload?.id) || '',
+    status: normalizeStatus(payload?.status),
+    totalAmount: readNumber(payload?.total_amount),
+    contactName: readString(payload?.contact_name),
+    contactPhone: readString(payload?.contact_phone),
+    shippingAddress: readString(payload?.shipping_address),
+    createdAt: readString(payload?.created_at, new Date().toISOString()),
+    items: items.map(item => {
+      const itemPayload = toRecord(item);
+      return {
+        id: readString(itemPayload?.id) || '',
+        product: readString(itemPayload?.product),
+        quantity: readNumber(itemPayload?.quantity),
+        unitPrice: parseFloat(readString(itemPayload?.unit_price, '0')),
+        lineTotal: parseFloat(readString(itemPayload?.line_total, '0'))
+      } as ReviewOrderItem;
+    })
+  };
+}
+
+export function mapOrderReviewDtoToModel(dto: OrderReviewDto): OrderReview {
+  const nowIso = new Date().toISOString();
+
+  return {
+    id: readString(dto.id) || `review-${nowIso}`,
+    order: readString(dto.order),
+    orderDetail: parseReviewOrderDetail(dto.order_detail),
+    customer: readString(dto.customer) || undefined,
+    lead: readString(dto.lead) || undefined,
+    sessionExternalId: readString(dto.session_external_id) || undefined,
+    comment: readString(dto.comment),
+    requestedAt: readString(dto.requested_at, nowIso),
+    submittedAt: readString(dto.submitted_at, nowIso),
+    source: readString(dto.source),
+    metadata: readString(dto.metadata) || undefined,
+    createdAt: readString(dto.created_at, nowIso),
+    updatedAt: readString(dto.updated_at, nowIso),
+  };
+}
+
+export function mapOrderReviewListDtoToItems(value: unknown): OrderReview[] {
+  if (Array.isArray(value)) {
+    return value
+      .map((item) => toRecord(item))
+      .filter((item): item is OrderReviewDto => item !== null)
+      .map((item) => mapOrderReviewDtoToModel(item));
+  }
+
+  const payload = toRecord(value);
+  if (!payload) {
+    return [];
+  }
+
+  const results = Array.isArray(payload.results)
+    ? payload.results
+    : Array.isArray(payload.items)
+      ? payload.items
+      : [];
+
+  return results
+    .map((item) => toRecord(item))
+    .filter((item): item is OrderReviewDto => item !== null)
+    .map((item) => mapOrderReviewDtoToModel(item));
 }
