@@ -298,7 +298,15 @@ function ProductDetailPanel({
                         {t('products.form.category')}
                       </p>
                       <p className={`mt-1 ${valueClassName}`}>
-                        {product.categoryName || product.category || t('common.na')}
+                        {product.categoryName || product.category?.name || t('common.na')}
+                      </p>
+                    </div>
+                    <div className="rounded-lg bg-surface-subtle/80 p-3">
+                      <p className={labelClassName}>
+                        {t('products.form.brand', { defaultValue: 'Brend' })}
+                      </p>
+                      <p className={`mt-1 ${valueClassName}`}>
+                        {product.brandName || product.brand?.name || t('common.na')}
                       </p>
                     </div>
                     <div className="rounded-lg bg-surface-subtle/80 p-3 sm:col-span-2">
@@ -324,51 +332,47 @@ function ProductDetailPanel({
                     </p>
                   </div>
 
-                  <dl className="m-0 grid gap-2">
-                    <div className="flex items-center justify-between gap-3 rounded-lg bg-surface-subtle/80 px-3 py-2.5">
-                      <dt className={labelClassName}>
+                  <div className="grid gap-2.5 sm:grid-cols-2">
+                    <div className="rounded-lg bg-surface-subtle/35 p-3 ring-1 ring-border-soft/20">
+                      <p className={labelClassName}>
                         {t('products.detail.created')}
-                      </dt>
-                      <dd className={`m-0 ${valueClassName}`}>
-                        {formatDateTime(product.createdAt, i18n.language, locale) ||
-                          t('common.na')}
-                      </dd>
+                      </p>
+                      <p className={`mt-1 ${valueClassName}`}>
+                        {formatDateTime(product.createdAt, i18n.language, locale) || t('common.na')}
+                      </p>
                     </div>
-                    <div className="flex items-center justify-between gap-3 rounded-lg bg-surface-subtle/80 px-3 py-2.5">
-                      <dt className={labelClassName}>
+                    <div className="rounded-lg bg-surface-subtle/35 p-3 ring-1 ring-border-soft/20">
+                      <p className={labelClassName}>
                         {t('products.detail.updated')}
-                      </dt>
-                      <dd className={`m-0 ${valueClassName}`}>
-                        {formatDateTime(product.updatedAt, i18n.language, locale) ||
-                          t('common.na')}
-                      </dd>
+                      </p>
+                      <p className={`mt-1 ${valueClassName}`}>
+                        {formatDateTime(product.updatedAt, i18n.language, locale) || t('common.na')}
+                      </p>
                     </div>
-                  </dl>
+                  </div>
                 </div>
               </PageCard>
 
-              <PageCard>
-                <div className="flex flex-wrap items-center gap-2">
-                  <button
-                    type="button"
-                    className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-primary px-4 text-sm font-semibold text-primary-foreground transition duration-fast hover:bg-primary-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35"
-                    onClick={() => onEdit(product)}
-                  >
-                    <FiEdit2 className="h-4 w-4" />
-                    {t('products.detail.editProduct')}
-                  </button>
-                  <button
-                    type="button"
-                    className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-danger-bg px-4 text-sm font-semibold text-danger transition duration-fast hover:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-danger/30 disabled:cursor-not-allowed disabled:opacity-55"
-                    onClick={() => onDelete(product)}
-                    disabled={isDeleteDisabled}
-                    title={deleteDisabledReason ?? undefined}
-                  >
-                    <FiTrash2 className="h-4 w-4" />
-                    {t('products.detail.deleteProduct')}
-                  </button>
-                </div>
-              </PageCard>
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-primary px-4 text-sm font-semibold text-primary-foreground shadow-sm transition duration-fast hover:bg-primary-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35"
+                  onClick={() => onEdit(product)}
+                >
+                  <FiEdit2 className="h-4 w-4" />
+                  {t('products.detail.editProduct')}
+                </button>
+                <button
+                  type="button"
+                  className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-surface-card px-4 text-sm font-semibold text-danger shadow-sm ring-1 ring-danger/25 transition duration-fast hover:bg-danger/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-danger/25 disabled:cursor-not-allowed disabled:opacity-50"
+                  onClick={() => onDelete(product)}
+                  disabled={isDeleteDisabled}
+                  title={deleteDisabledReason ?? undefined}
+                >
+                  <FiTrash2 className="h-4 w-4" />
+                  {t('products.detail.deleteProduct')}
+                </button>
+              </div>
             </>
           ) : null}
         </div>
@@ -376,32 +380,21 @@ function ProductDetailPanel({
 
       {previewImageUrl ? (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-background-overlay/86 p-3 backdrop-blur-[3px] min-[640px]:p-6"
-          onClick={(event) => {
-            event.stopPropagation();
-            setPreviewImageUrl(null);
-          }}
-          role="presentation"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4 transition duration-base animate-in fade-in"
+          onClick={() => setPreviewImageUrl(null)}
         >
-          <div
-            className="relative flex w-full max-w-[980px] items-center justify-center rounded-2xl bg-surface-card/95 p-2 shadow-xl ring-1 ring-border-soft/55 min-[640px]:p-3"
-            onClick={(event) => event.stopPropagation()}
+          <img
+            src={previewImageUrl}
+            alt="Mahsulot rasmi"
+            className="max-h-full max-w-full rounded-lg object-contain shadow-2xl transition duration-base animate-in zoom-in-95"
+          />
+          <button
+            type="button"
+            className="absolute right-6 top-6 inline-flex h-10 w-10 items-center justify-center rounded-xl bg-white/10 text-white backdrop-blur-md transition duration-fast hover:bg-white/20"
+            onClick={() => setPreviewImageUrl(null)}
           >
-            <img
-              src={previewImageUrl}
-              alt={product?.name ?? t('products.detail.titleFallback')}
-              className="max-h-[82vh] w-full rounded-xl object-contain"
-            />
-
-            <button
-              type="button"
-              className="absolute right-3 top-3 inline-flex h-9 w-9 items-center justify-center rounded-lg bg-surface-subtle/92 text-text-primary shadow-sm transition duration-fast hover:bg-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20"
-              onClick={() => setPreviewImageUrl(null)}
-              aria-label={t('products.detail.close')}
-            >
-              <AppIcon name="close" className="h-4.5 w-4.5" aria-hidden="true" />
-            </button>
-          </div>
+            <AppIcon name="close" className="h-5 w-5" />
+          </button>
         </div>
       ) : null}
     </div>

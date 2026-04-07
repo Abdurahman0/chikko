@@ -55,7 +55,10 @@ export interface Product extends AuditInfo {
   description?: string;
   categoryId?: EntityId;
   categoryName?: string;
-  category?: string;
+  category?: ProductCategory;
+  brandId?: EntityId;
+  brandName?: string;
+  brand?: ProductBrand;
   price: number;
   promoPrice?: number;
   currency: CurrencyCode;
@@ -75,6 +78,7 @@ export interface ProductMutationInput {
   sku: string;
   description: string;
   categoryId?: EntityId | null;
+  brandId?: EntityId | null;
   price: number;
   currency: CurrencyCode;
   stockQuantity: number;
@@ -84,3 +88,30 @@ export interface ProductMutationInput {
 }
 
 export interface ProductPatchInput extends Partial<ProductMutationInput> {}
+
+export interface ProductBrand extends AuditInfo {
+  id: EntityId;
+  name: string;
+  code: string;
+  description?: string;
+  isActive: boolean;
+}
+
+export interface ProductBrandListParams {
+  page?: number;
+  pageSize?: number;
+  search?: string;
+  ordering?: string;
+  isActive?: boolean;
+  is_active?: boolean;
+}
+
+export interface ProductBrandMutationInput {
+  name: string;
+  code: string;
+  description?: string;
+  isActive?: boolean;
+}
+
+export interface ProductBrandPatchInput
+  extends Partial<ProductBrandMutationInput> {}

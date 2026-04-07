@@ -13,6 +13,8 @@ interface ProductFormPanelProps {
   currencyOptions: SelectOption[];
   categoryOptions: SelectOption[];
   isCategoryOptionsLoading?: boolean;
+  brandOptions: SelectOption[];
+  isBrandOptionsLoading?: boolean;
   isSubmitting: boolean;
   errorMessage?: string | null;
   onClose: () => void;
@@ -36,6 +38,7 @@ interface ProductFormState {
   isPromoted: boolean;
   isActive: boolean;
   categoryId: string;
+  brandId: string;
 }
 
 const PRODUCT_FETCH_BATCH_SIZE = 200;
@@ -60,16 +63,16 @@ function isUuid(value: string): boolean {
   );
 }
 
-function findCategoryOptionByLabel(
-  categoryOptions: SelectOption[],
-  categoryLabel: string,
+function findOptionByLabel(
+  options: SelectOption[],
+  label: string,
 ): SelectOption | undefined {
-  const normalizedLabel = normalizeString(categoryLabel).toLocaleLowerCase();
+  const normalizedLabel = normalizeString(label).toLocaleLowerCase();
   if (!normalizedLabel) {
     return undefined;
   }
 
-  return categoryOptions.find(
+  return options.find(
     (option) => option.label.trim().toLocaleLowerCase() === normalizedLabel,
   );
 }
@@ -83,17 +86,39 @@ function resolveInitialCategoryId(
     return directCategoryId;
   }
 
-  const categoryRawValue = normalizeString(product.category);
+  const categoryRawValue = normalizeString(product.category as unknown as string);
   if (categoryRawValue && isUuid(categoryRawValue)) {
     return categoryRawValue;
   }
 
-  const categoryName = normalizeString(product.categoryName || product.category);
+  const categoryName = normalizeString(product.categoryName || (product.category?.name));
   if (!categoryName) {
     return '';
   }
 
-  return findCategoryOptionByLabel(categoryOptions, categoryName)?.value ?? '';
+  return findOptionByLabel(categoryOptions, categoryName)?.value ?? '';
+}
+
+function resolveInitialBrandId(
+  product: Product,
+  brandOptions: SelectOption[],
+): string {
+  const directBrandId = normalizeString(product.brandId);
+  if (directBrandId.length > 0) {
+    return directBrandId;
+  }
+
+  const brandRawValue = normalizeString(product.brand as unknown as string);
+  if (brandRawValue && isUuid(brandRawValue)) {
+    return brandRawValue;
+  }
+
+  const brandName = normalizeString(product.brandName || (product.brand?.name));
+  if (!brandName) {
+    return '';
+  }
+
+  return findOptionByLabel(brandOptions, brandName)?.value ?? '';
 }
 
 function normalizeSkuPrefix(value: string): string {
@@ -114,8 +139,21 @@ function belongsToCategory(product: Product, categoryId: string): boolean {
     return true;
   }
 
-  const normalizedCategory = normalizeString(product.category);
+  const normalizedCategory = normalizeString(product.category as unknown as string);
   return normalizedCategory === categoryId;
+}
+
+function extractSequenceFromSku(sku: string, prefix: string): number {
+  const normalizedSku = normalizeString(sku).toUpperCase();
+  const normalizedPrefix = normalizeString(prefix).toUpperCase();
+
+  if (!normalizedSku.startsWith(normalizedPrefix)) {
+    return 0;
+  }
+
+  const suffix = normalizedSku.substring(normalizedPrefix.length).replace(/^[-_]+/, '');
+  const match = suffix.match(/^(\d+)/);
+  return match ? parseInt(match[1], 10) : 0;
 }
 
 function createInitialState(
@@ -138,7 +176,10 @@ function createInitialState(
       isActive: product.isActive,
       categoryId:
         normalizeString(product.categoryId) ||
-        (isUuid(normalizeString(product.category)) ? normalizeString(product.category) : ''),
+        (product.category?.id && isUuid(product.category.id) ? product.category.id : ''),
+      brandId:
+        normalizeString(product.brandId) ||
+        (product.brand?.id && isUuid(product.brand.id) ? product.brand.id : ''),
     };
   }
 
@@ -153,6 +194,7 @@ function createInitialState(
     isPromoted: false,
     isActive: true,
     categoryId: '',
+    brandId: '',
   };
 }
 
@@ -161,7 +203,9 @@ function ProductFormPanel({
   product,
   currencyOptions,
   categoryOptions,
+  brandOptions,
   isCategoryOptionsLoading = false,
+  isBrandOptionsLoading = false,
   isSubmitting,
   errorMessage,
   onClose,
@@ -205,6 +249,26 @@ function ProductFormPanel({
   }, [mode, product, categoryOptions, form.categoryId]);
 
   useEffect(() => {
+    if (mode !== 'edit' || !product || form.brandId || brandOptions.length === 0) {
+      return;
+    }
+
+    const resolvedBrandId = resolveInitialBrandId(product, brandOptions);
+    if (!resolvedBrandId) {
+      return;
+    }
+
+    setForm((current) =>
+      current.brandId
+        ? current
+        : {
+            ...current,
+            brandId: resolvedBrandId,
+          },
+    );
+  }, [mode, product, brandOptions, form.brandId]);
+
+  useEffect(() => {
     if (mode !== 'create') {
       return;
     }
@@ -235,28 +299,21 @@ function ProductFormPanel({
       setIsGeneratingSku(true);
 
       try {
-        let page = 1;
-        let totalPages = 1;
-        let productsInCategory = 0;
-
-        do {
-          const result = await services.products.listProducts({
-            page,
-            pageSize: PRODUCT_FETCH_BATCH_SIZE,
-            ordering: '-created_at',
-          });
-
-          productsInCategory += result.items.filter((item) =>
-            belongsToCategory(item, normalizedCategoryId),
-          ).length;
-
-          totalPages = result.meta.totalPages;
-          page += 1;
-        } while (page <= totalPages);
+        const result = await services.products.listProducts({
+          page: 1,
+          pageSize: 1,
+          category: normalizedCategoryId,
+          ordering: '-sku',
+        });
 
         if (!isActive) {
           return;
         }
+
+        const highestProduct = result.items[0];
+        const currentMaxSequence = highestProduct
+          ? extractSequenceFromSku(highestProduct.sku || '', prefix)
+          : 0;
 
         setForm((current) => {
           if (current.categoryId.trim() !== normalizedCategoryId) {
@@ -265,7 +322,7 @@ function ProductFormPanel({
 
           return {
             ...current,
-            sku: createSku(prefix, productsInCategory + 1),
+            sku: createSku(prefix, currentMaxSequence + 1),
           };
         });
       } catch {
@@ -314,7 +371,7 @@ function ProductFormPanel({
 
     const fallbackLabel =
       normalizeString(product?.categoryName) ||
-      normalizeString(product?.category) ||
+      normalizeString(product?.category?.name) ||
       form.categoryId;
 
     return [
@@ -324,7 +381,36 @@ function ProductFormPanel({
         label: fallbackLabel,
       },
     ];
-  }, [categoryOptions, form.categoryId, product?.category, product?.categoryName, t]);
+  }, [categoryOptions, form.categoryId, product, t]);
+
+  const brandSelectOptions = useMemo<SelectOption[]>(() => {
+    const baseOptions = [
+      { value: '', label: t('shared.filterSelect.select') },
+      ...brandOptions,
+    ];
+
+    if (!form.brandId) {
+      return baseOptions;
+    }
+
+    const hasCurrent = baseOptions.some((option) => option.value === form.brandId);
+    if (hasCurrent) {
+      return baseOptions;
+    }
+
+    const fallbackLabel =
+      normalizeString(product?.brandName) ||
+      normalizeString(product?.brand?.name) ||
+      form.brandId;
+
+    return [
+      ...baseOptions,
+      {
+        value: form.brandId,
+        label: fallbackLabel,
+      },
+    ];
+  }, [brandOptions, form.brandId, product, t]);
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
@@ -411,6 +497,7 @@ function ProductFormPanel({
       sku: normalizedSku,
       description: normalizedDescription,
       categoryId: normalizedCategoryId,
+      brandId: form.brandId.trim() || null,
       price: parsedPrice,
       currency: form.currency,
       stockQuantity: Math.floor(parsedStock),
@@ -795,18 +882,30 @@ function ProductFormPanel({
             ) : null}
           </div>
 
-          <div className="grid gap-1.5">
-            <label className={labelClassName}>
-              {t('products.form.category')}
-            </label>
-            <FilterSelect
-              value={form.categoryId}
-              options={categorySelectOptions}
-              onChange={(value) =>
-                setForm((current) => ({ ...current, categoryId: value }))
-              }
-              disabled={isSubmitting || isCategoryOptionsLoading}
-            />
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="grid gap-1.5">
+              <label className={labelClassName}>{t('products.form.category')}</label>
+              <FilterSelect
+                value={form.categoryId}
+                options={categorySelectOptions}
+                onChange={(value) =>
+                  setForm((current) => ({ ...current, categoryId: value }))
+                }
+                disabled={isSubmitting || isCategoryOptionsLoading}
+              />
+            </div>
+
+            <div className="grid gap-1.5">
+              <label className={labelClassName}>{t('products.form.brand', { defaultValue: 'Brend' })}</label>
+              <FilterSelect
+                value={form.brandId}
+                options={brandSelectOptions}
+                onChange={(value) =>
+                  setForm((current) => ({ ...current, brandId: value }))
+                }
+                disabled={isSubmitting || isBrandOptionsLoading}
+              />
+            </div>
           </div>
 
           {fieldError ? (

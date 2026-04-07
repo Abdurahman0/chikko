@@ -1,8 +1,9 @@
-import type { Product, ProductCategory, ProductImage } from '../../types/domain';
+import type { Product, ProductBrand, ProductCategory, ProductImage } from '../../types/domain';
 
 export type ProductDto = Record<string, unknown>;
 export type ProductImageDto = Record<string, unknown>;
 export type ProductCategoryDto = Record<string, unknown>;
+export type ProductBrandDto = Record<string, unknown>;
 
 function toRecord(value: unknown): Record<string, unknown> | null {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
@@ -167,29 +168,44 @@ export function mapProductDtoToModel(dto: ProductDto): Product {
   const images = mapImages(dto.images);
   const firstImageUrl =
     images[0]?.imageUrl || readString(dto.image) || readString(dto.image_url) || undefined;
-  const categoryFromMetadata =
-    metadata?.category !== undefined &&
-    metadata?.category !== null
-      ? String(metadata.category).trim()
-      : '';
-  const categoryFromDto = readString(dto.category);
+
+  // Category mapping
   const categoryRecord = toRecord(dto.category);
   const categoryIdFromDto = readString(dto.category_id);
   const categoryIdFromObject = readString(categoryRecord?.id);
   const categoryNameFromDto = readString(dto.category_name);
   const categoryNameFromObject = readString(categoryRecord?.name);
+  const categoryFromDto = readString(dto.category);
   const categoryIdFromRaw = isUuid(categoryFromDto) ? categoryFromDto : '';
-  const categoryId =
-    categoryIdFromDto || categoryIdFromObject || categoryIdFromRaw || undefined;
+
+  const categoryId = categoryIdFromDto || categoryIdFromObject || categoryIdFromRaw || undefined;
   const categoryName =
     categoryNameFromDto ||
     categoryNameFromObject ||
     (categoryFromDto && !isUuid(categoryFromDto) ? categoryFromDto : '') ||
     undefined;
-  const legacyCategory =
-    categoryFromMetadata && !isUuid(categoryFromMetadata)
-      ? categoryFromMetadata
-      : undefined;
+
+  const category = categoryRecord
+    ? mapProductCategoryDtoToModel(categoryRecord as ProductCategoryDto)
+    : undefined;
+
+  // Brand mapping
+  const brandRecord = toRecord(dto.brand);
+  const brandIdFromDto = readString(dto.brand_id);
+  const brandIdFromObject = readString(brandRecord?.id);
+  const brandFromDto = readString(dto.brand);
+  const brandIdFromRaw = isUuid(brandFromDto) ? brandFromDto : '';
+
+  const brandId = brandIdFromDto || brandIdFromObject || brandIdFromRaw || undefined;
+  const brandName =
+    readString(dto.brand_name) ||
+    readString(brandRecord?.name) ||
+    (brandFromDto && !isUuid(brandFromDto) ? brandFromDto : '') ||
+    undefined;
+
+  const brand = brandRecord
+    ? mapProductBrandDtoToModel(brandRecord as ProductBrandDto)
+    : undefined;
 
   return {
     id: readString(dto.id) || `product-${nowIso}`,
@@ -198,7 +214,10 @@ export function mapProductDtoToModel(dto: ProductDto): Product {
     description: readString(dto.description) || undefined,
     categoryId,
     categoryName,
-    category: categoryName || legacyCategory,
+    category,
+    brandId,
+    brandName,
+    brand,
     price,
     promoPrice: undefined,
     currency: readString(dto.currency, 'UZS'),
@@ -210,7 +229,7 @@ export function mapProductDtoToModel(dto: ProductDto): Product {
     metadata,
     status: resolveProductStatus(isActive, stockQuantity),
     imageUrl: firstImageUrl,
-    images,
+    images: images,
     createdAt: readString(dto.created_at, nowIso),
     updatedAt: readString(dto.updated_at, nowIso),
   };
@@ -284,4 +303,45 @@ export function mapProductCategoryListDtoToItems(value: unknown): ProductCategor
     .map((item) => toRecord(item))
     .filter((item): item is ProductCategoryDto => item !== null)
     .map((item) => mapProductCategoryDtoToModel(item));
+}
+
+export function mapProductBrandDtoToModel(
+  dto: ProductBrandDto,
+): ProductBrand {
+  const nowIso = new Date().toISOString();
+
+  return {
+    id: readString(dto.id) || `product-brand-${nowIso}`,
+    name: readString(dto.name),
+    code: readString(dto.code),
+    description: readString(dto.description) || undefined,
+    isActive: readBoolean(dto.is_active),
+    createdAt: readString(dto.created_at, nowIso),
+    updatedAt: readString(dto.updated_at, nowIso),
+  };
+}
+
+export function mapProductBrandListDtoToItems(value: unknown): ProductBrand[] {
+  if (Array.isArray(value)) {
+    return value
+      .map((item) => toRecord(item))
+      .filter((item): item is ProductBrandDto => item !== null)
+      .map((item) => mapProductBrandDtoToModel(item));
+  }
+
+  const payload = toRecord(value);
+  if (!payload) {
+    return [];
+  }
+
+  const results = Array.isArray(payload.results)
+    ? payload.results
+    : Array.isArray(payload.items)
+      ? payload.items
+      : [];
+
+  return results
+    .map((item) => toRecord(item))
+    .filter((item): item is ProductBrandDto => item !== null)
+    .map((item) => mapProductBrandDtoToModel(item));
 }

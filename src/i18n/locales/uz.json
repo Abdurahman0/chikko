@@ -606,8 +606,10 @@
     "title": "Mahsulotlar",
     "subtitle": "Narxlar, zaxira va faol holatni bitta katalogdan boshqaring.",
     "newProduct": "Yangi mahsulot",
-    "newCategory": "Yangi Categoriya",
+    "newCategory": "Yangi kategoriya",
+    "newBrand": "Yangi brend",
     "allCurrencies": "Barcha valyutalar",
+    "allBrands": "Barcha brendlar",
     "allStatuses": "Barcha holatlar",
     "status": "Holat",
     "currency": "Valyuta",
@@ -633,6 +635,14 @@
     "promotedCountLabel": "reklamadagi mahsulotlar",
     "categoriesCatalogTitle": "Categoriyalar katalogi",
     "categoriesCatalogHint": "Kategoriyani tahrirlash uchun amallarni tanlang",
+    "brandsCatalogTitle": "Brendlar katalogi",
+    "brandsCatalogHint": "Brendni tahrirlash uchun satrni bosing",
+    "brandsCountLabel": "brendlar",
+    "brandSearchPlaceholder": "Brend nomi yoki kodi bo'yicha qidirish...",
+    "brandsEmptyTitle": "Brendlar topilmadi",
+    "brandsEmptyDescription": "Hali birorta ham brend qo'shilmagan.",
+    "brandsErrorTitle": "Xatolik yuz berdi",
+    "brandsErrorDescription": "Brendlarni yuklab bo'lmadi.",
     "loadingTitle": "Mahsulotlar yuklanmoqda",
     "loadingDescription": "Katalog ma'lumotlari olinmoqda.",
     "errorTitle": "Mahsulotlar mavjud emas",
@@ -661,6 +671,13 @@
       "updated": "Yangilangan sana",
       "actions": "Amallar"
     },
+    "brandColumns": {
+      "name": "Brend",
+      "code": "Kod",
+      "status": "Holat",
+      "updated": "Yangilangan sana",
+      "actions": "Amallar"
+    },
     "noDescription": "Tavsif yo'q",
     "promotedBadge": "Reklama",
     "actions": {
@@ -668,6 +685,10 @@
       "delete": "O'chirish"
     },
     "categoryActions": {
+      "edit": "Tahrirlash",
+      "delete": "O'chirish"
+    },
+    "brandActions": {
       "edit": "Tahrirlash",
       "delete": "O'chirish"
     },
@@ -698,6 +719,35 @@
       "title": "\"{{name}}\" kategoriyasini o'chirasizmi?",
       "description": "Bu amal kategoriyani ro'yxatdan o'chiradi va ortga qaytarib bo'lmaydi.",
       "confirm": "Kategoriyani o'chirish",
+      "deleting": "O'chirilmoqda..."
+    },
+    "brandForm": {
+      "ariaLabel": "Brend qo'shish formasi",
+      "eyebrow": "Brend formasi",
+      "createTitle": "Yangi Brend",
+      "editTitle": "Brendni tahrirlash",
+      "createSubtitle": "Mahsulotlar uchun yangi brend qo'shing.",
+      "editSubtitle": "Brend ma'lumotlarini yangilang.",
+      "name": "Brend nomi",
+      "namePlaceholder": "Masalan: Nestle",
+      "code": "Kod",
+      "description": "Tavsif",
+      "descriptionPlaceholder": "Brend bo'yicha qisqa tavsif",
+      "active": "Faol brend",
+      "activeHint": "Brendni faol yoki nofaol holatga o'tkazing.",
+      "create": "Brend qo'shish",
+      "save": "O'zgarishlarni saqlash",
+      "creating": "Qo'shilmoqda...",
+      "saving": "Saqlanmoqda...",
+      "requiredError": "Brend nomini kiriting.",
+      "saveError": "Brendni saqlab bo'lmadi."
+    },
+    "brandDeleteDialog": {
+      "ariaLabel": "Brendni o'chirish oynasi",
+      "eyebrow": "O'chirishni tasdiqlash",
+      "title": "\"{{name}}\" brendini o'chirasizmi?",
+      "description": "Bu amal brendni ro'yxatdan o'chiradi va ortga qaytarib bo'lmaydi.",
+      "confirm": "Brendni o'chirish",
       "deleting": "O'chirilmoqda..."
     },
     "detail": {
@@ -739,6 +789,7 @@
       "skuAutoHint": "SKU kategoriya bo'yicha avtomatik yaratiladi.",
       "description": "Tavsif",
       "category": "Kategoriya",
+      "brand": "Brend",
       "categoryPlaceholder": "Masalan: care",
       "price": "Narx",
       "stockQuantity": "Zaxira soni",

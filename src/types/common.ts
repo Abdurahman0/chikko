@@ -61,6 +61,7 @@ export interface TableQueryParams extends BaseFilterParams {
   isPromoted?: boolean;
   is_promoted?: boolean;
   ordering?: string;
+  brand?: EntityId;
 }
 
 export interface AuditInfo {

@@ -23,9 +23,11 @@ import {
 } from '../../../components/shared/page';
 import ProductDeleteDialog from '../../../features/products/components/ProductDeleteDialog';
 import ProductCategoryDeleteDialog from '../../../features/products/components/ProductCategoryDeleteDialog';
+import ProductBrandDeleteDialog from '../../../features/products/components/ProductBrandDeleteDialog';
 import ProductDetailPanel from '../../../features/products/components/ProductDetailPanel';
 import ProductFormPanel from '../../../features/products/components/ProductFormPanel';
 import ProductCategoryFormDialog from '../../../features/products/components/ProductCategoryFormDialog';
+import ProductBrandFormDialog from '../../../features/products/components/ProductBrandFormDialog';
 import { formatLocalizedDate } from '../../../i18n/date-format';
 import { usePersistentState } from '../../../lib/persistent-state';
 import { services } from '../../../services';
@@ -33,13 +35,15 @@ import type {
   PaginationMeta,
   Product,
   ProductCategory,
+  ProductBrand,
   ProductMutationInput,
+  ProductBrandMutationInput,
   SelectOption,
   TableQueryParams,
 } from '../../../types/domain';
 
 type ActiveFilter = 'all' | 'active' | 'inactive';
-type CatalogView = 'products' | 'promoted' | 'categories';
+type CatalogView = 'products' | 'promoted' | 'categories' | 'brands';
 type ProductOrdering =
   | '-created_at'
   | 'created_at'
@@ -55,6 +59,14 @@ type CategoryOrdering =
   | 'name'
   | '-name';
 
+type BrandOrdering =
+  | '-created_at'
+  | 'created_at'
+  | '-updated_at'
+  | 'updated_at'
+  | 'name'
+  | '-name';
+
 const PAGE_SIZE = 8;
 const SERVICE_FETCH_SIZE = 500;
 const SEARCH_DEBOUNCE_MS = 350;
@@ -62,6 +74,7 @@ const ALL_CURRENCIES_VALUE = 'all';
 const ALL_CATEGORIES_VALUE = 'all';
 const DEFAULT_ORDERING: ProductOrdering = '-created_at';
 const DEFAULT_CATEGORY_ORDERING: CategoryOrdering = '-created_at';
+const DEFAULT_BRAND_ORDERING: BrandOrdering = '-created_at';
 
 const DEFAULT_PAGINATION_META: PaginationMeta = {
   page: 1,
@@ -104,6 +117,19 @@ function parseOrdering(ordering: ProductOrdering): Pick<
 }
 
 function parseCategoryOrdering(ordering: CategoryOrdering): Pick<
+  TableQueryParams,
+  'sortBy' | 'sortDirection'
+> {
+  const direction = ordering.startsWith('-') ? 'desc' : 'asc';
+  const sortBy = ordering.replace('-', '');
+
+  return {
+    sortBy,
+    sortDirection: direction,
+  };
+}
+
+function parseBrandOrdering(ordering: BrandOrdering): Pick<
   TableQueryParams,
   'sortBy' | 'sortDirection'
 > {
@@ -272,6 +298,18 @@ function ProductsPage() {
     [t],
   );
 
+  const brandOrderingOptions = useMemo<SelectOption[]>(
+    () => [
+      { value: '-created_at', label: t('products.createdNewest') },
+      { value: 'created_at', label: t('products.createdOldest') },
+      { value: '-updated_at', label: t('products.updatedNewest') },
+      { value: 'updated_at', label: t('products.updatedOldest') },
+      { value: 'name', label: t('products.nameAz') },
+      { value: '-name', label: t('products.nameZa') },
+    ],
+    [t],
+  );
+
   const [search, setSearch] = usePersistentState('products:search', '');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [catalogView, setCatalogView] = usePersistentState<CatalogView>(
@@ -280,12 +318,15 @@ function ProductsPage() {
     {
       deserialize: (value) => {
         const parsed = JSON.parse(value);
-        return parsed === 'categories' || parsed === 'promoted' ? parsed : 'products';
+        return parsed === 'categories' || parsed === 'promoted' || parsed === 'brands'
+          ? parsed
+          : 'products';
       },
     },
   );
   const [currencyFilter, setCurrencyFilter] = useState(ALL_CURRENCIES_VALUE);
   const [categoryFilter, setCategoryFilter] = useState(ALL_CATEGORIES_VALUE);
+  const [brandFilter, setBrandFilter] = useState('all');
   const [activeFilter, setActiveFilter] = useState<ActiveFilter>('all');
   const [ordering, setOrdering] = useState<ProductOrdering>(DEFAULT_ORDERING);
   const [currentPage, setCurrentPage] = useState(1);
@@ -295,7 +336,9 @@ function ProductsPage() {
   );
   const [currencyOptions, setCurrencyOptions] = useState<SelectOption[]>([]);
   const [categoryOptions, setCategoryOptions] = useState<SelectOption[]>([]);
+  const [brandOptions, setBrandOptions] = useState<SelectOption[]>([]);
   const [isCategoryOptionsLoading, setIsCategoryOptionsLoading] = useState(true);
+  const [isBrandOptionsLoading, setIsBrandOptionsLoading] = useState(true);
   const [categories, setCategories] = useState<ProductCategory[]>([]);
   const [categorySearch, setCategorySearch] = usePersistentState(
     'products:categories-search',
@@ -341,6 +384,34 @@ function ProductsPage() {
   const [orderedProductIds, setOrderedProductIds] = useState<string[]>([]);
   const [isOrderUsageLoading, setIsOrderUsageLoading] = useState(true);
 
+  const [brands, setBrands] = useState<ProductBrand[]>([]);
+  const [brandSearch, setBrandSearch] = usePersistentState(
+    'products:brands-search',
+    '',
+  );
+  const [debouncedBrandSearch, setDebouncedBrandSearch] = useState('');
+  const [brandActiveFilter, setBrandActiveFilter] = useState<ActiveFilter>('all');
+  const [brandOrdering, setBrandOrdering] = useState<BrandOrdering>(
+    DEFAULT_BRAND_ORDERING,
+  );
+  const [brandCurrentPage, setBrandCurrentPage] = useState(1);
+  const [brandPaginationMeta, setBrandPaginationMeta] = useState<PaginationMeta>(
+    DEFAULT_PAGINATION_META,
+  );
+  const [isBrandsLoading, setIsBrandsLoading] = useState(false);
+  const [brandHasError, setBrandHasError] = useState(false);
+  const [isBrandStatusUpdatingId, setIsBrandStatusUpdatingId] = useState<
+    string | null
+  >(null);
+
+  const [isBrandFormOpen, setIsBrandFormOpen] = useState(false);
+  const [brandFormMode, setBrandFormMode] = useState<'create' | 'edit'>('create');
+  const [editingBrand, setEditingBrand] = useState<ProductBrand | null>(null);
+  const [isBrandSaving, setIsBrandSaving] = useState(false);
+  const [brandErrorMessage, setBrandErrorMessage] = useState<string | null>(null);
+  const [brandToDelete, setBrandToDelete] = useState<ProductBrand | null>(null);
+  const [isBrandDeleting, setIsBrandDeleting] = useState(false);
+
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
       setDebouncedSearch(search.trim());
@@ -361,6 +432,16 @@ function ProductsPage() {
     };
   }, [categorySearch]);
 
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      setDebouncedBrandSearch(brandSearch.trim());
+    }, SEARCH_DEBOUNCE_MS);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [brandSearch]);
+
   const currencyAllOption = useMemo<SelectOption>(
     () => ({
       value: ALL_CURRENCIES_VALUE,
@@ -379,13 +460,35 @@ function ProductsPage() {
     [t],
   );
 
+  const brandAllOption = useMemo<SelectOption>(
+    () => ({
+      value: 'all',
+      label: t('products.allBrands', { defaultValue: 'Barcha brendlar' }),
+    }),
+    [t],
+  );
+
+  const productCategoryFilterOptions = useMemo<SelectOption[]>(
+    () => [categoryAllOption, ...categoryOptions],
+    [categoryAllOption, categoryOptions],
+  );
+
+  const brandFilterOptions = useMemo<SelectOption[]>(
+    () => [brandAllOption, ...brandOptions],
+    [brandAllOption, brandOptions],
+  );
+
   useEffect(() => {
     setCurrentPage(1);
-  }, [catalogView, debouncedSearch, currencyFilter, categoryFilter, activeFilter, ordering]);
+  }, [catalogView, debouncedSearch, currencyFilter, categoryFilter, brandFilter, activeFilter, ordering]);
 
   useEffect(() => {
     setCategoryCurrentPage(1);
   }, [debouncedCategorySearch, categoryActiveFilter, categoryOrdering]);
+
+  useEffect(() => {
+    setBrandCurrentPage(1);
+  }, [debouncedBrandSearch, brandActiveFilter, brandOrdering]);
 
   useEffect(() => {
     let isActive = true;
@@ -472,6 +575,53 @@ function ProductsPage() {
   useEffect(() => {
     let isActive = true;
 
+    async function loadBrandOptions() {
+      setIsBrandOptionsLoading(true);
+
+      try {
+        const result = await services.products.listProductBrands({
+          page: 1,
+          pageSize: SERVICE_FETCH_SIZE,
+          ordering: 'name',
+          is_active: true,
+        });
+
+        if (!isActive) {
+          return;
+        }
+
+        const options = result.items
+          .map((brand) => ({
+            value: brand.id,
+            label: brand.name,
+            description: brand.code,
+          }))
+          .sort((left, right) => left.label.localeCompare(right.label));
+
+        setBrandOptions(options);
+      } catch {
+        if (!isActive) {
+          return;
+        }
+
+        setBrandOptions([]);
+      } finally {
+        if (isActive) {
+          setIsBrandOptionsLoading(false);
+        }
+      }
+    }
+
+    void loadBrandOptions();
+
+    return () => {
+      isActive = false;
+    };
+  }, [brandAllOption, reloadCursor]);
+
+  useEffect(() => {
+    let isActive = true;
+
     async function loadOrderedProducts() {
       setIsOrderUsageLoading(true);
 
@@ -547,6 +697,8 @@ function ProductsPage() {
           search: debouncedSearch || undefined,
           category:
             categoryFilter === ALL_CATEGORIES_VALUE ? undefined : categoryFilter,
+          brand:
+            brandFilter === 'all' ? undefined : brandFilter,
           currency:
             currencyFilter === ALL_CURRENCIES_VALUE ? undefined : currencyFilter,
           is_active:
@@ -663,6 +815,69 @@ function ProductsPage() {
   ]);
 
   useEffect(() => {
+    let isActive = true;
+
+    async function loadBrands() {
+      setIsBrandsLoading(true);
+      setBrandHasError(false);
+
+      try {
+        const sortConfig = parseBrandOrdering(brandOrdering);
+        const result = await services.products.listProductBrands({
+          page: brandCurrentPage,
+          pageSize: PAGE_SIZE,
+          search: debouncedBrandSearch || undefined,
+          is_active:
+            brandActiveFilter === 'all'
+              ? undefined
+              : brandActiveFilter === 'active',
+          ordering: brandOrdering,
+          ...sortConfig,
+        });
+
+        if (!isActive) {
+          return;
+        }
+
+        if (brandCurrentPage > result.meta.totalPages) {
+          setBrandCurrentPage(result.meta.totalPages);
+          return;
+        }
+
+        setBrands(result.items);
+        setBrandPaginationMeta(result.meta);
+      } catch {
+        if (!isActive) {
+          return;
+        }
+
+        setBrandHasError(true);
+        setBrands([]);
+        setBrandPaginationMeta(DEFAULT_PAGINATION_META);
+      } finally {
+        if (isActive) {
+          setIsBrandsLoading(false);
+        }
+      }
+    }
+
+    if (catalogView === 'brands') {
+      void loadBrands();
+    }
+
+    return () => {
+      isActive = false;
+    };
+  }, [
+    brandActiveFilter,
+    brandCurrentPage,
+    brandOrdering,
+    catalogView,
+    debouncedBrandSearch,
+    reloadCursor,
+  ]);
+
+  useEffect(() => {
     if (!selectedProductId) {
       return;
     }
@@ -720,6 +935,20 @@ function ProductsPage() {
     setIsCategoryFormOpen(true);
   }
 
+  function openBrandCreateForm() {
+    setBrandFormMode('create');
+    setEditingBrand(null);
+    setBrandErrorMessage(null);
+    setIsBrandFormOpen(true);
+  }
+
+  function openBrandEditForm(brand: ProductBrand) {
+    setBrandFormMode('edit');
+    setEditingBrand(brand);
+    setBrandErrorMessage(null);
+    setIsBrandFormOpen(true);
+  }
+
   function openEditForm(product: Product) {
     setFormMode('edit');
     setFormErrorMessage(null);
@@ -747,6 +976,10 @@ function ProductsPage() {
 
   function requestCategoryDelete(category: ProductCategory) {
     setCategoryToDelete(category);
+  }
+
+  function requestBrandDelete(brand: ProductBrand) {
+    setBrandToDelete(brand);
   }
 
   async function handleSaveProduct(
@@ -928,6 +1161,95 @@ function ProductsPage() {
       // Keep dialog open if deletion fails.
     } finally {
       setIsCategoryDeleting(false);
+    }
+  }
+
+  async function handleSaveBrand(payload: {
+    name: string;
+    code: string;
+    description: string;
+    isActive: boolean;
+  }) {
+    setIsBrandSaving(true);
+    setBrandErrorMessage(null);
+
+    try {
+      if (brandFormMode === 'create') {
+        await services.products.createProductBrand({
+          name: payload.name,
+          code: payload.code,
+          description: payload.description,
+          isActive: payload.isActive,
+        });
+      } else {
+        if (!editingBrand) {
+          throw new Error(t('products.brandForm.saveError', { defaultValue: 'Brendni saqlashda xatolik yuz berdi.' }));
+        }
+
+        await services.products.updateProductBrand(editingBrand.id, {
+          name: payload.name,
+          code: payload.code,
+          description: payload.description,
+          isActive: payload.isActive,
+        });
+      }
+
+      setIsBrandFormOpen(false);
+      setEditingBrand(null);
+      setReloadCursor((current) => current + 1);
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : t('products.brandForm.saveError', { defaultValue: 'Brendni saqlashda xatolik yuz berdi.' });
+      setBrandErrorMessage(message);
+    } finally {
+      setIsBrandSaving(false);
+    }
+  }
+
+  async function handleConfirmBrandDelete() {
+    if (!brandToDelete) {
+      return;
+    }
+
+    setIsBrandDeleting(true);
+
+    try {
+      const deleted = await services.products.deleteProductBrand(brandToDelete.id);
+      if (!deleted) {
+        throw new Error();
+      }
+
+      setBrandToDelete(null);
+      setReloadCursor((current) => current + 1);
+    } catch {
+      // Keep dialog open if deletion fails.
+    } finally {
+      setIsBrandDeleting(false);
+    }
+  }
+
+  async function handleToggleBrandActive(brand: ProductBrand, nextValue: boolean) {
+    if (isBrandStatusUpdatingId) {
+      return;
+    }
+
+    setIsBrandStatusUpdatingId(brand.id);
+    try {
+      const updated = await services.products.patchProductBrand(brand.id, {
+        isActive: nextValue,
+      });
+
+      if (updated) {
+        setBrands((current) =>
+          current.map((entry) => (entry.id === updated.id ? updated : entry)),
+        );
+      }
+
+      setReloadCursor((current) => current + 1);
+    } catch {
+      // Keep current state if update fails.
+    } finally {
+      setIsBrandStatusUpdatingId(null);
     }
   }
 
@@ -1241,8 +1563,108 @@ function ProductsPage() {
       },
     ];
   }, [
+    t,
+  ]);
+
+  const brandColumns = useMemo<DataTableColumn<ProductBrand>[]>(() => {
+    return [
+      {
+        key: 'name',
+        label: t('products.brandColumns.name', { defaultValue: 'Brend nomi' }),
+        render: (brand) => (
+          <div className="flex items-center gap-2.5">
+            <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-surface-subtle text-text-muted ring-1 ring-border-soft/45 font-bold uppercase text-xs">
+              {brand.name.charAt(0)}
+            </span>
+            <div className="grid gap-0.5">
+              <span className={tablePrimaryTextClassName}>{brand.name}</span>
+              <span className={tableSecondaryTextClassName}>
+                {brand.description || t('products.brandNoDescription', { defaultValue: 'Tavsif yo\'q' })}
+              </span>
+            </div>
+          </div>
+        ),
+      },
+      {
+        key: 'code',
+        label: t('products.brandColumns.code', { defaultValue: 'Kod' }),
+        render: (brand) => (
+          <span className={tablePrimaryTextClassName}>{brand.code}</span>
+        ),
+      },
+      {
+        key: 'status',
+        label: t('products.brandColumns.status', { defaultValue: 'Holati' }),
+        render: (brand) => (
+          <div className="flex items-center gap-2">
+            <StatusBadge
+              status={brand.isActive ? 'active' : 'inactive'}
+              label={brand.isActive ? t('common.active') : t('common.inactive')}
+              tone={brand.isActive ? 'success' : 'neutral'}
+            />
+            <Switch
+              checked={brand.isActive}
+              onChange={(nextValue) => {
+                void handleToggleBrandActive(brand, nextValue);
+              }}
+              disabled={isBrandStatusUpdatingId === brand.id}
+              stopPropagation
+              ariaLabel={`${brand.name} holatini almashtirish`}
+            />
+          </div>
+        ),
+      },
+      {
+        key: 'updatedAt',
+        label: t('products.brandColumns.updated', { defaultValue: 'Yangilandi' }),
+        render: (brand) => (
+          <span className={tablePrimaryTextClassName}>
+            {brand.updatedAt
+              ? formatLocalizedDate(brand.updatedAt, i18n.language, {
+                  locale,
+                  withYear: true,
+                  shortMonth: true,
+                  fallback: t('common.na'),
+                })
+              : t('common.na')}
+          </span>
+        ),
+      },
+      {
+        key: 'actions',
+        label: t('products.brandColumns.actions', { defaultValue: 'Amallar' }),
+        align: 'right',
+        render: (brand) => (
+          <div className="flex items-center justify-end gap-1.5">
+            <button
+              type="button"
+              className={actionButtonClassName}
+              onClick={(event) => {
+                event.stopPropagation();
+                openBrandEditForm(brand);
+              }}
+              aria-label={`${t('products.brandActions.edit', { defaultValue: 'Brendni tahrirlash' })} ${brand.name}`}
+            >
+              <FiEdit2 className="h-3.5 w-3.5" />
+            </button>
+            <button
+              type="button"
+              className={actionButtonClassName}
+              onClick={(event) => {
+                event.stopPropagation();
+                requestBrandDelete(brand);
+              }}
+              aria-label={`${t('products.brandActions.delete', { defaultValue: 'Brendni o\'chirish' })} ${brand.name}`}
+            >
+              <FiTrash2 className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        ),
+      },
+    ];
+  }, [
     i18n.language,
-    isCategoryStatusUpdatingId,
+    isBrandStatusUpdatingId,
     locale,
     t,
   ]);
@@ -1255,10 +1677,21 @@ function ProductsPage() {
   const categoryActiveFilterCount =
     Number(categoryActiveFilter !== 'all') +
     Number(categoryOrdering !== DEFAULT_CATEGORY_ORDERING);
+  const brandActiveFilterCount =
+    Number(brandActiveFilter !== 'all') +
+    Number(brandOrdering !== DEFAULT_BRAND_ORDERING);
   const activeFilterCount =
-    catalogView === 'categories' ? categoryActiveFilterCount : productActiveFilterCount;
+    catalogView === 'brands'
+      ? brandActiveFilterCount
+      : catalogView === 'categories'
+        ? categoryActiveFilterCount
+        : productActiveFilterCount;
   const activeTotalItems =
-    catalogView === 'categories' ? categoryPaginationMeta.totalItems : paginationMeta.totalItems;
+    catalogView === 'brands'
+      ? brandPaginationMeta.totalItems
+      : catalogView === 'categories'
+        ? categoryPaginationMeta.totalItems
+        : paginationMeta.totalItems;
 
   const formCurrencyOptions = useMemo<SelectOption[]>(() => {
     const filtered = currencyOptions.filter(
@@ -1269,11 +1702,6 @@ function ProductsPage() {
       ? filtered
       : [{ value: DEFAULT_CURRENCY_CODE, label: DEFAULT_CURRENCY_CODE }];
   }, [currencyOptions]);
-
-  const productCategoryFilterOptions = useMemo<SelectOption[]>(
-    () => [categoryAllOption, ...categoryOptions],
-    [categoryAllOption, categoryOptions],
-  );
 
   const header = (
     <PageHeader
@@ -1298,6 +1726,14 @@ function ProductsPage() {
             <AppIcon name="plus" className="h-4 w-4" aria-hidden="true" />
             {t('products.newCategory')}
           </button>
+          <button
+            type="button"
+            className="inline-flex min-h-9 items-center gap-2 rounded-lg bg-surface-card px-3.5 text-sm font-semibold text-text-primary shadow-sm ring-1 ring-border-soft/40 transition duration-fast hover:bg-surface-subtle focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/25"
+            onClick={openBrandCreateForm}
+          >
+            <AppIcon name="plus" className="h-4 w-4" aria-hidden="true" />
+            {t('products.newBrand', { defaultValue: 'Yangi brend' })}
+          </button>
           <span className="inline-flex min-h-8 items-center gap-2 rounded-pill bg-primary/12 px-3 text-[12px] font-semibold text-text-accent">
             <AppIcon name="products" className="h-3.5 w-3.5" aria-hidden="true" />
             {activeTotalItems}{' '}
@@ -1305,7 +1741,9 @@ function ProductsPage() {
               ? t('products.categoriesCountLabel')
               : catalogView === 'promoted'
                 ? t('products.promotedCountLabel')
-                : t('products.title').toLowerCase()}
+                : catalogView === 'brands'
+                  ? t('products.brandsCountLabel', { defaultValue: 'brendlar' })
+                  : t('products.title').toLowerCase()}
           </span>
         </div>
       }
@@ -1388,6 +1826,18 @@ function ProductsPage() {
 
               <label className="grid min-w-[min(180px,100%)] flex-[1_1_180px] gap-1.5 min-[640px]:flex-[0_1_200px]">
                 <span className={labelClassName}>
+                  {t('products.form.brand', { defaultValue: 'Brend' })}
+                </span>
+                <FilterSelect
+                  value={brandFilter}
+                  options={brandFilterOptions}
+                  onChange={setBrandFilter}
+                  disabled={isLoading || isBrandOptionsLoading}
+                />
+              </label>
+
+              <label className="grid min-w-[min(180px,100%)] flex-[1_1_180px] gap-1.5 min-[640px]:flex-[0_1_200px]">
+                <span className={labelClassName}>
                   {t('products.form.category')}
                 </span>
                 <FilterSelect
@@ -1418,7 +1868,7 @@ function ProductsPage() {
                 />
               </label>
             </>
-          ) : (
+          ) : catalogView === 'categories' ? (
             <>
               <SearchInput
                 value={categorySearch}
@@ -1443,6 +1893,34 @@ function ProductsPage() {
                   options={categoryOrderingOptions}
                   onChange={(value) => setCategoryOrdering(value as CategoryOrdering)}
                   disabled={isCategoriesLoading}
+                />
+              </label>
+            </>
+          ) : (
+            <>
+              <SearchInput
+                value={brandSearch}
+                onChange={setBrandSearch}
+                placeholder={t('products.brandSearchPlaceholder', { defaultValue: 'Brendlar bo\'yicha qidirish...' })}
+              />
+
+              <label className="grid min-w-[min(180px,100%)] flex-[1_1_180px] gap-1.5 min-[640px]:flex-[0_1_180px]">
+                <span className={labelClassName}>{t('products.status')}</span>
+                <FilterSelect
+                  value={brandActiveFilter}
+                  options={activeFilterOptions}
+                  onChange={(value) => setBrandActiveFilter(value as ActiveFilter)}
+                  disabled={isBrandsLoading}
+                />
+              </label>
+
+              <label className="grid min-w-[min(180px,100%)] flex-[1_1_180px] gap-1.5 min-[640px]:flex-[0_1_200px]">
+                <span className={labelClassName}>{t('products.orderBy')}</span>
+                <FilterSelect
+                  value={brandOrdering}
+                  options={brandOrderingOptions}
+                  onChange={(value) => setBrandOrdering(value as BrandOrdering)}
+                  disabled={isBrandsLoading}
                 />
               </label>
             </>
@@ -1481,6 +1959,18 @@ function ProductsPage() {
                   type="button"
                   className={[
                     'rounded-lg px-3 py-1.5 text-sm font-semibold transition duration-fast',
+                    catalogView === 'brands'
+                      ? 'bg-surface-card text-text-primary shadow-sm ring-1 ring-border-soft/45'
+                      : 'text-text-secondary hover:text-text-primary',
+                  ].join(' ')}
+                  onClick={() => setCatalogView('brands')}
+                >
+                  {t('products.brandsCatalogTitle', { defaultValue: 'Brendlar' })}
+                </button>
+                <button
+                  type="button"
+                  className={[
+                    'rounded-lg px-3 py-1.5 text-sm font-semibold transition duration-fast',
                     catalogView === 'promoted'
                       ? 'bg-surface-card text-text-primary shadow-sm ring-1 ring-border-soft/45'
                       : 'text-text-secondary hover:text-text-primary',
@@ -1495,11 +1985,13 @@ function ProductsPage() {
                   ? t('products.categoriesCatalogHint')
                   : catalogView === 'promoted'
                     ? t('products.promotedCatalogHint')
-                    : t('products.catalogHint')}
+                    : catalogView === 'brands'
+                      ? t('products.brandsCatalogHint', { defaultValue: 'Brendlarni boshqarish' })
+                      : t('products.catalogHint')}
               </span>
             </div>
 
-            {catalogView !== 'categories' ? (
+            {catalogView === 'products' || catalogView === 'promoted' ? (
             <DataTable
               data={products}
               columns={productColumns}
@@ -1513,7 +2005,7 @@ function ProductsPage() {
               emptyTitle={t('products.emptyTitle')}
                 emptyDescription={t('products.emptyDescription')}
               />
-            ) : (
+            ) : catalogView === 'categories' ? (
               <DataTable
                 data={categories}
                 columns={categoryColumns}
@@ -1528,6 +2020,23 @@ function ProductsPage() {
                   categoryHasError
                     ? t('products.categoriesErrorDescription')
                     : t('products.categoriesEmptyDescription')
+                }
+              />
+            ) : (
+              <DataTable
+                data={brands}
+                columns={brandColumns}
+                rowKey="id"
+                loading={isBrandsLoading}
+                emptyTitle={
+                  brandHasError
+                    ? t('products.brandsErrorTitle', { defaultValue: 'Brendlarni yuklashda xatolik' })
+                    : t('products.brandsEmptyTitle', { defaultValue: 'Brendlar mavjud emas' })
+                }
+                emptyDescription={
+                  brandHasError
+                    ? t('products.brandsErrorDescription', { defaultValue: 'Iltimos, sahifani yangilab ko\'ring.' })
+                    : t('products.brandsEmptyDescription', { defaultValue: 'Hali birorta ham brend qo\'shilmagan.' })
                 }
               />
             )}
@@ -1551,6 +2060,17 @@ function ProductsPage() {
             totalPages={categoryPaginationMeta.totalPages}
             totalItems={categoryPaginationMeta.totalItems}
             onPageChange={setCategoryCurrentPage}
+          />
+        ) : null}
+
+        {catalogView === 'brands' &&
+        !isBrandsLoading &&
+        brandPaginationMeta.totalItems > 0 ? (
+          <Pagination
+            currentPage={Math.min(brandCurrentPage, brandPaginationMeta.totalPages)}
+            totalPages={brandPaginationMeta.totalPages}
+            totalItems={brandPaginationMeta.totalItems}
+            onPageChange={setBrandCurrentPage}
           />
         ) : null}
       </PageSection>
@@ -1580,6 +2100,8 @@ function ProductsPage() {
           currencyOptions={formCurrencyOptions}
           categoryOptions={categoryOptions}
           isCategoryOptionsLoading={isCategoryOptionsLoading}
+          brandOptions={brandOptions}
+          isBrandOptionsLoading={isBrandOptionsLoading}
           isSubmitting={isSaving}
           errorMessage={formErrorMessage}
           onClose={() => {
@@ -1644,6 +2166,35 @@ function ProductsPage() {
           }}
           onConfirm={() => {
             void handleConfirmDelete();
+          }}
+        />
+      ) : null}
+      {isBrandFormOpen ? (
+        <ProductBrandFormDialog
+          mode={brandFormMode}
+          brand={editingBrand}
+          isSubmitting={isBrandSaving}
+          errorMessage={brandErrorMessage}
+          onClose={() => {
+            if (!isBrandSaving) {
+              setIsBrandFormOpen(false);
+              setEditingBrand(null);
+              setBrandErrorMessage(null);
+            }
+          }}
+          onSubmit={(payload) => {
+            void handleSaveBrand(payload);
+          }}
+        />
+      ) : null}
+
+      {brandToDelete ? (
+        <ProductBrandDeleteDialog
+          brand={brandToDelete}
+          isDeleting={isBrandDeleting}
+          onCancel={() => setBrandToDelete(null)}
+          onConfirm={() => {
+            void handleConfirmBrandDelete();
           }}
         />
       ) : null}

@@ -607,7 +607,9 @@
     "subtitle": "Управляйте ценами, остатками и активным статусом из одного каталога.",
     "newProduct": "Новый товар",
     "newCategory": "Новая категория",
+    "newBrand": "Новый бренд",
     "allCurrencies": "Все валюты",
+    "allBrands": "Все бренды",
     "allStatuses": "Все статусы",
     "status": "Статус",
     "currency": "Валюта",
@@ -626,13 +628,21 @@
     "categoriesRecords": "категорий",
     "categoriesCountLabel": "категории",
     "activeFilters": "активных",
+    "promotedCountLabel": "рекламных товаров",
+    "brandsCountLabel": "брендов",
     "catalogTitle": "Каталог товаров",
     "catalogHint": "Нажмите на строку, чтобы посмотреть детали",
     "promotedCatalogTitle": "Рекламные товары",
     "promotedCatalogHint": "Список товаров, отмеченных для рекламы",
-    "promotedCountLabel": "рекламных товаров",
     "categoriesCatalogTitle": "Каталог категорий",
     "categoriesCatalogHint": "Выберите действие для редактирования категории",
+    "brandsCatalogTitle": "Каталог брендов",
+    "brandsCatalogHint": "Нажмите на строку, чтобы редактировать бренд",
+    "brandSearchPlaceholder": "Поиск по названию или коду бренда...",
+    "brandsEmptyTitle": "Бренды не найдены",
+    "brandsEmptyDescription": "Пока не добавлено ни одного бренда.",
+    "brandsErrorTitle": "Бренды недоступны",
+    "brandsErrorDescription": "Не удалось загрузить бренды из текущего сервиса.",
     "loadingTitle": "Загрузка товаров",
     "loadingDescription": "Получение данных каталога.",
     "errorTitle": "Товары недоступны",
@@ -661,6 +671,13 @@
       "updated": "Дата обновления",
       "actions": "Действия"
     },
+    "brandColumns": {
+      "name": "Бренд",
+      "code": "Код",
+      "status": "Статус",
+      "updated": "Дата обновления",
+      "actions": "Действия"
+    },
     "noDescription": "Нет описания",
     "promotedBadge": "Реклама",
     "actions": {
@@ -668,6 +685,10 @@
       "delete": "Удалить"
     },
     "categoryActions": {
+      "edit": "Редактировать",
+      "delete": "Удалить"
+    },
+    "brandActions": {
       "edit": "Редактировать",
       "delete": "Удалить"
     },
@@ -698,6 +719,35 @@
       "title": "Удалить категорию \"{{name}}\"?",
       "description": "Это действие удалит категорию из списка и не может быть отменено.",
       "confirm": "Удалить категорию",
+      "deleting": "Удаление..."
+    },
+    "brandForm": {
+      "ariaLabel": "Форма добавления бренда",
+      "eyebrow": "Форма бренда",
+      "createTitle": "Новый бренд",
+      "editTitle": "Редактировать бренд",
+      "createSubtitle": "Добавьте новый бренд для товаров.",
+      "editSubtitle": "Обновите данные бренда.",
+      "name": "Название бренда",
+      "namePlaceholder": "Например: Nestle",
+      "code": "Код",
+      "description": "Описание",
+      "descriptionPlaceholder": "Краткое описание бренда",
+      "active": "Активный бренд",
+      "activeHint": "Переключите бренд в активное или неактивное состояние.",
+      "create": "Добавить бренд",
+      "save": "Сохранить изменения",
+      "creating": "Добавление...",
+      "saving": "Сохранение...",
+      "requiredError": "Введите название бренда.",
+      "saveError": "Не удалось сохранить бренд."
+    },
+    "brandDeleteDialog": {
+      "ariaLabel": "Окно удаления бренда",
+      "eyebrow": "Подтверждение удаления",
+      "title": "Удалить бренд \"{{name}}\"?",
+      "description": "Это действие удалит бренд из списка и не может быть отменено.",
+      "confirm": "Удалить бренд",
       "deleting": "Удаление..."
     },
     "detail": {
@@ -739,6 +789,7 @@
       "skuAutoHint": "SKU создаётся автоматически по категории.",
       "description": "Описание",
       "category": "Категория",
+      "brand": "Бренд",
       "categoryPlaceholder": "Например: care",
       "price": "Цена",
       "stockQuantity": "Количество на складе",

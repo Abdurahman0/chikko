@@ -52,6 +52,10 @@ import type {
   ProductCategoryListParams,
   ProductCategoryMutationInput,
   ProductCategoryPatchInput,
+  ProductBrand,
+  ProductBrandListParams,
+  ProductBrandMutationInput,
+  ProductBrandPatchInput,
   ProductPatchInput,
   ProductMutationInput,
   SendMessageInput,
@@ -300,6 +304,20 @@ export interface ProductService {
     input: ProductCategoryPatchInput,
   ): Promise<ProductCategory | null>;
   deleteProductCategory(id: EntityId): Promise<boolean>;
+  listProductBrands(
+    params?: ProductBrandListParams,
+  ): Promise<PaginatedResult<ProductBrand>>;
+  getProductBrandById(id: EntityId): Promise<ProductBrand | null>;
+  createProductBrand(input: ProductBrandMutationInput): Promise<ProductBrand>;
+  updateProductBrand(
+    id: EntityId,
+    input: ProductBrandMutationInput,
+  ): Promise<ProductBrand | null>;
+  patchProductBrand(
+    id: EntityId,
+    input: ProductBrandPatchInput,
+  ): Promise<ProductBrand | null>;
+  deleteProductBrand(id: EntityId): Promise<boolean>;
   uploadProductImages(productId: EntityId, payload: FormData | File[]): Promise<Product | null>;
   deleteProductImage(productId: EntityId, imageId: EntityId): Promise<boolean>;
 }

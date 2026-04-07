@@ -5,16 +5,22 @@ import type {
   ProductCategoryListParams,
   ProductCategoryMutationInput,
   ProductCategoryPatchInput,
+  ProductBrandListParams,
+  ProductBrandMutationInput,
+  ProductBrandPatchInput,
   ProductMutationInput,
   ProductPatchInput,
   TableQueryParams,
 } from '../../types/domain';
 import { apiClient } from '../../lib/api-client';
 import {
+  mapProductBrandDtoToModel,
+  mapProductBrandListDtoToItems,
   mapProductCategoryDtoToModel,
   mapProductCategoryListDtoToItems,
   mapProductDtoToModel,
   mapProductListDtoToItems,
+  type ProductBrandDto,
   type ProductCategoryDto,
   type ProductDto,
 } from '../adapters/product-adapter';
@@ -106,6 +112,13 @@ function toMutationPayload(
     // Keep legacy key for backward compatibility with older API versions.
     payload.category = normalizedCategoryId;
   }
+  if (input.brandId !== undefined) {
+    const normalizedBrandId =
+      typeof input.brandId === 'string' ? input.brandId.trim() : input.brandId;
+    payload.brand_id = normalizedBrandId;
+    // Keep legacy key if needed, though usually not for brands.
+    payload.brand = normalizedBrandId;
+  }
   return payload;
 }
 
@@ -130,6 +143,26 @@ function toCategoryMutationPayload(
     formData.append('image', input.image);
   }
   return formData;
+}
+
+function toBrandMutationPayload(
+  input: ProductBrandMutationInput | ProductBrandPatchInput,
+): Record<string, unknown> {
+  const payload: Record<string, unknown> = {};
+
+  if (input.name !== undefined) {
+    payload.name = input.name;
+  }
+  if (input.code !== undefined) {
+    payload.code = input.code;
+  }
+  if (input.description !== undefined) {
+    payload.description = input.description;
+  }
+  if (input.isActive !== undefined) {
+    payload.is_active = input.isActive;
+  }
+  return payload;
 }
 
 function toImageUploadFormData(payload: FormData | File[]): FormData {
@@ -161,6 +194,7 @@ export const apiProductService: ProductService = {
         page_size: params?.pageSize,
         search: params?.search,
         category: params?.category ?? params?.category_id,
+        brand: params?.brand,
         currency: params?.currency,
         is_active: params?.isActive ?? params?.is_active,
         is_promoted: params?.isPromoted ?? params?.is_promoted,
@@ -277,6 +311,55 @@ export const apiProductService: ProductService = {
 
   async deleteProductCategory(id: EntityId) {
     await apiClient.delete(`/api/products/categories/${id}/`);
+    return true;
+  },
+
+  async listProductBrands(params?: ProductBrandListParams) {
+    const { data } = await apiClient.get<unknown>('/api/products/brands/', {
+      params: {
+        search: params?.search,
+        ordering: params?.ordering,
+        is_active: params?.isActive ?? params?.is_active,
+      },
+    });
+
+    const items = mapProductBrandListDtoToItems(data);
+    return toPaginatedResult(items, params);
+  },
+
+  async getProductBrandById(id) {
+    const { data } = await apiClient.get<ProductBrandDto>(
+      `/api/products/brands/${id}/`,
+    );
+    return mapProductBrandDtoToModel(data);
+  },
+
+  async createProductBrand(input) {
+    const { data } = await apiClient.post<ProductBrandDto>(
+      '/api/products/brands/',
+      toBrandMutationPayload(input),
+    );
+    return mapProductBrandDtoToModel(data);
+  },
+
+  async updateProductBrand(id, input) {
+    const { data } = await apiClient.put<ProductBrandDto>(
+      `/api/products/brands/${id}/`,
+      toBrandMutationPayload(input),
+    );
+    return mapProductBrandDtoToModel(data);
+  },
+
+  async patchProductBrand(id, input) {
+    const { data } = await apiClient.patch<ProductBrandDto>(
+      `/api/products/brands/${id}/`,
+      toBrandMutationPayload(input),
+    );
+    return mapProductBrandDtoToModel(data);
+  },
+
+  async deleteProductBrand(id: EntityId) {
+    await apiClient.delete(`/api/products/brands/${id}/`);
     return true;
   },
 
