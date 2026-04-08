@@ -18,6 +18,7 @@ export type OrderStatus =
   | 'cancelled';
 
 export type OrderSource = 'telegram' | 'instagram' | 'manual';
+export type OrderFulfillmentMethod = 'delivery' | 'pickup';
 
 export type OrderPaymentStatus =
   | 'unpaid'
@@ -51,6 +52,7 @@ export interface Order extends AuditInfo {
   contactName: string;
   contactPhone: string;
   shippingAddress: string;
+  fulfillmentMethod: OrderFulfillmentMethod;
   notes?: string;
   metadata?: Record<string, string | number | boolean | null>;
   aiGenerated: boolean;
@@ -74,6 +76,7 @@ export interface OrderMutationInput {
   contactName: string;
   contactPhone: string;
   shippingAddress: string;
+  fulfillmentMethod: OrderFulfillmentMethod;
   notes: string;
   metadata?: Record<string, string | number | boolean | null>;
   aiGenerated: boolean;
@@ -109,6 +112,7 @@ export interface ReviewOrderDetail {
   contactName: string;
   contactPhone: string;
   shippingAddress: string;
+  fulfillmentMethod: OrderFulfillmentMethod;
   createdAt: TimestampString;
   items: ReviewOrderItem[];
 }

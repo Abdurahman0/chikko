@@ -43,6 +43,7 @@ import type {
 } from '../../../types/domain';
 
 type ActiveFilter = 'all' | 'active' | 'inactive';
+type ReviewsFilter = 'all' | 'enabled' | 'disabled';
 type CatalogView = 'products' | 'promoted' | 'categories' | 'brands';
 type ProductOrdering =
   | '-created_at'
@@ -286,6 +287,26 @@ function ProductsPage() {
     [t],
   );
 
+  const reviewsFilterOptions = useMemo<SelectOption[]>(
+    () => [
+      {
+        value: 'all',
+        label: t('products.allReviewsModes', {
+          defaultValue: "Sharhlar: barchasi",
+        }),
+      },
+      {
+        value: 'enabled',
+        label: t('products.reviewsEnabled', { defaultValue: 'Sharhlar yoqilgan' }),
+      },
+      {
+        value: 'disabled',
+        label: t('products.reviewsDisabled', { defaultValue: "Sharhlar o'chirilgan" }),
+      },
+    ],
+    [t],
+  );
+
   const categoryOrderingOptions = useMemo<SelectOption[]>(
     () => [
       { value: '-created_at', label: t('products.createdNewest') },
@@ -328,6 +349,7 @@ function ProductsPage() {
   const [categoryFilter, setCategoryFilter] = useState(ALL_CATEGORIES_VALUE);
   const [brandFilter, setBrandFilter] = useState('all');
   const [activeFilter, setActiveFilter] = useState<ActiveFilter>('all');
+  const [reviewsFilter, setReviewsFilter] = useState<ReviewsFilter>('all');
   const [ordering, setOrdering] = useState<ProductOrdering>(DEFAULT_ORDERING);
   const [currentPage, setCurrentPage] = useState(1);
   const [products, setProducts] = useState<Product[]>([]);
@@ -480,7 +502,16 @@ function ProductsPage() {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [catalogView, debouncedSearch, currencyFilter, categoryFilter, brandFilter, activeFilter, ordering]);
+  }, [
+    catalogView,
+    debouncedSearch,
+    currencyFilter,
+    categoryFilter,
+    brandFilter,
+    activeFilter,
+    reviewsFilter,
+    ordering,
+  ]);
 
   useEffect(() => {
     setCategoryCurrentPage(1);
@@ -703,6 +734,8 @@ function ProductsPage() {
             currencyFilter === ALL_CURRENCIES_VALUE ? undefined : currencyFilter,
           is_active:
             activeFilter === 'all' ? undefined : activeFilter === 'active',
+          reviews_enabled:
+            reviewsFilter === 'all' ? undefined : reviewsFilter === 'enabled',
           is_promoted: catalogView === 'promoted' ? true : undefined,
           ordering,
           ...sortConfig,
@@ -749,6 +782,7 @@ function ProductsPage() {
     currentPage,
     debouncedSearch,
     ordering,
+    reviewsFilter,
     reloadCursor,
   ]);
 
@@ -1005,7 +1039,7 @@ function ProductsPage() {
           throw new Error(t('products.form.saveError'));
         }
 
-        const updated = await services.products.updateProduct(editId, payload);
+        const updated = await services.products.patchProduct(editId, payload);
         if (!updated) {
           throw new Error(t('products.form.saveError'));
         }
@@ -1675,6 +1709,7 @@ function ProductsPage() {
     Number(categoryFilter !== ALL_CATEGORIES_VALUE) +
     Number(brandFilter !== 'all') +
     Number(activeFilter !== 'all') +
+    Number(reviewsFilter !== 'all') +
     Number(ordering !== DEFAULT_ORDERING);
   const categoryActiveFilterCount =
     Number(categoryActiveFilter !== 'all') +
@@ -1860,6 +1895,18 @@ function ProductsPage() {
                   value={activeFilter}
                   options={activeFilterOptions}
                   onChange={(value) => setActiveFilter(value as ActiveFilter)}
+                  disabled={isLoading}
+                />
+              </label>
+
+              <label className="grid min-w-[min(200px,100%)] flex-[1_1_200px] gap-1.5 min-[640px]:flex-[0_1_200px]">
+                <span className={labelClassName}>
+                  {t('products.reviewsFilterLabel', { defaultValue: 'Sharhlar' })}
+                </span>
+                <FilterSelect
+                  value={reviewsFilter}
+                  options={reviewsFilterOptions}
+                  onChange={(value) => setReviewsFilter(value as ReviewsFilter)}
                   disabled={isLoading}
                 />
               </label>

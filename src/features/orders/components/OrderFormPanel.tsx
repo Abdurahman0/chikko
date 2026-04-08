@@ -12,6 +12,7 @@ import type {
   Customer,
   EntityId,
   Order,
+  OrderFulfillmentMethod,
   OrderMutationInput,
   OrderSource,
   OrderStatus,
@@ -26,6 +27,7 @@ interface OrderFormPanelProps {
   products: Product[];
   statusOptions: SelectOption[];
   sourceOptions: SelectOption[];
+  fulfillmentOptions: SelectOption[];
   isSubmitting: boolean;
   errorMessage?: string | null;
   onClose: () => void;
@@ -46,6 +48,7 @@ interface OrderFormState {
   customerId: string;
   status: OrderStatus;
   source: OrderSource;
+  fulfillmentMethod: OrderFulfillmentMethod;
   contactName: string;
   contactPhone: string;
   shippingAddress: string;
@@ -137,6 +140,7 @@ function createInitialState(
       customerId: order.customer?.id ?? '',
       status: order.status,
       source: order.source,
+      fulfillmentMethod: order.fulfillmentMethod,
       contactName: order.contactName,
       contactPhone: order.contactPhone,
       shippingAddress: order.shippingAddress,
@@ -155,6 +159,7 @@ function createInitialState(
     customerId: customers[0]?.id ?? '',
     status: 'draft',
     source: 'manual',
+    fulfillmentMethod: 'delivery',
     contactName: '',
     contactPhone: '',
     shippingAddress: '',
@@ -216,6 +221,7 @@ function OrderFormPanel({
   products,
   statusOptions,
   sourceOptions,
+  fulfillmentOptions,
   isSubmitting,
   errorMessage,
   onClose,
@@ -476,6 +482,7 @@ function OrderFormPanel({
       form.contactName.trim().length > 0 &&
       form.contactPhone.trim().length > 0 &&
       form.shippingAddress.trim().length > 0 &&
+      form.fulfillmentMethod.length > 0 &&
       form.items.length > 0 &&
       form.items.every(
         (item) =>
@@ -562,6 +569,7 @@ function OrderFormPanel({
       customerId,
       status,
       source: form.source,
+      fulfillmentMethod: form.fulfillmentMethod,
       contactName,
       contactPhone,
       shippingAddress,
@@ -614,6 +622,7 @@ function OrderFormPanel({
         isPaidOrder,
       ),
       source: form.source,
+      fulfillmentMethod: form.fulfillmentMethod,
       contactName: form.contactName.trim(),
       contactPhone: form.contactPhone.trim(),
       shippingAddress: form.shippingAddress.trim(),
@@ -734,7 +743,7 @@ function OrderFormPanel({
             </label>
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid gap-3 sm:grid-cols-3">
             <label className="grid gap-1.5">
               <span className={labelClassName}>{t('orders.form.status')}</span>
               <FilterSelect
@@ -759,6 +768,23 @@ function OrderFormPanel({
                   setForm((current) => ({
                     ...current,
                     source: value as OrderSource,
+                  }))
+                }
+                disabled={isSubmitting}
+              />
+            </label>
+
+            <label className="grid gap-1.5">
+              <span className={labelClassName}>
+                {t('orders.form.fulfillmentMethod', { defaultValue: 'Bajarish usuli' })}
+              </span>
+              <FilterSelect
+                value={form.fulfillmentMethod}
+                options={fulfillmentOptions}
+                onChange={(value) =>
+                  setForm((current) => ({
+                    ...current,
+                    fulfillmentMethod: value as OrderFulfillmentMethod,
                   }))
                 }
                 disabled={isSubmitting}

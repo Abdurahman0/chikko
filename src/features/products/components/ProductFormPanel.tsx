@@ -36,6 +36,7 @@ interface ProductFormState {
   stockQuantity: string;
   minimalStock: string;
   isPromoted: boolean;
+  reviewsEnabled: boolean;
   isActive: boolean;
   categoryId: string;
   brandId: string;
@@ -173,6 +174,7 @@ function createInitialState(
       stockQuantity: String(product.stockQuantity ?? 0),
       minimalStock: String(product.minimalStock ?? 0),
       isPromoted: product.isPromoted,
+      reviewsEnabled: product.reviewsEnabled,
       isActive: product.isActive,
       categoryId:
         normalizeString(product.categoryId) ||
@@ -192,6 +194,7 @@ function createInitialState(
     stockQuantity: '0',
     minimalStock: '0',
     isPromoted: false,
+    reviewsEnabled: true,
     isActive: true,
     categoryId: '',
     brandId: '',
@@ -503,6 +506,7 @@ function ProductFormPanel({
       stockQuantity: Math.floor(parsedStock),
       minimalStock: Math.floor(parsedMinimalStock),
       isPromoted: form.isPromoted,
+      reviewsEnabled: form.reviewsEnabled,
       isActive: form.isActive,
     }, {
       newImages,
@@ -785,6 +789,28 @@ function ProductFormPanel({
               checked={form.isPromoted}
               onChange={(nextValue) =>
                 setForm((current) => ({ ...current, isPromoted: nextValue }))
+              }
+              disabled={isSubmitting}
+            />
+          </div>
+
+          <div className="flex items-center justify-between gap-4 rounded-xl bg-surface-card px-4 py-4 ring-1 ring-border-soft/35">
+            <div className="grid gap-0.5">
+              <p className="m-0 text-sm font-semibold text-text-primary">
+                {t('products.form.reviewsEnabled', {
+                  defaultValue: 'Sharhlarni qabul qilish',
+                })}
+              </p>
+              <p className="m-0 text-[12px] text-text-secondary">
+                {t('products.form.reviewsEnabledHint', {
+                  defaultValue: 'Ushbu mahsulot uchun sharhlarni yoqish yoki o‘chirish.',
+                })}
+              </p>
+            </div>
+            <Switch
+              checked={form.reviewsEnabled}
+              onChange={(nextValue) =>
+                setForm((current) => ({ ...current, reviewsEnabled: nextValue }))
               }
               disabled={isSubmitting}
             />

@@ -164,6 +164,7 @@ export function mapProductDtoToModel(dto: ProductDto): Product {
   const minimalStock = readInteger(dto.minimal_stock, 0);
   const isActive = readBoolean(dto.is_active);
   const isPromoted = readBoolean(dto.is_promoted);
+  const reviewsEnabled = readBoolean(dto.reviews_enabled ?? dto.reviewsEnabled);
   const metadata = mapMetadata(dto.metadata);
   const images = mapImages(dto.images);
   const firstImageUrl =
@@ -224,6 +225,7 @@ export function mapProductDtoToModel(dto: ProductDto): Product {
     stockQuantity,
     minimalStock,
     isPromoted,
+    reviewsEnabled,
     isActive,
     embedding: null,
     metadata,

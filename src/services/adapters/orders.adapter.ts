@@ -4,6 +4,7 @@ import type {
   LeadStatus,
   LeadSummary,
   Order,
+  OrderFulfillmentMethod,
   OrderItem,
   OrderPaymentStatus,
   OrderReview,
@@ -50,6 +51,10 @@ const ALLOWED_LEAD_STATUSES: readonly LeadStatus[] = [
   'negotiating',
   'converted',
   'lost',
+];
+const ALLOWED_FULFILLMENT_METHODS: readonly OrderFulfillmentMethod[] = [
+  'delivery',
+  'pickup',
 ];
 
 function toRecord(value: unknown): Record<string, unknown> | null {
@@ -139,6 +144,13 @@ function normalizeLeadStatus(value: unknown): LeadStatus {
 function normalizePaymentStatus(value: unknown): OrderPaymentStatus | undefined {
   const normalized = readString(value) as OrderPaymentStatus;
   return ALLOWED_PAYMENT_STATUSES.includes(normalized) ? normalized : undefined;
+}
+
+function normalizeFulfillmentMethod(value: unknown): OrderFulfillmentMethod {
+  const normalized = readString(value) as OrderFulfillmentMethod;
+  return ALLOWED_FULFILLMENT_METHODS.includes(normalized)
+    ? normalized
+    : 'delivery';
 }
 
 function normalizeMetadataValue(
@@ -418,6 +430,9 @@ export function mapOrderDtoToModel(dto: OrderDto): Order {
       '',
     shippingAddress:
       readString(dto.shipping_address) || readString(dto.shippingAddress) || '',
+    fulfillmentMethod: normalizeFulfillmentMethod(
+      dto.fulfillment_method ?? dto.fulfillmentMethod,
+    ),
     notes: notes || undefined,
     metadata: mapMetadata(dto.metadata),
     aiGenerated: readBoolean(dto.ai_generated ?? dto.aiGenerated),
@@ -481,6 +496,9 @@ function parseReviewOrderDetail(value: unknown): ReviewOrderDetail {
     contactName: readString(payload?.contact_name),
     contactPhone: readString(payload?.contact_phone),
     shippingAddress: readString(payload?.shipping_address),
+    fulfillmentMethod: normalizeFulfillmentMethod(
+      payload?.fulfillment_method ?? payload?.fulfillmentMethod,
+    ),
     createdAt: readString(payload?.created_at, new Date().toISOString()),
     items: items.map(item => {
       const itemPayload = toRecord(item);

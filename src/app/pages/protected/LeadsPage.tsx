@@ -58,6 +58,7 @@ const SOURCE_VALUES: readonly LeadSource[] = [
   'manual',
   'telegram',
   'instagram',
+  'web',
 ];
 
 const DEFAULT_PAGINATION_META: PaginationMeta = {
@@ -105,8 +106,8 @@ function formatDate(
 }
 
 function normalizeLeadSource(source: LeadSource): LeadSource {
-  if (source === 'website' || source === 'web') {
-    return 'manual';
+  if (source === 'website') {
+    return 'web';
   }
 
   return source;
@@ -149,6 +150,8 @@ function channelAbbreviation(source: LeadSource): string {
       return 'IG';
     case 'telegram':
       return 'TG';
+    case 'web':
+      return 'WEB';
     case 'manual':
       return 'MN';
     default:

@@ -62,8 +62,8 @@ function getLeadStatusTone(status: LeadStatus): 'info' | 'warning' | 'accent' | 
 }
 
 function normalizeLeadSource(source: LeadSource): LeadSource {
-  if (source === 'website' || source === 'web') {
-    return 'manual';
+  if (source === 'website') {
+    return 'web';
   }
 
   return source;

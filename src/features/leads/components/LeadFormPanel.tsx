@@ -46,8 +46,8 @@ const labelClassName =
 const UNASSIGNED_OPERATOR_VALUE = '';
 
 function normalizeLeadSource(source: LeadSource): LeadSource {
-  if (source === 'website' || source === 'web') {
-    return 'manual';
+  if (source === 'website') {
+    return 'web';
   }
 
   return source;

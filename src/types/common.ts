@@ -60,8 +60,12 @@ export interface TableQueryParams extends BaseFilterParams {
   ai_generated?: boolean;
   isPromoted?: boolean;
   is_promoted?: boolean;
+  reviewsEnabled?: boolean;
+  reviews_enabled?: boolean;
   ordering?: string;
   brand?: EntityId;
+  fulfillmentMethod?: string;
+  fulfillment_method?: string;
 }
 
 export interface AuditInfo {

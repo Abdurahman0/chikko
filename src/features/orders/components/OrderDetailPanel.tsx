@@ -287,6 +287,18 @@ function OrderDetailPanel({
                         {order.shippingAddress || t('common.na')}
                       </p>
                     </div>
+                    <div className="rounded-lg bg-surface-subtle/80 p-3">
+                      <p className={labelClassName}>
+                        {t('orders.detail.fulfillmentMethod', {
+                          defaultValue: 'Bajarish usuli',
+                        })}
+                      </p>
+                      <p className={`mt-1 ${valueClassName}`}>
+                        {order.fulfillmentMethod === 'pickup'
+                          ? t('orders.fulfillmentPickup', { defaultValue: 'Olib ketish' })
+                          : t('orders.fulfillmentDelivery', { defaultValue: 'Yetkazib berish' })}
+                      </p>
+                    </div>
                     <div 
                       className={`rounded-lg bg-surface-subtle/80 p-3 transition-colors ${order.customer ? 'cursor-pointer hover:bg-surface-muted/90' : ''}`}
                       onClick={() => {

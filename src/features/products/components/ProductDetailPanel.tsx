@@ -309,6 +309,16 @@ function ProductDetailPanel({
                         {product.brandName || product.brand?.name || t('common.na')}
                       </p>
                     </div>
+                    <div className="rounded-lg bg-surface-subtle/80 p-3">
+                      <p className={labelClassName}>
+                        {t('products.detail.reviewsEnabled', {
+                          defaultValue: 'Sharhlar',
+                        })}
+                      </p>
+                      <p className={`mt-1 ${valueClassName}`}>
+                        {product.reviewsEnabled ? t('common.active') : t('common.inactive')}
+                      </p>
+                    </div>
                     <div className="rounded-lg bg-surface-subtle/80 p-3 sm:col-span-2">
                       <p className={labelClassName}>
                         {t('products.detail.description')}

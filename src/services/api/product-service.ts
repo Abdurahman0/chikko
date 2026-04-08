@@ -105,6 +105,9 @@ function toMutationPayload(
   if (input.isPromoted !== undefined) {
     payload.is_promoted = input.isPromoted;
   }
+  if (input.reviewsEnabled !== undefined) {
+    payload.reviews_enabled = input.reviewsEnabled;
+  }
   if (input.categoryId !== undefined) {
     const normalizedCategoryId =
       typeof input.categoryId === 'string' ? input.categoryId.trim() : input.categoryId;
@@ -198,6 +201,8 @@ export const apiProductService: ProductService = {
         currency: params?.currency,
         is_active: params?.isActive ?? params?.is_active,
         is_promoted: params?.isPromoted ?? params?.is_promoted,
+        reviews_enabled:
+          params?.reviewsEnabled ?? params?.reviews_enabled,
         ordering:
           params?.ordering ??
           (params?.sortBy

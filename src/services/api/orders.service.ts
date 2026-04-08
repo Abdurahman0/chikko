@@ -132,6 +132,9 @@ function toOrderPayload(
   if (input.shippingAddress !== undefined) {
     payload.shipping_address = input.shippingAddress;
   }
+  if (input.fulfillmentMethod !== undefined) {
+    payload.fulfillment_method = input.fulfillmentMethod;
+  }
   if (input.notes !== undefined) {
     payload.notes = normalizeText(input.notes);
   }
@@ -224,6 +227,8 @@ export async function listOrders(params?: TableQueryParams): Promise<PaginatedRe
       status: params?.status,
       source: params?.source,
       ai_generated: params?.aiGenerated ?? params?.ai_generated,
+      fulfillment_method:
+        params?.fulfillmentMethod ?? params?.fulfillment_method,
       ordering:
         params?.ordering ??
         (params?.sortBy
@@ -306,6 +311,8 @@ export async function listOrderReviews(
 ): Promise<PaginatedResult<OrderReview>> {
   const { data } = await apiClient.get<unknown>('/api/orders/reviews/', {
     params: {
+      page: params?.page,
+      page_size: params?.pageSize,
       customer: params?.customer,
       lead: params?.lead,
       ordering: params?.ordering,
@@ -316,7 +323,9 @@ export async function listOrderReviews(
   });
 
   const items = mapOrderReviewListDtoToItems(data);
-  return toPaginatedResult(items, params);
+  const payload = toRecord(data);
+  const totalItemsHint = readNumber(payload?.count);
+  return toPaginatedResult(items, params, totalItemsHint);
 }
 
 export async function getOrderReviewById(id: EntityId): Promise<OrderReview | null> {
@@ -414,4 +423,3 @@ export const apiOrderService: OrderService = {
     return deleteOrderReview(id);
   },
 };
-

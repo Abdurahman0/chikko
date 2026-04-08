@@ -37,6 +37,7 @@ import type {
   EntityId,
   Order,
   OrderMutationInput,
+  OrderFulfillmentMethod,
   OrderSource,
   OrderStatus,
   PaginationMeta,
@@ -51,6 +52,7 @@ import type {
 
 type OrdersView = 'orders' | 'reviews';
 type AiFilter = 'all' | 'yes' | 'no';
+type FulfillmentFilter = OrderFulfillmentMethod | 'all';
 type OrderOrdering =
   | '-updated_at'
   | 'updated_at'
@@ -65,10 +67,15 @@ const SEARCH_DEBOUNCE_MS = 350;
 const ALL_STATUS_VALUE = 'all';
 const ALL_SOURCE_VALUE = 'all';
 const ALL_AI_VALUE = 'all';
+const ALL_FULFILLMENT_VALUE = 'all';
 const DEFAULT_ORDERING: OrderOrdering = '-updated_at';
 const DEFAULT_REVIEW_ORDERING = '-submitted_at';
 
 const ORDER_SOURCES: readonly OrderSource[] = ['manual', 'telegram', 'instagram'];
+const ORDER_FULFILLMENT_METHODS: readonly OrderFulfillmentMethod[] = [
+  'delivery',
+  'pickup',
+];
 
 const DEFAULT_PAGINATION_META: PaginationMeta = {
   page: 1,
@@ -243,6 +250,14 @@ function getSourceBadgeClassName(source: OrderSource): string {
   return 'bg-surface-subtle text-text-secondary';
 }
 
+function getFulfillmentBadgeClassName(method: OrderFulfillmentMethod): string {
+  if (method === 'pickup') {
+    return 'bg-[rgb(245_158_11_/_0.16)] text-[rgb(146_94_0)]';
+  }
+
+  return 'bg-[rgb(16_185_129_/_0.14)] text-[rgb(4_120_87)]';
+}
+
 function OrdersPage() {
   const { t, i18n } = useTranslation();
   const locale = i18n.language === 'ru' ? 'ru-RU' : 'uz-UZ';
@@ -252,6 +267,8 @@ function OrdersPage() {
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>(ALL_STATUS_VALUE);
   const [sourceFilter, setSourceFilter] = useState<string>(ALL_SOURCE_VALUE);
+  const [fulfillmentFilter, setFulfillmentFilter] =
+    useState<FulfillmentFilter>(ALL_FULFILLMENT_VALUE);
   const [aiFilter, setAiFilter] = useState<AiFilter>('all');
   const [ordering, setOrdering] = useState<OrderOrdering>(DEFAULT_ORDERING);
   const [currentPage, setCurrentPage] = useState(1);
@@ -325,7 +342,7 @@ function OrdersPage() {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [debouncedSearch, statusFilter, sourceFilter, aiFilter, ordering]);
+  }, [debouncedSearch, statusFilter, sourceFilter, fulfillmentFilter, aiFilter, ordering]);
 
   useEffect(() => {
     let isActive = true;
@@ -394,6 +411,10 @@ function OrdersPage() {
           search: debouncedSearch || undefined,
           status: statusFilter === ALL_STATUS_VALUE ? undefined : statusFilter,
           source: sourceFilter === ALL_SOURCE_VALUE ? undefined : sourceFilter,
+          fulfillment_method:
+            fulfillmentFilter === ALL_FULFILLMENT_VALUE
+              ? undefined
+              : fulfillmentFilter,
           ai_generated: resolveAiGeneratedFilter(aiFilter),
           ordering,
           ...sortConfig,
@@ -438,6 +459,7 @@ function OrdersPage() {
     ordering,
     reloadCursor,
     sourceFilter,
+    fulfillmentFilter,
     statusFilter,
   ]);
 
@@ -654,6 +676,25 @@ function OrdersPage() {
     [t],
   );
 
+  const fulfillmentOptions = useMemo<SelectOption[]>(
+    () => [
+      {
+        value: ALL_FULFILLMENT_VALUE,
+        label: t('orders.allFulfillmentMethods', {
+          defaultValue: 'Barcha bajarish usullari',
+        }),
+      },
+      ...ORDER_FULFILLMENT_METHODS.map((method) => ({
+        value: method,
+        label:
+          method === 'pickup'
+            ? t('orders.fulfillmentPickup', { defaultValue: 'Olib ketish' })
+            : t('orders.fulfillmentDelivery', { defaultValue: 'Yetkazib berish' }),
+      })),
+    ],
+    [t],
+  );
+
   const aiFilterOptions = useMemo<SelectOption[]>(
     () => [
       { value: ALL_AI_VALUE, label: t('orders.aiAll') },
@@ -741,6 +782,22 @@ function OrdersPage() {
             ].join(' ')}
           >
             {getChannelLabel(t, order.source)}
+          </span>
+        ),
+      },
+      {
+        key: 'fulfillmentMethod',
+        label: t('orders.fulfillmentMethod', { defaultValue: 'Bajarish usuli' }),
+        render: (order) => (
+          <span
+            className={[
+              'inline-flex min-h-7 items-center rounded-pill px-2.5 text-[11px] font-semibold uppercase tracking-[0.08em]',
+              getFulfillmentBadgeClassName(order.fulfillmentMethod),
+            ].join(' ')}
+          >
+            {order.fulfillmentMethod === 'pickup'
+              ? t('orders.fulfillmentPickup', { defaultValue: 'Olib ketish' })
+              : t('orders.fulfillmentDelivery', { defaultValue: 'Yetkazib berish' })}
           </span>
         ),
       },
@@ -912,6 +969,7 @@ function OrdersPage() {
   const activeFilterCount =
     Number(statusFilter !== ALL_STATUS_VALUE) +
     Number(sourceFilter !== ALL_SOURCE_VALUE) +
+    Number(fulfillmentFilter !== ALL_FULFILLMENT_VALUE) +
     Number(aiFilter !== ALL_AI_VALUE) +
     Number(ordering !== DEFAULT_ORDERING);
 
@@ -1062,6 +1120,18 @@ function OrdersPage() {
                   value={sourceFilter}
                   options={sourceOptions}
                   onChange={setSourceFilter}
+                  disabled={isLoading}
+                />
+              </label>
+
+              <label className="grid min-w-[min(190px,100%)] flex-[1_1_190px] gap-1.5 min-[640px]:flex-[0_1_190px]">
+                <span className={labelClassName}>
+                  {t('orders.fulfillmentMethod', { defaultValue: 'Bajarish usuli' })}
+                </span>
+                <FilterSelect
+                  value={fulfillmentFilter}
+                  options={fulfillmentOptions}
+                  onChange={(value) => setFulfillmentFilter(value as FulfillmentFilter)}
                   disabled={isLoading}
                 />
               </label>
@@ -1222,6 +1292,9 @@ function OrdersPage() {
           )}
           sourceOptions={sourceOptions.filter(
             (option) => option.value !== ALL_SOURCE_VALUE,
+          )}
+          fulfillmentOptions={fulfillmentOptions.filter(
+            (option) => option.value !== ALL_FULFILLMENT_VALUE,
           )}
           isSubmitting={isSaving}
           errorMessage={formErrorMessage || undefined}

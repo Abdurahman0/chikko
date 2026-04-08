@@ -65,6 +65,7 @@ export interface Product extends AuditInfo {
   stockQuantity?: number;
   minimalStock?: number;
   isPromoted: boolean;
+  reviewsEnabled: boolean;
   isActive: boolean;
   embedding?: number[] | null;
   metadata?: Record<string, string | number | boolean | null> | null;
@@ -84,6 +85,7 @@ export interface ProductMutationInput {
   stockQuantity: number;
   minimalStock: number;
   isPromoted: boolean;
+  reviewsEnabled: boolean;
   isActive: boolean;
 }
 
