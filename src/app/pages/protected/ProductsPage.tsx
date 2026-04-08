@@ -742,6 +742,7 @@ function ProductsPage() {
     };
   }, [
     activeFilter,
+    brandFilter,
     catalogView,
     categoryFilter,
     currencyFilter,
@@ -1672,6 +1673,7 @@ function ProductsPage() {
   const productActiveFilterCount =
     Number(currencyFilter !== ALL_CURRENCIES_VALUE) +
     Number(categoryFilter !== ALL_CATEGORIES_VALUE) +
+    Number(brandFilter !== 'all') +
     Number(activeFilter !== 'all') +
     Number(ordering !== DEFAULT_ORDERING);
   const categoryActiveFilterCount =
@@ -1692,6 +1694,8 @@ function ProductsPage() {
       : catalogView === 'categories'
         ? categoryPaginationMeta.totalItems
         : paginationMeta.totalItems;
+  const isProductCatalogView =
+    catalogView === 'products' || catalogView === 'promoted';
 
   const formCurrencyOptions = useMemo<SelectOption[]>(() => {
     const filtered = currencyOptions.filter(
@@ -1793,8 +1797,10 @@ function ProductsPage() {
                   aria-hidden="true"
                 />
                 {activeTotalItems}{' '}
-                {catalogView === 'products'
+                {isProductCatalogView
                   ? t('products.records')
+                  : catalogView === 'brands'
+                    ? t('products.brandsCountLabel', { defaultValue: 'brendlar' })
                   : t('products.categoriesRecords')}
               </span>
               {activeFilterCount > 0 ? (
@@ -1806,7 +1812,7 @@ function ProductsPage() {
             </div>
           }
         >
-          {catalogView !== 'categories' ? (
+          {isProductCatalogView ? (
             <>
               <SearchInput
                 value={search}
@@ -2043,7 +2049,7 @@ function ProductsPage() {
           </div>
         </PageCard>
 
-        {catalogView !== 'categories' && !isLoading && paginationMeta.totalItems > 0 ? (
+        {isProductCatalogView && !isLoading && paginationMeta.totalItems > 0 ? (
           <Pagination
             currentPage={Math.min(currentPage, paginationMeta.totalPages)}
             totalPages={paginationMeta.totalPages}
@@ -2075,7 +2081,7 @@ function ProductsPage() {
         ) : null}
       </PageSection>
 
-      {catalogView !== 'categories' && selectedProductId ? (
+      {isProductCatalogView && selectedProductId ? (
         <ProductDetailPanel
           productId={selectedProductId}
           isDeleteDisabled={isDeleteBlocked(selectedProductId)}
