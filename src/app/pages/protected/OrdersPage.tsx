@@ -1104,7 +1104,7 @@ function OrdersPage() {
                 placeholder={t('orders.searchPlaceholder')}
               />
 
-              <label className="grid min-w-[min(180px,100%)] flex-[1_1_180px] gap-1.5 min-[640px]:flex-[0_1_180px]">
+              <label className="grid min-w-[min(190px,100%)] flex-[1_1_190px] gap-1.5 min-[640px]:flex-[0_1_200px]">
                 <span className={labelClassName}>{t('orders.status')}</span>
                 <FilterSelect
                   value={statusFilter}
@@ -1114,7 +1114,7 @@ function OrdersPage() {
                 />
               </label>
 
-              <label className="grid min-w-[min(180px,100%)] flex-[1_1_180px] gap-1.5 min-[640px]:flex-[0_1_180px]">
+              <label className="grid min-w-[min(190px,100%)] flex-[1_1_190px] gap-1.5 min-[640px]:flex-[0_1_200px]">
                 <span className={labelClassName}>{t('orders.source')}</span>
                 <FilterSelect
                   value={sourceFilter}
@@ -1124,7 +1124,7 @@ function OrdersPage() {
                 />
               </label>
 
-              <label className="grid min-w-[min(190px,100%)] flex-[1_1_190px] gap-1.5 min-[640px]:flex-[0_1_190px]">
+              <label className="grid min-w-[min(200px,100%)] flex-[1_1_200px] gap-1.5 min-[640px]:flex-[0_1_210px]">
                 <span className={labelClassName}>
                   {t('orders.fulfillmentMethod', { defaultValue: 'Bajarish usuli' })}
                 </span>
@@ -1136,7 +1136,7 @@ function OrdersPage() {
                 />
               </label>
 
-              <label className="grid min-w-[min(170px,100%)] flex-[1_1_170px] gap-1.5 min-[640px]:flex-[0_1_170px]">
+              <label className="grid min-w-[min(180px,100%)] flex-[1_1_180px] gap-1.5 min-[640px]:flex-[0_1_190px]">
                 <span className={labelClassName}>{t('orders.aiGenerated')}</span>
                 <FilterSelect
                   value={aiFilter}
@@ -1146,7 +1146,7 @@ function OrdersPage() {
                 />
               </label>
 
-              <label className="grid min-w-[min(180px,100%)] flex-[1_1_180px] gap-1.5 min-[640px]:flex-[0_1_200px]">
+              <label className="grid min-w-[min(200px,100%)] flex-[1_1_200px] gap-1.5 min-[640px]:flex-[0_1_220px]">
                 <span className={labelClassName}>{t('orders.orderBy')}</span>
                 <FilterSelect
                   value={ordering}
@@ -1164,7 +1164,7 @@ function OrdersPage() {
                 placeholder={t('orders.reviews.searchPlaceholder')}
               />
 
-              <label className="grid min-w-[min(180px,100%)] flex-[1_1_180px] gap-1.5 min-[640px]:flex-[0_1_180px]">
+              <label className="grid min-w-[min(190px,100%)] flex-[1_1_190px] gap-1.5 min-[640px]:flex-[0_1_200px]">
                 <span className={labelClassName}>{t('orders.source')}</span>
                 <FilterSelect
                   value={reviewSourceFilter}
@@ -1174,7 +1174,7 @@ function OrdersPage() {
                 />
               </label>
 
-              <label className="grid min-w-[min(180px,100%)] flex-[1_1_180px] gap-1.5 min-[640px]:flex-[0_1_200px]">
+              <label className="grid min-w-[min(200px,100%)] flex-[1_1_200px] gap-1.5 min-[640px]:flex-[0_1_220px]">
                 <span className={labelClassName}>{t('orders.orderBy')}</span>
                 <FilterSelect
                   value={reviewOrdering}
