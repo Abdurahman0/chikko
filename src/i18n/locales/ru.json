@@ -1753,7 +1753,7 @@
       "partially_refunded": "Частично возвращён"
     },
     "paymentMethod": {
-      "manual": "Вручную",
+      "manual": "Наличные",
       "payme": "Payme",
       "click": "Click"
     },
