@@ -8,11 +8,11 @@ function FilterBar({ children, actions }: FilterBarProps) {
   return (
     <div
       className={[
-        'filter-bar relative z-20 flex flex-wrap items-end justify-between gap-3 overflow-visible rounded-xl',
+        'filter-bar relative z-20 flex flex-wrap items-end justify-between gap-x-4 gap-y-3 overflow-visible rounded-xl',
         'bg-surface-card p-4 shadow-sm ring-1 ring-border-soft/25 backdrop-blur-[12px]',
       ].join(' ')}
     >
-      <div className="filter-bar__filters flex min-w-0 flex-1 flex-wrap items-end gap-3">
+      <div className="filter-bar__filters flex min-w-0 flex-1 flex-wrap items-end gap-x-4 gap-y-3">
         {children}
       </div>
       {actions ? (

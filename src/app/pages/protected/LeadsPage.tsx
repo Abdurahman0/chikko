@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { FiEdit2, FiTrash2 } from 'react-icons/fi';
+import { FiEdit2, FiEdit3, FiGlobe, FiTrash2 } from 'react-icons/fi';
+import { FaInstagram, FaTelegramPlane } from 'react-icons/fa';
 import { useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
@@ -144,19 +145,35 @@ function formatRelativeTime(
   return formatter.format(Math.round(delta / day), 'day');
 }
 
-function channelAbbreviation(source: LeadSource): string {
+function getLeadSourceBadgeClassName(source: LeadSource): string {
   switch (normalizeLeadSource(source)) {
-    case 'instagram':
-      return 'IG';
     case 'telegram':
-      return 'TG';
+      return 'bg-[rgb(32_156_238_/_0.14)] text-[rgb(12_114_181)]';
+    case 'instagram':
+      return 'bg-[rgb(225_48_108_/_0.14)] text-[rgb(176_32_87)]';
     case 'web':
-      return 'WEB';
-    case 'manual':
-      return 'MN';
+      return 'bg-info-bg text-info';
     default:
-      return 'OTR';
+      return 'bg-surface-subtle text-text-secondary';
   }
+}
+
+function LeadSourceIcon({ source, className }: { source: LeadSource; className: string }) {
+  const normalizedSource = normalizeLeadSource(source);
+
+  if (normalizedSource === 'telegram') {
+    return <FaTelegramPlane className={className} aria-hidden="true" />;
+  }
+
+  if (normalizedSource === 'instagram') {
+    return <FaInstagram className={className} aria-hidden="true" />;
+  }
+
+  if (normalizedSource === 'web') {
+    return <FiGlobe className={className} aria-hidden="true" />;
+  }
+
+  return <FiEdit3 className={className} aria-hidden="true" />;
 }
 
 function getLeadStatusTone(status: LeadStatus): 'info' | 'warning' | 'accent' | 'success' | 'danger' {
@@ -644,8 +661,13 @@ function LeadsPage() {
           return (
             <div className="grid gap-0.5">
               <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-text-primary">
-                <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-md bg-info-bg px-1 text-[10px] font-semibold text-info">
-                  {channelAbbreviation(normalizedSource)}
+                <span
+                  className={[
+                    'inline-flex h-6 min-w-6 items-center justify-center rounded-md',
+                    getLeadSourceBadgeClassName(normalizedSource),
+                  ].join(' ')}
+                >
+                  <LeadSourceIcon source={normalizedSource} className="h-3.5 w-3.5" />
                 </span>
                 {getChannelLabel(t, normalizedSource)}
               </span>

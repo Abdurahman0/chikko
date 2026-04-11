@@ -463,6 +463,7 @@ function OrderFormPanel({
     [itemRows],
   );
   const displayedTotalAmount = recalculatedTotalAmount ?? totalAmount;
+  const isPickupFulfillment = form.fulfillmentMethod === 'pickup';
   const itemRecalculateFingerprint = useMemo(
     () =>
       form.items
@@ -477,11 +478,14 @@ function OrderFormPanel({
   );
 
   const canSubmit = useMemo(() => {
+    const hasShippingAddress =
+      isPickupFulfillment || form.shippingAddress.trim().length > 0;
+
     return (
       isUuidLike(form.customerId.trim()) &&
       form.contactName.trim().length > 0 &&
       form.contactPhone.trim().length > 0 &&
-      form.shippingAddress.trim().length > 0 &&
+      hasShippingAddress &&
       form.fulfillmentMethod.length > 0 &&
       form.items.length > 0 &&
       form.items.every(
@@ -490,7 +494,7 @@ function OrderFormPanel({
           parsePositiveInteger(item.quantity) > 0,
       )
     );
-  }, [form, resolveProductUuid]);
+  }, [form, isPickupFulfillment, resolveProductUuid]);
 
   function updateItem(id: string, patch: Partial<OrderItemFormState>) {
     setForm((current) => ({
@@ -530,8 +534,15 @@ function OrderFormPanel({
     const contactPhone = form.contactPhone.trim();
     const shippingAddress = form.shippingAddress.trim();
     const notes = form.notes.trim();
+    const normalizedShippingAddress =
+      form.fulfillmentMethod === 'pickup' ? '' : shippingAddress;
 
-    if (!isUuidLike(customerId) || !contactName || !contactPhone || !shippingAddress) {
+    if (
+      !isUuidLike(customerId) ||
+      !contactName ||
+      !contactPhone ||
+      (form.fulfillmentMethod !== 'pickup' && !shippingAddress)
+    ) {
       setFieldError(t('orders.form.requiredError'));
       return;
     }
@@ -572,7 +583,7 @@ function OrderFormPanel({
       fulfillmentMethod: form.fulfillmentMethod,
       contactName,
       contactPhone,
-      shippingAddress,
+      shippingAddress: normalizedShippingAddress,
       notes,
       aiGenerated: form.aiGenerated,
       items: normalizedItems,
@@ -625,7 +636,8 @@ function OrderFormPanel({
       fulfillmentMethod: form.fulfillmentMethod,
       contactName: form.contactName.trim(),
       contactPhone: form.contactPhone.trim(),
-      shippingAddress: form.shippingAddress.trim(),
+      shippingAddress:
+        form.fulfillmentMethod === 'pickup' ? '' : form.shippingAddress.trim(),
       notes: form.notes.trim(),
       aiGenerated: form.aiGenerated,
       items: normalizedItems,
@@ -852,7 +864,7 @@ function OrderFormPanel({
               className={`${inputClassName} min-h-[86px] resize-y`}
               placeholder={t('orders.form.shippingAddress')}
               disabled={isSubmitting}
-              required
+              required={!isPickupFulfillment}
             />
           </div>
 

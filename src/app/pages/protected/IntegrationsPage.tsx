@@ -494,6 +494,7 @@ function IntegrationsPage() {
         is_active: nextIsActive,
       });
       if (!updated) {
+        setConfigReloadCursor((current) => current + 1);
         return;
       }
 
@@ -522,6 +523,8 @@ function IntegrationsPage() {
         }),
       );
       setConfigDetailRefreshToken((current) => current + 1);
+      setConfigReloadCursor((current) => current + 1);
+    } catch {
       setConfigReloadCursor((current) => current + 1);
     } finally {
       setTogglingConfigId(null);
@@ -585,7 +588,7 @@ function IntegrationsPage() {
               onChange={() => {
                 void handleToggleConfigActive(config);
               }}
-              disabled={togglingConfigId === config.id}
+              disabled={Boolean(togglingConfigId)}
               stopPropagation
             />
           ) : (
@@ -872,7 +875,7 @@ function IntegrationsPage() {
           onChange={setConfigSearch}
           placeholder={t('integrations.configSearchPlaceholder')}
         />
-        <label className="grid min-w-[min(160px,100%)] flex-[1_1_160px] gap-1.5 min-[640px]:flex-[0_1_170px]">
+        <label className="grid min-w-[min(170px,100%)] flex-[1_1_170px] gap-1.5 min-[640px]:flex-[0_1_190px]">
           <span className={labelClassName}>{t('integrations.filters.provider')}</span>
           <FilterSelect
             value={providerFilter}
@@ -881,7 +884,7 @@ function IntegrationsPage() {
             disabled={isConfigLoading}
           />
         </label>
-        <label className="grid min-w-[min(150px,100%)] flex-[1_1_150px] gap-1.5 min-[640px]:flex-[0_1_160px]">
+        <label className="grid min-w-[min(170px,100%)] flex-[1_1_170px] gap-1.5 min-[640px]:flex-[0_1_180px]">
           <span className={labelClassName}>{t('integrations.filters.status')}</span>
           <FilterSelect
             value={activeFilter}
@@ -890,7 +893,7 @@ function IntegrationsPage() {
             disabled={isConfigLoading}
           />
         </label>
-        <label className="grid min-w-[min(150px,100%)] flex-[1_1_150px] gap-1.5 min-[640px]:flex-[0_1_160px]">
+        <label className="grid min-w-[min(170px,100%)] flex-[1_1_170px] gap-1.5 min-[640px]:flex-[0_1_180px]">
           <span className={labelClassName}>{t('integrations.filters.visibility')}</span>
           <FilterSelect
             value={secretFilter}
@@ -899,7 +902,7 @@ function IntegrationsPage() {
             disabled={isConfigLoading}
           />
         </label>
-        <label className="grid min-w-[min(220px,100%)] flex-[1_1_220px] gap-1.5 min-[640px]:flex-[0_1_240px]">
+        <label className="grid min-w-[min(230px,100%)] flex-[1_1_230px] gap-1.5 min-[640px]:flex-[0_1_250px]">
           <span className={labelClassName}>{t('integrations.filters.ordering')}</span>
           <FilterSelect
             value={configOrdering}
@@ -940,7 +943,7 @@ function IntegrationsPage() {
           onChange={setEventSearch}
           placeholder={t('integrations.eventSearchPlaceholder')}
         />
-        <label className="grid min-w-[min(170px,100%)] flex-[1_1_170px] gap-1.5 min-[640px]:flex-[0_1_180px]">
+        <label className="grid min-w-[min(180px,100%)] flex-[1_1_180px] gap-1.5 min-[640px]:flex-[0_1_190px]">
           <span className={labelClassName}>{t('integrations.filters.platform')}</span>
           <FilterSelect
             value={platformFilter}
@@ -949,7 +952,7 @@ function IntegrationsPage() {
             disabled={isEventLoading}
           />
         </label>
-        <label className="grid min-w-[min(170px,100%)] flex-[1_1_170px] gap-1.5 min-[640px]:flex-[0_1_180px]">
+        <label className="grid min-w-[min(180px,100%)] flex-[1_1_180px] gap-1.5 min-[640px]:flex-[0_1_190px]">
           <span className={labelClassName}>{t('integrations.filters.processed')}</span>
           <FilterSelect
             value={processedFilter}
@@ -958,7 +961,7 @@ function IntegrationsPage() {
             disabled={isEventLoading}
           />
         </label>
-        <label className="grid min-w-[min(220px,100%)] flex-[1_1_220px] gap-1.5 min-[640px]:flex-[0_1_240px]">
+        <label className="grid min-w-[min(230px,100%)] flex-[1_1_230px] gap-1.5 min-[640px]:flex-[0_1_250px]">
           <span className={labelClassName}>{t('integrations.filters.ordering')}</span>
           <FilterSelect
             value={eventOrdering}
