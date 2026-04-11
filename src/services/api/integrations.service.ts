@@ -19,12 +19,6 @@ import {
 } from '../adapters/integrations.adapter';
 import type { IntegrationsService } from '../core/contracts';
 
-const ACTIVE_PROVIDER_FETCH_SIZE = 500;
-
-function shouldEnforceSingleActivePerProvider(provider: IntegrationConfig['provider']): boolean {
-  return provider !== 'openai';
-}
-
 function toRecord(value: unknown): Record<string, unknown> | null {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
     return null;
@@ -173,40 +167,6 @@ async function patchConfigRaw(
   return mapSingleConfig(data, id);
 }
 
-async function ensureSingleActivePerProvider(
-  provider: IntegrationConfig['provider'],
-  activeConfigId: EntityId,
-): Promise<void> {
-  if (!shouldEnforceSingleActivePerProvider(provider)) {
-    return;
-  }
-
-  try {
-    const activeConfigs = await listConfigs({
-      page: 1,
-      pageSize: ACTIVE_PROVIDER_FETCH_SIZE,
-      provider,
-      is_active: true,
-      ordering: '-updated_at',
-    });
-
-    const deactivationTargets = activeConfigs.items.filter(
-      (config) => config.id !== activeConfigId,
-    );
-    if (deactivationTargets.length === 0) {
-      return;
-    }
-
-    await Promise.allSettled(
-      deactivationTargets.map((config) =>
-        patchConfigRaw(config.id, { is_active: false }),
-      ),
-    );
-  } catch {
-    // Backend may already enforce exclusivity.
-  }
-}
-
 export async function listConfigs(
   params?: IntegrationConfigListParams,
 ): Promise<PaginatedResult<IntegrationConfig>> {
@@ -254,12 +214,6 @@ export async function createConfig(
     throw new Error('Failed to create integration config: invalid API response.');
   }
 
-  if (mapped.is_active) {
-    await ensureSingleActivePerProvider(mapped.provider, mapped.id);
-    const refreshed = await getConfigById(mapped.id);
-    return refreshed ?? mapped;
-  }
-
   return mapped;
 }
 
@@ -277,12 +231,6 @@ export async function updateConfig(
     return null;
   }
 
-  if (mapped.is_active) {
-    await ensureSingleActivePerProvider(mapped.provider, mapped.id);
-    const refreshed = await getConfigById(mapped.id);
-    return refreshed ?? mapped;
-  }
-
   return mapped;
 }
 
@@ -293,12 +241,6 @@ export async function patchConfig(
   const mapped = await patchConfigRaw(id, input);
   if (!mapped) {
     return null;
-  }
-
-  if (mapped.is_active) {
-    await ensureSingleActivePerProvider(mapped.provider, mapped.id);
-    const refreshed = await getConfigById(mapped.id);
-    return refreshed ?? mapped;
   }
 
   return mapped;

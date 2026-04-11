@@ -97,10 +97,6 @@ const actionButtonClassName =
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
-function shouldEnforceSingleActive(provider: IntegrationProvider): boolean {
-  return provider !== 'openai';
-}
-
 function resolveHumanLabel(value: string | null | undefined): string | null {
   if (!value) {
     return null;
@@ -504,21 +500,6 @@ function IntegrationsPage() {
             return updated;
           }
 
-          if (
-            nextIsActive &&
-            shouldEnforceSingleActive(updated.provider) &&
-            entry.provider === updated.provider &&
-            entry.is_active
-          ) {
-            return {
-              ...entry,
-              is_active: false,
-              updated_at: updated.updated_at,
-              updated_by: updated.updated_by,
-              updated_by_name: updated.updated_by_name,
-            };
-          }
-
           return entry;
         }),
       );
@@ -588,7 +569,7 @@ function IntegrationsPage() {
               onChange={() => {
                 void handleToggleConfigActive(config);
               }}
-              disabled={Boolean(togglingConfigId)}
+              disabled={togglingConfigId === config.id}
               stopPropagation
             />
           ) : (
