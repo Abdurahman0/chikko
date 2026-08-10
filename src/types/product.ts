@@ -91,6 +91,51 @@ export interface ProductMutationInput {
 
 export interface ProductPatchInput extends Partial<ProductMutationInput> {}
 
+/**
+ * Input for POST /api/products/from-photo/.
+ *
+ * `price` and `isActive` are required even though the endpoint defaults them
+ * (0.00 / true): the endpoint creates the product immediately, so this flow must
+ * never rely on those defaults. See ProductPhotoImportPanel.
+ */
+export interface ProductPhotoImportInput {
+  name: string;
+  image: File;
+  isActive: boolean;
+  price: number;
+  sku?: string;
+  categoryId?: EntityId | null;
+  brandId?: EntityId | null;
+  description?: string;
+  extractDescription?: boolean;
+  currency?: CurrencyCode;
+  stockQuantity?: number;
+  minimalStock?: number;
+  isPromoted?: boolean;
+  reviewsEnabled?: boolean;
+}
+
+/**
+ * `metadata.photo_import` from the response. `null` means the backend did not
+ * report the flag at all, which is not the same as an explicit `false`.
+ */
+export interface ProductPhotoImportMetadata {
+  backgroundRemoved: boolean | null;
+  ocrAvailable: boolean | null;
+  descriptionExtracted: boolean | null;
+}
+
+export interface ProductPhotoImportResult {
+  product: Product;
+  photoImport: ProductPhotoImportMetadata;
+}
+
+export interface ProductPhotoImportOptions {
+  timeoutMs?: number;
+  signal?: AbortSignal;
+  onUploadProgress?: (progress: { loaded: number; total: number | null }) => void;
+}
+
 export interface ProductBrand extends AuditInfo {
   id: EntityId;
   name: string;

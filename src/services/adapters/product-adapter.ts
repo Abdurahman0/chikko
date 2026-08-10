@@ -1,4 +1,10 @@
-import type { Product, ProductBrand, ProductCategory, ProductImage } from '../../types/domain';
+import type {
+  Product,
+  ProductBrand,
+  ProductCategory,
+  ProductImage,
+  ProductPhotoImportMetadata,
+} from '../../types/domain';
 
 export type ProductDto = Record<string, unknown>;
 export type ProductImageDto = Record<string, unknown>;
@@ -64,6 +70,24 @@ function readBoolean(value: unknown): boolean {
   }
 
   return Boolean(value);
+}
+
+function readOptionalBoolean(value: unknown): boolean | null {
+  if (typeof value === 'boolean') {
+    return value;
+  }
+
+  if (typeof value === 'string') {
+    const normalized = value.trim().toLowerCase();
+    if (normalized === 'true') {
+      return true;
+    }
+    if (normalized === 'false') {
+      return false;
+    }
+  }
+
+  return null;
 }
 
 function isUuid(value: string): boolean {
@@ -234,6 +258,25 @@ export function mapProductDtoToModel(dto: ProductDto): Product {
     images: images,
     createdAt: readString(dto.created_at, nowIso),
     updatedAt: readString(dto.updated_at, nowIso),
+  };
+}
+
+/**
+ * Reads `metadata.photo_import` straight from the DTO.
+ *
+ * `mapMetadata` flattens nested metadata objects into JSON strings, so the
+ * photo-import flags cannot be recovered from the mapped `Product.metadata`.
+ */
+export function mapProductPhotoImportMetadataDto(
+  dto: ProductDto,
+): ProductPhotoImportMetadata {
+  const metadata = toRecord(dto.metadata);
+  const photoImport = toRecord(metadata?.photo_import);
+
+  return {
+    backgroundRemoved: readOptionalBoolean(photoImport?.background_removed),
+    ocrAvailable: readOptionalBoolean(photoImport?.ocr_available),
+    descriptionExtracted: readOptionalBoolean(photoImport?.description_extracted),
   };
 }
 

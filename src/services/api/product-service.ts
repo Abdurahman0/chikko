@@ -10,9 +10,12 @@ import type {
   ProductBrandPatchInput,
   ProductMutationInput,
   ProductPatchInput,
+  ProductPhotoImportInput,
+  ProductPhotoImportOptions,
   TableQueryParams,
 } from '../../types/domain';
 import { apiClient } from '../../lib/api-client';
+import { PRODUCT_PHOTO_IMPORT_TIMEOUT_MS } from '../../constants';
 import {
   mapProductBrandDtoToModel,
   mapProductBrandListDtoToItems,
@@ -20,6 +23,7 @@ import {
   mapProductCategoryListDtoToItems,
   mapProductDtoToModel,
   mapProductListDtoToItems,
+  mapProductPhotoImportMetadataDto,
   type ProductBrandDto,
   type ProductCategoryDto,
   type ProductDto,
@@ -166,6 +170,51 @@ function toBrandMutationPayload(
     payload.is_active = input.isActive;
   }
   return payload;
+}
+
+function toPhotoImportFormData(input: ProductPhotoImportInput): FormData {
+  const formData = new FormData();
+
+  formData.append('name', input.name);
+  formData.append('image', input.image);
+
+  // Both of these have server-side defaults that are unsafe for this flow
+  // (is_active=true, price=0.00), so they are always sent explicitly.
+  formData.append('is_active', String(input.isActive));
+  formData.append('price', input.price.toFixed(2));
+
+  if (input.sku !== undefined && input.sku.length > 0) {
+    formData.append('sku', input.sku);
+  }
+  if (input.categoryId) {
+    formData.append('category_id', String(input.categoryId).trim());
+  }
+  if (input.brandId) {
+    formData.append('brand_id', String(input.brandId).trim());
+  }
+  if (input.description !== undefined) {
+    formData.append('description', input.description);
+  }
+  if (input.extractDescription !== undefined) {
+    formData.append('extract_description', String(input.extractDescription));
+  }
+  if (input.currency !== undefined) {
+    formData.append('currency', input.currency);
+  }
+  if (input.stockQuantity !== undefined) {
+    formData.append('stock_quantity', String(Math.floor(input.stockQuantity)));
+  }
+  if (input.minimalStock !== undefined) {
+    formData.append('minimal_stock', String(Math.floor(input.minimalStock)));
+  }
+  if (input.isPromoted !== undefined) {
+    formData.append('is_promoted', String(input.isPromoted));
+  }
+  if (input.reviewsEnabled !== undefined) {
+    formData.append('reviews_enabled', String(input.reviewsEnabled));
+  }
+
+  return formData;
 }
 
 function toImageUploadFormData(payload: FormData | File[]): FormData {
@@ -385,5 +434,33 @@ export const apiProductService: ProductService = {
   async deleteProductImage(productId, imageId) {
     await apiClient.delete(`/api/products/${productId}/images/${imageId}/`);
     return true;
+  },
+
+  async createProductFromPhoto(
+    input: ProductPhotoImportInput,
+    options?: ProductPhotoImportOptions,
+  ) {
+    // Content-Type is intentionally not set: the browser adds the multipart boundary.
+    const { data } = await apiClient.post<ProductDto>(
+      '/api/products/from-photo/',
+      toPhotoImportFormData(input),
+      {
+        timeout: options?.timeoutMs ?? PRODUCT_PHOTO_IMPORT_TIMEOUT_MS,
+        signal: options?.signal,
+        onUploadProgress: options?.onUploadProgress
+          ? (event) => {
+              options.onUploadProgress?.({
+                loaded: event.loaded,
+                total: typeof event.total === 'number' ? event.total : null,
+              });
+            }
+          : undefined,
+      },
+    );
+
+    return {
+      product: mapProductDtoToModel(data),
+      photoImport: mapProductPhotoImportMetadataDto(data),
+    };
   },
 };

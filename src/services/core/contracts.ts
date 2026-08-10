@@ -58,6 +58,9 @@ import type {
   ProductBrandPatchInput,
   ProductPatchInput,
   ProductMutationInput,
+  ProductPhotoImportInput,
+  ProductPhotoImportOptions,
+  ProductPhotoImportResult,
   SendMessageInput,
   SessionListParams,
   TableQueryParams,
@@ -320,6 +323,14 @@ export interface ProductService {
   deleteProductBrand(id: EntityId): Promise<boolean>;
   uploadProductImages(productId: EntityId, payload: FormData | File[]): Promise<Product | null>;
   deleteProductImage(productId: EntityId, imageId: EntityId): Promise<boolean>;
+  /**
+   * Creates a product from a single photo (background removal + OCR on the backend).
+   * The product row is created by this call, so it must never be retried automatically.
+   */
+  createProductFromPhoto(
+    input: ProductPhotoImportInput,
+    options?: ProductPhotoImportOptions,
+  ): Promise<ProductPhotoImportResult>;
 }
 
 export interface OrderService {

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { FiAlertTriangle, FiEdit2, FiImage, FiTrash2 } from 'react-icons/fi';
+import { FiAlertTriangle, FiCamera, FiEdit2, FiImage, FiTrash2 } from 'react-icons/fi';
 import { useTranslation } from 'react-i18next';
 import { DEFAULT_CURRENCY_CODE, formatCurrencyAmount } from '../../../constants';
 import {
@@ -26,6 +26,7 @@ import ProductCategoryDeleteDialog from '../../../features/products/components/P
 import ProductBrandDeleteDialog from '../../../features/products/components/ProductBrandDeleteDialog';
 import ProductDetailPanel from '../../../features/products/components/ProductDetailPanel';
 import ProductFormPanel from '../../../features/products/components/ProductFormPanel';
+import ProductPhotoImportPanel from '../../../features/products/components/ProductPhotoImportPanel';
 import ProductCategoryFormDialog from '../../../features/products/components/ProductCategoryFormDialog';
 import ProductBrandFormDialog from '../../../features/products/components/ProductBrandFormDialog';
 import { formatLocalizedDate } from '../../../i18n/date-format';
@@ -387,6 +388,7 @@ function ProductsPage() {
   const [reloadCursor, setReloadCursor] = useState(0);
 
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [isPhotoImportOpen, setIsPhotoImportOpen] = useState(false);
   const [formMode, setFormMode] = useState<'create' | 'edit'>('create');
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -1760,6 +1762,14 @@ function ProductsPage() {
           <button
             type="button"
             className="inline-flex min-h-9 items-center gap-2 rounded-lg bg-surface-card px-3.5 text-sm font-semibold text-text-primary shadow-sm ring-1 ring-border-soft/40 transition duration-fast hover:bg-surface-subtle focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/25"
+            onClick={() => setIsPhotoImportOpen(true)}
+          >
+            <FiCamera className="h-4 w-4" aria-hidden="true" />
+            {t('products.photoImport.openAction')}
+          </button>
+          <button
+            type="button"
+            className="inline-flex min-h-9 items-center gap-2 rounded-lg bg-surface-card px-3.5 text-sm font-semibold text-text-primary shadow-sm ring-1 ring-border-soft/40 transition duration-fast hover:bg-surface-subtle focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/25"
             onClick={openCategoryCreateForm}
           >
             <AppIcon name="plus" className="h-4 w-4" aria-hidden="true" />
@@ -2167,6 +2177,17 @@ function ProductsPage() {
           onSubmit={(payload, options) => {
             void handleSaveProduct(payload, options);
           }}
+        />
+      ) : null}
+
+      {isPhotoImportOpen ? (
+        <ProductPhotoImportPanel
+          categoryOptions={categoryOptions}
+          isCategoryOptionsLoading={isCategoryOptionsLoading}
+          brandOptions={brandOptions}
+          isBrandOptionsLoading={isBrandOptionsLoading}
+          onClose={() => setIsPhotoImportOpen(false)}
+          onProductsChanged={() => setReloadCursor((current) => current + 1)}
         />
       ) : null}
 
