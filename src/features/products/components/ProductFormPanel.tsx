@@ -3,7 +3,6 @@ import { FiImage, FiTrash2 } from 'react-icons/fi';
 import AppIcon from '../../../components/shared/icons/AppIcon';
 import { FilterSelect, Switch } from '../../../components/shared/data';
 import { DEFAULT_CURRENCY_CODE } from '../../../constants';
-import { services } from '../../../services';
 import type { Product, ProductMutationInput, SelectOption } from '../../../types/domain';
 import { useTranslation } from 'react-i18next';
 
@@ -122,18 +121,6 @@ function resolveInitialBrandId(
   return findOptionByLabel(brandOptions, brandName)?.value ?? '';
 }
 
-function normalizeSkuPrefix(value: string): string {
-  return value
-    .trim()
-    .toUpperCase()
-    .replace(/[^A-Z0-9]+/g, '_')
-    .replace(/^_+|_+$/g, '');
-}
-
-function createSku(prefix: string, sequence: number): string {
-  return `${prefix}-${String(Math.max(1, sequence)).padStart(3, '0')}`;
-}
-
 function belongsToCategory(product: Product, categoryId: string): boolean {
   const normalizedCategoryId = normalizeString(product.categoryId);
   if (normalizedCategoryId === categoryId) {
@@ -142,19 +129,6 @@ function belongsToCategory(product: Product, categoryId: string): boolean {
 
   const normalizedCategory = normalizeString(product.category as unknown as string);
   return normalizedCategory === categoryId;
-}
-
-function extractSequenceFromSku(sku: string, prefix: string): number {
-  const normalizedSku = normalizeString(sku).toUpperCase();
-  const normalizedPrefix = normalizeString(prefix).toUpperCase();
-
-  if (!normalizedSku.startsWith(normalizedPrefix)) {
-    return 0;
-  }
-
-  const suffix = normalizedSku.substring(normalizedPrefix.length).replace(/^[-_]+/, '');
-  const match = suffix.match(/^(\d+)/);
-  return match ? parseInt(match[1], 10) : 0;
 }
 
 function createInitialState(
@@ -219,14 +193,12 @@ function ProductFormPanel({
     createInitialState(mode, product, currencyOptions),
   );
   const [fieldError, setFieldError] = useState<string | null>(null);
-  const [isGeneratingSku, setIsGeneratingSku] = useState(false);
   const [newImages, setNewImages] = useState<File[]>([]);
   const [deletedImageIds, setDeletedImageIds] = useState<string[]>([]);
 
   useEffect(() => {
     setForm(createInitialState(mode, product, currencyOptions));
     setFieldError(null);
-    setIsGeneratingSku(false);
     setNewImages([]);
     setDeletedImageIds([]);
   }, [mode, product, currencyOptions]);
@@ -270,92 +242,6 @@ function ProductFormPanel({
           },
     );
   }, [mode, product, brandOptions, form.brandId]);
-
-  useEffect(() => {
-    if (mode !== 'create') {
-      return;
-    }
-
-    const normalizedCategoryId = form.categoryId.trim();
-    if (!normalizedCategoryId) {
-      setIsGeneratingSku(false);
-      setForm((current) => ({ ...current, sku: '' }));
-      return;
-    }
-
-    const selectedCategory = categoryOptions.find(
-      (option) => option.value === normalizedCategoryId,
-    );
-    const prefix =
-      normalizeSkuPrefix(selectedCategory?.label || '') ||
-      normalizeSkuPrefix(selectedCategory?.description || '');
-
-    if (!prefix) {
-      setIsGeneratingSku(false);
-      setForm((current) => ({ ...current, sku: '' }));
-      return;
-    }
-
-    let isActive = true;
-
-    async function generateSku() {
-      setIsGeneratingSku(true);
-
-      try {
-        const result = await services.products.listProducts({
-          page: 1,
-          pageSize: 1,
-          category: normalizedCategoryId,
-          ordering: '-sku',
-        });
-
-        if (!isActive) {
-          return;
-        }
-
-        const highestProduct = result.items[0];
-        const currentMaxSequence = highestProduct
-          ? extractSequenceFromSku(highestProduct.sku || '', prefix)
-          : 0;
-
-        setForm((current) => {
-          if (current.categoryId.trim() !== normalizedCategoryId) {
-            return current;
-          }
-
-          return {
-            ...current,
-            sku: createSku(prefix, currentMaxSequence + 1),
-          };
-        });
-      } catch {
-        if (!isActive) {
-          return;
-        }
-
-        setForm((current) => {
-          if (current.categoryId.trim() !== normalizedCategoryId) {
-            return current;
-          }
-
-          return {
-            ...current,
-            sku: createSku(prefix, 1),
-          };
-        });
-      } finally {
-        if (isActive) {
-          setIsGeneratingSku(false);
-        }
-      }
-    }
-
-    void generateSku();
-
-    return () => {
-      isActive = false;
-    };
-  }, [mode, form.categoryId, categoryOptions]);
 
   const categorySelectOptions = useMemo<SelectOption[]>(() => {
     const baseOptions = [
@@ -431,23 +317,20 @@ function ProductFormPanel({
   const canSubmit = useMemo(() => {
     return (
       form.name.trim().length > 0 &&
-      form.sku.trim().length > 0 &&
       form.description.trim().length > 0 &&
       form.categoryId.trim().length > 0 &&
       form.currency.trim().length > 0 &&
       Number(form.price) >= 0 &&
       Number(form.stockQuantity) >= 0 &&
-      Number(form.minimalStock) >= 0 &&
-      !isGeneratingSku
+      Number(form.minimalStock) >= 0
     );
-  }, [form, isGeneratingSku]);
+  }, [form]);
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setFieldError(null);
 
     const normalizedName = form.name.trim();
-    const normalizedSku = form.sku.trim().toUpperCase();
     const normalizedDescription = form.description.trim();
     const normalizedCategoryId = form.categoryId.trim();
     const parsedPrice = Number(form.price);
@@ -456,7 +339,6 @@ function ProductFormPanel({
 
     if (
       !normalizedName ||
-      !normalizedSku ||
       !normalizedDescription ||
       !normalizedCategoryId ||
       !form.currency.trim()
@@ -495,9 +377,8 @@ function ProductFormPanel({
       }
     }
 
-    onSubmit({
+    const payload: ProductMutationInput = {
       name: normalizedName,
-      sku: normalizedSku,
       description: normalizedDescription,
       categoryId: normalizedCategoryId,
       brandId: form.brandId.trim() || null,
@@ -508,7 +389,13 @@ function ProductFormPanel({
       isPromoted: form.isPromoted,
       reviewsEnabled: form.reviewsEnabled,
       isActive: form.isActive,
-    }, {
+    };
+
+    if (mode === 'edit') {
+      payload.sku = form.sku.trim().toUpperCase();
+    }
+
+    onSubmit(payload, {
       newImages,
       deletedImageIds,
     });
@@ -626,28 +513,24 @@ function ProductFormPanel({
           </div>
 
           <div className="grid gap-3 sm:grid-cols-2">
-            <div className="grid gap-1.5">
-              <label className={labelClassName} htmlFor="product-form-sku">
-                SKU
-              </label>
-              <input
-                id="product-form-sku"
-                type="text"
-                value={form.sku}
-                onChange={(event) =>
-                  setForm((current) =>
-                    mode === 'create'
-                      ? current
-                      : { ...current, sku: event.target.value }
-                  )
-                }
-                className={inputClassName}
-                placeholder="CHK-0001"
-                disabled={isSubmitting}
-                readOnly={mode === 'create'}
-                required
-              />
-            </div>
+            {mode === 'edit' ? (
+              <div className="grid gap-1.5">
+                <label className={labelClassName} htmlFor="product-form-sku">
+                  SKU
+                </label>
+                <input
+                  id="product-form-sku"
+                  type="text"
+                  value={form.sku}
+                  onChange={(event) =>
+                    setForm((current) => ({ ...current, sku: event.target.value }))
+                  }
+                  className={inputClassName}
+                  placeholder="CHK-0001"
+                  disabled={isSubmitting}
+                />
+              </div>
+            ) : null}
 
             <div className="grid gap-1.5">
               <span className={labelClassName}>{t('products.form.currency')}</span>
@@ -661,13 +544,6 @@ function ProductFormPanel({
               />
             </div>
 
-            {mode === 'create' ? (
-              <p className="m-0 text-[12px] text-text-muted sm:col-span-2">
-                {isGeneratingSku
-                  ? t('common.loading')
-                  : t('products.form.skuAutoHint')}
-              </p>
-            ) : null}
           </div>
 
           <div className="grid gap-1.5">

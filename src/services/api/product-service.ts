@@ -79,13 +79,14 @@ function toPaginatedResult<T>(
 
 function toMutationPayload(
   input: ProductMutationInput | ProductPatchInput,
+  includeSku = true,
 ): Record<string, unknown> {
   const payload: Record<string, unknown> = {};
 
   if (input.name !== undefined) {
     payload.name = input.name;
   }
-  if (input.sku !== undefined) {
+  if (includeSku && input.sku !== undefined) {
     payload.sku = input.sku;
   }
   if (input.description !== undefined) {
@@ -183,9 +184,6 @@ function toPhotoImportFormData(input: ProductPhotoImportInput): FormData {
   formData.append('is_active', String(input.isActive));
   formData.append('price', input.price.toFixed(2));
 
-  if (input.sku !== undefined && input.sku.length > 0) {
-    formData.append('sku', input.sku);
-  }
   if (input.categoryId) {
     formData.append('category_id', String(input.categoryId).trim());
   }
@@ -280,7 +278,10 @@ export const apiProductService: ProductService = {
   },
 
   async createProduct(input) {
-    const { data } = await apiClient.post<ProductDto>('/api/products/', toMutationPayload(input));
+    const { data } = await apiClient.post<ProductDto>(
+      '/api/products/',
+      toMutationPayload(input, false),
+    );
     return mapProductDtoToModel(data);
   },
 

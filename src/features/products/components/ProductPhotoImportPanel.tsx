@@ -48,7 +48,6 @@ type PhotoImportPhase = 'form' | 'uploading' | 'review' | 'unknown-result' | 'sa
 type PhotoImportField =
   | 'name'
   | 'image'
-  | 'sku'
   | 'categoryId'
   | 'brandId'
   | 'price'
@@ -63,7 +62,6 @@ const PHOTO_IMPORT_STAGES = ['sending', 'background', 'ocr'] as const;
 const API_FIELD_TO_FORM_FIELD: Record<string, PhotoImportField> = {
   name: 'name',
   image: 'image',
-  sku: 'sku',
   category_id: 'categoryId',
   category: 'categoryId',
   brand_id: 'brandId',
@@ -228,7 +226,6 @@ function ProductPhotoImportPanel({
   const [photoImport, setPhotoImport] = useState<ProductPhotoImportMetadata | null>(
     null,
   );
-  const [reviewSku, setReviewSku] = useState('');
   const [reviewDescription, setReviewDescription] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [savedAsActive, setSavedAsActive] = useState(false);
@@ -501,7 +498,6 @@ function ProductPhotoImportPanel({
 
       setCreatedProduct(result.product);
       setPhotoImport(result.photoImport);
-      setReviewSku(result.product.sku ?? '');
       setReviewDescription(result.product.description ?? '');
       setPhase('review');
     } catch (error) {
@@ -545,13 +541,7 @@ function ProductPhotoImportPanel({
       return;
     }
 
-    const normalizedSku = reviewSku.trim();
     const normalizedDescription = reviewDescription.trim();
-
-    if (normalizedSku.length === 0) {
-      setFieldErrors({ sku: t('products.photoImport.errors.skuRequired') });
-      return;
-    }
 
     if (activate && normalizedDescription.length === 0) {
       setFieldErrors({
@@ -567,7 +557,6 @@ function ProductPhotoImportPanel({
 
     try {
       const patched = await services.products.patchProduct(createdProduct.id, {
-        sku: normalizedSku,
         description: normalizedDescription,
         ...(activate ? { isActive: true } : {}),
       });
@@ -609,7 +598,6 @@ function ProductPhotoImportPanel({
     resetImage();
     setCreatedProduct(null);
     setPhotoImport(null);
-    setReviewSku('');
     setReviewDescription('');
     setFieldErrors({});
     setGeneralError(null);
@@ -1011,24 +999,6 @@ function ProductPhotoImportPanel({
                 {t('products.photoImport.notices.noOcrText')}
               </p>
             ) : null}
-
-            <div className="grid gap-1.5">
-              <label className={labelClassName} htmlFor="photo-import-review-sku">
-                SKU
-              </label>
-              <input
-                id="photo-import-review-sku"
-                type="text"
-                value={reviewSku}
-                onChange={(event) => setReviewSku(event.target.value)}
-                className={inputClassName}
-                disabled={isSaving}
-                aria-invalid={Boolean(fieldErrors.sku)}
-              />
-              {fieldErrors.sku ? (
-                <p className={fieldErrorClassName}>{fieldErrors.sku}</p>
-              ) : null}
-            </div>
 
             <div className="grid gap-1.5">
               <div className="flex items-center justify-between gap-2">

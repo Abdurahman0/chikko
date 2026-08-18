@@ -76,7 +76,7 @@ export interface Product extends AuditInfo {
 
 export interface ProductMutationInput {
   name: string;
-  sku: string;
+  sku?: string;
   description: string;
   categoryId?: EntityId | null;
   brandId?: EntityId | null;
@@ -103,7 +103,6 @@ export interface ProductPhotoImportInput {
   image: File;
   isActive: boolean;
   price: number;
-  sku?: string;
   categoryId?: EntityId | null;
   brandId?: EntityId | null;
   description?: string;
